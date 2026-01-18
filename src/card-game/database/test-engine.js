@@ -16,7 +16,10 @@ const testMatch = {
             deck: [],
             discardPile: [],
             inPlay: randomizeArray([...cards]).slice(0, 8),
-            elements: [],
+            elements: {
+                fire: 4,
+                earth: 2
+            },
             statusEffects: []
         },
         {
@@ -29,7 +32,10 @@ const testMatch = {
             deck: [],
             discardPile: [],
             inPlay: randomizeArray([...cards]).slice(0, 8),
-            elements: [],
+            elements: {
+                air: 3,
+                electric: 3,
+            },
             statusEffects: []
         }
     ],

@@ -16,10 +16,7 @@ const CardGame = () => {
                 return (
                     <div>
                         <PlayerHUD
-                            name={player.name}
-                            image={player.image}
-                            health={player.health}
-                            maxHealth={player.maxHealth}
+                            player={player}
                         />
 
                         <CardLayout
