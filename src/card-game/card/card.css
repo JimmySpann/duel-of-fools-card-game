@@ -44,12 +44,11 @@
 }
 
 .card-front {
-    background-color: var(--system-color-card-polyphemus);
+    background-color: oklch(39.22% 0.016 214.52);
+    ;
 }
 
 .card-back {
-    background: #ff0066;
-    color: #fff;
     transform: rotateY(180deg);
 }
 
@@ -60,7 +59,7 @@
 }
 
 .card-header {
-    padding-top: 3px;
+    padding-top: 5px;
     width: 100%;
     height: 25px;
     display: flex;
@@ -76,6 +75,7 @@
 
 .card-type {
     margin-left: 20px;
+    color: rgb(220, 220, 220)
 }
 
 .card-elements-icon {
@@ -129,6 +129,7 @@
     height: 265px;
     border-radius: 0px 0px 10px 10px;
     font-size: 14px;
+    overflow-y: auto;
 }
 
 .card-info-title {
@@ -152,6 +153,23 @@
     display: flex;
     justify-content: space-around;
     align-items: center;
+    color: rgb(220, 220, 220)
+}
+
+.health-circle {
+    margin-top: -30px;
+    background-color: darkred;
+    border-radius: 30px;
+    width: 55px;
+    height: 55px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.health-text {
+    font-size: 14px
 }
 
 .rotate-90 {

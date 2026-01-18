@@ -108,7 +108,10 @@ const Card = ({
                 <div className="card-footer">
                     <div>ATK:{card.attack}</div>
                     <div>AGI:{card.agility}</div>
-                    <div>HP:{card.health}/{card.health}</div>
+                    <div className="health-circle">
+                        {card.health}/{card.health}
+                        <div className="health-text">HP</div>
+                    </div>
                     <div>EVA:{card.evasion}</div>
                     <div>DEF:{card.defense}</div>
                 </div>
