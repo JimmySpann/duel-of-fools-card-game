@@ -69,58 +69,48 @@ const CardHeader = ({ type, elements }) => {
 }
 
 const Card = ({
-    name,
-    type,
-    elements,
-    image,
-    description,
-    passives,
-    actions,
-    evasion,
-    defense,
-    attack,
-    agility,
-    health,
+    card,
     isFlipped
 }) => {
+
     return (
         <div
             className="card-container"
         >
             <div className={`card-front ${isFlipped ? 'rotateY-180' : ''}`}>
-                <CardHeader type={type} elements={elements} />
+                <CardHeader type={card?.type} elements={card?.elements} />
 
                 <div className="card-image-container">
                     <img
                         className="card-image"
-                        src={image}
+                        src={card.image}
                         alt="Card Visual"
                     />
-                    <div className="card-name">{name}</div>
+                    <div className="card-name">{card.name}</div>
                 </div>
 
                 <div className="card-info-container">
-                    <div className="card-description">{description}</div>
-                    {passives.length > 1 && <div className="card-passives-container">
+                    <div className="card-description">{card.description}</div>
+                    {card.passives.length > 1 && <div className="card-passives-container">
                         <div className="card-info-title">Passives</div>
-                        {passives.map((passive, index) => (
+                        {card.passives.map((passive, index) => (
                             <div key={index} className="card-passive">{passive}</div>
                         ))}
                     </div>}
-                    {actions.length > 1 && <div className="card-actions-container">
+                    {card.actions.length > 1 && <div className="card-actions-container">
                         <div className="card-info-title">Actions</div>
-                        {actions.map((action, index) => (
+                        {card.actions.map((action, index) => (
                             <div key={index} className="card-action">{action}</div>
                         ))}
                     </div>}
                 </div>
 
                 <div className="card-footer">
-                    <div>ATK:{attack}</div>
-                    <div>AGI:{agility}</div>
-                    <div>HP:{health}/{health}</div>
-                    <div>EVA:{evasion}</div>
-                    <div>DEF:{defense}</div>
+                    <div>ATK:{card.attack}</div>
+                    <div>AGI:{card.agility}</div>
+                    <div>HP:{card.health}/{card.health}</div>
+                    <div>EVA:{card.evasion}</div>
+                    <div>DEF:{card.defense}</div>
                 </div>
             </div>
 

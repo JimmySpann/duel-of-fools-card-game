@@ -52,33 +52,6 @@ const CardGame = () => {
         <div
             className="card-game-container"
         >
-            <div className="card-layout">
-                {cards.map((card, index) => (
-                    <div
-                        style={{
-                            zoom: .25,
-                        }}
-                        key={index}
-                    >
-                        <Card
-                            key={index}
-                            name={card.name}
-                            type={card.type}
-                            image={card.image}
-                            description={card.description}
-                            evasion={card.evasion}
-                            defense={card.defense}
-                            attack={card.attack}
-                            agility={card.agility}
-                            health={card.health}
-                            elements={card.elements}
-                            passives={card.passives}
-                            actions={card.actions}
-                            isFlipped={flippedCards[index]}
-                        />
-                    </div>
-                ))}
-            </div>
             <h2 style={{ color: 'white', marginLeft: '10px' }}>
                 Card Game
             </h2>
@@ -100,18 +73,7 @@ const CardGame = () => {
                     >
                         <Card
                             key={index}
-                            name={card.name}
-                            type={card.type}
-                            image={card.image}
-                            description={card.description}
-                            evasion={card.evasion}
-                            defense={card.defense}
-                            attack={card.attack}
-                            agility={card.agility}
-                            health={card.health}
-                            elements={card.elements}
-                            passives={card.passives}
-                            actions={card.actions}
+                            card={card}
                             isFlipped={flippedCards[index]}
                         />
                     </div>

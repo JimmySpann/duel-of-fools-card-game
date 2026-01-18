@@ -47,20 +47,7 @@ const SelectedCard = ({ card, onFlipClick, onCloseClick }) => {
             onClick={() => onClose()}
         >
             <div className={`selected-card ${animationTriggers.showCard ? 'selected-card-show' : ''}`} >
-                <Card
-                    name={card.name}
-                    type={card.type}
-                    image={card.image}
-                    description={card.description}
-                    evasion={card.evasion}
-                    defense={card.defense}
-                    attack={card.attack}
-                    agility={card.agility}
-                    health={card.health}
-                    elements={card.elements}
-                    passives={card.passives}
-                    actions={card.actions}
-                />
+                <Card card={card} />
             </div>
             <div className={`selected-card-button-container ${animationTriggers.showButtons ? 'selected-card-button-container-show' : ''}`}>
                 <button
