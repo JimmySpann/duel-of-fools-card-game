@@ -117,7 +117,6 @@
     border-radius: 2px;
     box-shadow: 0 0 30px rgba(0, 0, 0, .15) inset,
         0 6px 10px rgba(0, 0, 0, .15);
-    z-index: 2;
 }
 
 
@@ -147,12 +146,12 @@
 }
 
 .card-footer {
-    width: 100%;
+    margin-left: 20px;
+    width: 360px;
     height: 25px;
     display: flex;
     justify-content: space-around;
-    /* padding-top: 3px; */
-    /* padding-right: 25px; */
+    align-items: center;
 }
 
 .rotate-90 {
