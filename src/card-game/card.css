@@ -1,0 +1,162 @@
+:root {
+    --system-color-canvas: oklch(0% 0 0 / 90%);
+    --system-color-shadow: oklch(0% 0 0 / 38.5%);
+    --system-color-dark: oklch(0% 0 0);
+    --system-color-light: oklch(100% 0 0);
+    --system-color-label: oklch(67.03% 0.023 79.03);
+    --system-color-logo: oklch(57.75% 0.149 25.33);
+    --system-color-card-border: oklch(0% 0 0 / 10%);
+    --system-color-card-shadow: oklch(0% 0 0 / 50%);
+    --system-color-text-shadow: oklch(0% 0 0 / 20%);
+    --system-color-card-polyphemus: oklch(39.58% 0.013 81.76);
+    --system-color-card-andromeda: oklch(39.22% 0.016 214.52);
+    --system-color-card-cerberus: oklch(23.19% 0.036 48.15);
+    --system-color-card-nyx: oklch(35.95% 0.024 18.46);
+    --system-color-card-horse: oklch(35.25% 0.027 142.94);
+    --system-color-gem-orange: oklch(71.92% 0.056 38.8 / 20%);
+    --system-color-gem-blue: oklch(78.19% 0.06 187.95 / 20%);
+    --system-color-gem-red: oklch(69.69% 0.072 6.59 / 20%);
+    --system-color-gem-purple: oklch(71.26% 0.104 327.17 / 20%);
+    --system-color-gem-green: oklch(72.3% 0.162 149.93 / 20%);
+}
+
+.card-container {
+    width: 400px;
+    height: 550px;
+    display: grid;
+}
+
+.card-front,
+.card-back {
+    grid-area: 1 / 1;
+    /* This stacks them on top of each other */
+    backface-visibility: hidden;
+    width: 100%;
+    height: 100%;
+    border: 1px solid #000;
+    border-radius: 10px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    transition: 1s;
+    cursor: pointer;
+}
+
+.card-front {
+    background-color: var(--system-color-card-polyphemus);
+}
+
+.card-back {
+    background: #ff0066;
+    color: #fff;
+    transform: rotateY(180deg);
+}
+
+.card-header {
+    padding-top: 3px;
+    width: 100%;
+    height: 25px;
+    display: flex;
+}
+
+.card-elements {
+    width: 100%;
+    height: 25px;
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 23px;
+}
+
+.card-type {
+    margin-left: 20px;
+}
+
+.card-elements-icon {
+    margin-left: 1px;
+    width: 18px;
+    height: 18px;
+    border-radius: 25px;
+}
+
+.card-elements-icon-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-image-container {
+    margin-left: 20px;
+    width: 360px;
+    height: 250px;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px 10px 0px 0px;
+}
+
+.card-name {
+    width: 100%;
+    height: 40px;
+    margin-top: -40px;
+    position: relative;
+    border: 1px solid rgb(0, 0, 0);
+    font: normal 32px/40px 'Rye';
+    text-align: center;
+    color: rgb(0, 0, 0);
+    background: rgb(192, 191, 191);
+    border-radius: 2px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, .15) inset,
+        0 6px 10px rgba(0, 0, 0, .15);
+    z-index: 2;
+}
+
+
+.card-info-container {
+    background: oklch(67.03% 0.023 79.03);
+    text-align: left;
+    padding: 10px;
+    margin-top: -00px;
+    margin-left: 20px;
+    width: 360px;
+    height: 250px;
+    border-radius: 0px 0px 10px 10px;
+    font-size: 14px;
+}
+
+.card-info-title {
+    font-weight: bold;
+    margin-top: 5px;
+    margin-bottom: 3px;
+}
+
+.card-passive {
+    margin-bottom: 3px;
+}
+
+.card-action {
+    margin-bottom: 3px;
+}
+
+.card-footer {
+    width: 100%;
+    height: 25px;
+    display: flex;
+    justify-content: space-around;
+    /* padding-top: 3px; */
+    /* padding-right: 25px; */
+}
+
+.rotate-90 {
+    transform: rotate(90deg);
+}
+
+.rotateY-180 {
+    transform: rotateY(180deg);
+}
+
+.rotateY-0 {
+    transform: rotateY(0deg);
+}
