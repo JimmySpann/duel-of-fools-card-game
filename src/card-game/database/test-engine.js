@@ -1,5 +1,9 @@
 import cards from './cards'
 
+const randomizeArray = (array) => {
+    return array.sort(() => Math.random() - 0.5);
+}
+
 const testMatch = {
     players: [
         {
@@ -11,7 +15,7 @@ const testMatch = {
             hand: [],
             deck: [],
             discardPile: [],
-            inPlay: cards,
+            inPlay: randomizeArray([...cards]).slice(0, 8),
             elements: [],
             statusEffects: []
         },
@@ -24,7 +28,7 @@ const testMatch = {
             hand: [],
             deck: [],
             discardPile: [],
-            inPlay: cards,
+            inPlay: randomizeArray([...cards]).slice(0, 8),
             elements: [],
             statusEffects: []
         }

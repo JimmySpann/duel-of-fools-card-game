@@ -66,17 +66,17 @@ const CardGame = () => {
             {testEngine.players.map(player => {
                 return (
                     <div>
-                        <CardLayout
-                            cards={player.inPlay}
-                            onCardClick={onCardClick}
-                            flippedCards={flippedCards}
-                        />
-
                         <PlayerHUD
                             name={player.name}
                             image={player.image}
                             health={player.health}
                             maxHealth={player.maxHealth}
+                        />
+
+                        <CardLayout
+                            cards={player.inPlay}
+                            onCardClick={onCardClick}
+                            flippedCards={flippedCards}
                         />
                     </div>
                 )
