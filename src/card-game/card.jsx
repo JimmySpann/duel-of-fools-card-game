@@ -87,11 +87,7 @@ const Card = ({ name, type, elements, image, description, passives, actions, eva
             <div className={`card-back ${isActive ? 'rotateY-0' : ''}`}>
                 <img
                     src={cardBack}
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: '10px',
-                    }}
+                    className="card-back-image"
                 />
             </div>
         </div>
