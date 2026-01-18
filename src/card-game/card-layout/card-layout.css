@@ -1,0 +1,17 @@
+.card-layout {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.card-game-card {
+    zoom: 0.25;
+    transition: 1s;
+}
+
+.card-hover {
+    transform: scale(1.1);
+    z-index: 10;
+}

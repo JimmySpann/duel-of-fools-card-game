@@ -5,23 +5,4 @@ body {
 .card-game-container {
     width: 100vw;
     height: 100vh;
-    padding-top: 15px;
-}
-
-.card-layout {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    flex-direction: row;
-    flex-wrap: wrap;
-}
-
-.card-game-card {
-    zoom: 0.25;
-    transition: 1s;
-}
-
-.card-hover {
-    transform: scale(1.1);
-    z-index: 10;
 }
