@@ -8,11 +8,19 @@
 }
 
 .card-game-card {
-    zoom: 0.25;
+    zoom: 0.4;
     transition: 1s;
 }
 
 .card-hover {
     transform: scale(1.1);
     z-index: 10;
+}
+
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    .card-game-card {
+        zoom: .3;
+    }
 }
