@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
+import { cards } from './card-data.js';
 import Card from './card/card.jsx';
 import SelectedCard from './selected-card/selected-card.jsx';
-import { cards } from './card-data.js';
+import PlayerHUD from './player-hud/player-hud.jsx';
 import './card-game.css'; // Assume your styles are here
 
 const CardGame = () => {
@@ -79,6 +80,13 @@ const CardGame = () => {
                     </div>
                 ))}
             </ div>
+
+            <PlayerHUD
+                name="Test"
+                image=""
+                health="8"
+                maxHealth="8"
+            />
 
             {selectedCardIndex !== null &&
                 <SelectedCard
