@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { cards } from './card-data.js';
+import { useEffect, useState } from 'react';
+import cards from './database/cards.js';
+import testEngine from './database/test-engine.js';
 import Header from './header/header.jsx';
 import CardLayout from './card-layout/card-layout.jsx';
 import PlayerHUD from './player-hud/player-hud.jsx';
@@ -9,6 +10,14 @@ import './card-game.css'; // Assume your styles are here
 const CardGame = () => {
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
     const [flippedCards, setFlippedCards] = useState({});
+    const [players, setPlayers] = useState(testEngine.players)
+
+    useEffect(() => {
+        console.log('players', players)
+        setPlayers(testEngine.players)
+    }, [])
+
+    console.log('testEngine', testEngine, testEngine.players)
 
     const onFlipAllCards = () => {
         const allFlipped = Object.keys(flippedCards).length === cards.length && Object.values(flippedCards).every(value => value === true);
@@ -54,19 +63,24 @@ const CardGame = () => {
             className="card-game-container"
         >
             <Header onFlipAllCards={onFlipAllCards} />
+            {testEngine.players.map(player => {
+                return (
+                    <div>
+                        <CardLayout
+                            cards={player.inPlay}
+                            onCardClick={onCardClick}
+                            flippedCards={flippedCards}
+                        />
 
-            <CardLayout
-                cards={cards}
-                onCardClick={onCardClick}
-                flippedCards={flippedCards}
-            />
-
-            <PlayerHUD
-                name="Test"
-                image=""
-                health="8"
-                maxHealth="8"
-            />
+                        <PlayerHUD
+                            name={player.name}
+                            image={player.image}
+                            health={player.health}
+                            maxHealth={player.maxHealth}
+                        />
+                    </div>
+                )
+            })}
 
             {selectedCardIndex !== null &&
                 <SelectedCard
