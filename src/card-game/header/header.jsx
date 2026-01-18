@@ -1,6 +1,6 @@
 import './header.css'
 
-const Header = ({ onFlipAllCards }) => {
+const Header = ({ }) => {
 
     return (
         <div className="header-container">
@@ -9,7 +9,7 @@ const Header = ({ onFlipAllCards }) => {
             </h2>
             <button
                 className="button"
-                onClick={onFlipAllCards}
+            // onClick={onFlipAllCards}
             >
                 Flip All Cards
             </button>
