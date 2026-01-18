@@ -94,13 +94,31 @@ const Card = ({
                     {card.passives.length > 1 && <div className="card-passives-container">
                         <div className="card-info-title">Passives</div>
                         {card.passives.map((passive, index) => (
-                            <div key={index} className="card-passive">{passive}</div>
+                            <div
+                                key={index}
+                                className="card-passive-ability"
+                            >
+                                <div className="ability-first-row">
+                                    <div className="ability-name">{passive.name}</div>
+                                    <div className="ability-effect">{passive.effect}</div>
+                                </div>
+                                <div className="ability-description">{passive.description}</div>
+                            </div>
                         ))}
                     </div>}
                     {card.actions.length > 1 && <div className="card-actions-container">
                         <div className="card-info-title">Actions</div>
                         {card.actions.map((action, index) => (
-                            <div key={index} className="card-action">{action}</div>
+                            <div
+                                key={index}
+                                className="card-action-ability"
+                            >
+                                <div className="ability-first-row">
+                                    <div className="ability-name">{action.name}</div>
+                                    <div className="ability-effect">{action.actionInfo}</div>
+                                </div>
+                                <div className="ability-description">{action.description}</div>
+                            </div>
                         ))}
                     </div>}
                 </div>

@@ -40,16 +40,15 @@
     font-family: Arial, sans-serif;
     font-size: 18px;
     transition: 1s;
-    cursor: pointer;
 }
 
 .card-front {
     background-color: oklch(39.22% 0.016 214.52);
-    ;
 }
 
 .card-back {
     transform: rotateY(180deg);
+    cursor: pointer;
 }
 
 .card-back-image {
@@ -128,23 +127,63 @@
     width: 340px;
     height: 265px;
     border-radius: 0px 0px 10px 10px;
-    font-size: 14px;
+    font-size: 13px;
     overflow-y: auto;
+}
+
+.card-description {
+    font-style: italic;
 }
 
 .card-info-title {
     font-weight: bold;
-    margin-top: 5px;
+    /* font-size: 18px; */
+    color: rgb(52, 44, 44);
+    margin-top: 10px;
     margin-bottom: 3px;
+    /* border-bottom: 1px solid gray; */
+    overflow-y: auto;
 }
 
-.card-passive {
+.card-action-ability {
     margin-bottom: 3px;
+    background: oklch(71.851% 0.03365 78.039);
+    border: 1px solid gray;
+    padding: 1px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out
+}
+
+.card-action-ability:hover {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+    transform: translateY(-3px);
+    cursor: pointer;
+}
+
+.ability-first-row {
+    display: flex;
+    flex-direction: row;
+}
+
+.ability-name {
+    font-weight: bold;
+}
+
+.ability-effect {
+    margin-left: 10px;
+}
+
+.ability-description {
+    font-style: italic;
 }
 
 .card-action {
     margin-bottom: 3px;
 }
+
+
+
 
 .card-footer {
     margin-left: 20px;
