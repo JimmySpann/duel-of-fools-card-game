@@ -5,7 +5,7 @@ const cards = [
             fire: 3,
             normal: 2
         },
-        type: 'Monster',
+        type: 'Battler',
         image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4i0P_aTGgvJSkN3qxz-tsscYgxAqLNAMoMA&s',
         description: 'The hood nigga will attack immediately if crack is seen. He hasnt slept is 3 days',
         passives: [
@@ -20,15 +20,66 @@ const cards = [
         evasion: 6,
         health: 9
     },
-    // {
-    //   name: 'Water Dragon',
-    //   type: 'Water',
-    //   image:
-    //     'https://www.shutterstock.com/shutterstock/photos/2457990309/display_1500/stock-photo-traveler-woman-with-arms-raised-in-triumph-on-a-beach-at-sunset-silhouetted-against-vibrant-sky-2457990309.jpg',
-    //   description: 'A fierce dragon engulfed in flames.',
-    //   attack: 8,
-    //   defense: 5,
-    // },
+    {
+        elements: {
+            fire: 3,
+            normal: 2
+        },
+        type: 'Battler',
+        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4i0P_aTGgvJSkN3qxz-tsscYgxAqLNAMoMA&s',
+        description: 'The hood nigga will attack immediately if crack is seen. He hasnt slept is 3 days',
+        passives: [
+            'Flying High - This nigga flying high! Evasion increased by 2',
+            'Pain Immunity - if hit, defense increases by 3 next turn'
+        ],
+        actions: [
+            'Crack Attack - Makes a bee line for enemys jugula.',
+            'Smoke Break - Becomes unattackable for 1 turn'
+        ],
+        defense: 5,
+        evasion: 6,
+        health: 9
+    },
+    {
+        elements: {
+            fire: 3,
+            normal: 2
+        },
+        type: 'Battler',
+        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4i0P_aTGgvJSkN3qxz-tsscYgxAqLNAMoMA&s',
+        description: 'The hood nigga will attack immediately if crack is seen. He hasnt slept is 3 days',
+        passives: [
+            'Flying High - This nigga flying high! Evasion increased by 2',
+            'Pain Immunity - if hit, defense increases by 3 next turn'
+        ],
+        actions: [
+            'Crack Attack - Makes a bee line for enemys jugula.',
+            'Smoke Break - Becomes unattackable for 1 turn'
+        ],
+        defense: 5,
+        evasion: 6,
+        health: 9
+    },
+    {
+        elements: {
+            fire: 3,
+            normal: 2
+        },
+        type: 'Battler',
+        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4i0P_aTGgvJSkN3qxz-tsscYgxAqLNAMoMA&s',
+        description: 'The hood nigga will attack immediately if crack is seen. He hasnt slept is 3 days',
+        passives: [
+            'Flying High - This nigga flying high! Evasion increased by 2',
+            'Pain Immunity - if hit, defense increases by 3 next turn'
+        ],
+        actions: [
+            'Crack Attack - Makes a bee line for enemys jugula.',
+            'Smoke Break - Becomes unattackable for 1 turn'
+        ],
+        defense: 5,
+        evasion: 6,
+        health: 9
+    },
 ];
 
 const actions = [
@@ -72,21 +123,28 @@ const inPlayCard = {
     description: '',
     passives: [],
     actions: [],
+    baseEvasion: 0,
+    baseDefense: 0,
+    baseMaxHealth: 0,
     evasion: 0,
     defense: 0,
-    health: 0,
     maxHealth: 0,
+    health: 0,
     statusEffects: []
 }
 
-const BsttlerStatus = [
+const cardStatus = [
     {
         name: 'Fatigue',
         description: 'Cannot use action until next turn.',
         duration: 1,
     },
     {
-        name: 'Burn',
+        name: 'Hidden',
+        description: 'Card is placed faced down.',
+    },
+    {
+        name: 'Burned',
         description: 'Takes 2 fire damage at the start of their turn for 3 turns.',
         duration: 3,
     }
