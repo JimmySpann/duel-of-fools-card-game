@@ -65,6 +65,9 @@ const CardLayout = ({ cards }) => {
                     />
                 </div>
             ))}
+            {(cards.length === 0) && (
+                <div className="no-battlers-card">No Battlers In Play</div>
+            )}
 
             {selectedCardIndex !== null &&
                 <SelectedCard

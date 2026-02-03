@@ -8,6 +8,18 @@
     margin-top: 12px;
 }
 
+.no-battlers-card {
+    width: 180px;
+    height: 80px;
+    border-radius: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: gray;
+    font-size: large;
+    font-weight: 500
+}
+
 .card-game-card {
     zoom: 0.4;
     transition: 1s;
