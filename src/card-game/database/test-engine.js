@@ -12,7 +12,7 @@ const testMatch = {
             health: 20,
             maxHealth: 20,
             image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkvhuZArGVn0gVclSuYnQfGMgzbQoVhczNFg&s',
-            hand: [],
+            hand: randomizeArray([...cards]).slice(0, 5),
             deck: [],
             discardPile: [],
             inPlay: randomizeArray([...cards]).slice(0, 8),
@@ -41,6 +41,7 @@ const testMatch = {
     ],
     turnOrder: [],
     currentTurn: 0,
+    currentUserId: 'player1'
 }
 
 export default testMatch

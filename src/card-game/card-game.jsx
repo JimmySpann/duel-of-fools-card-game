@@ -27,7 +27,7 @@ const CardGame = () => {
                     </div>
                 )
             })}
-            <Hand />
+            <Hand _hand={testEngine.players[0].hand} />
         </div >
     );
 };

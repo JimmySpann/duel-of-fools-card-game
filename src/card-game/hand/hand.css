@@ -3,26 +3,20 @@
 }
 
 #hand {
-    width: 60%;
+    /* width: 60%; */
     position: relative;
     height: calc(5px * var(--cardmult));
-    left: 20%;
-    top: 15%;
+    /* left: 20%;
+    top: 15%; */
     /* Lowered slightly to give hover room */
 }
 
 .card {
-    width: calc(2.5px * var(--cardmult));
-    height: calc(3.5px * var(--cardmult));
     position: absolute;
-    background-color: white;
-    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-    border: 1px solid #ddd;
 
     /* Use the variables from React */
     bottom: var(--bottom-base);
-    transform: rotate(var(--rot));
+    transform: rotate(var(--rot)) scale(.5);
 
     /* The Secret Sauce: Rotation Point */
     transform-origin: bottom center;
@@ -46,11 +40,8 @@
 .card:hover {
     /* Lift the card: -30px up, keep the rotation, and scale up slightly */
     bottom: calc(var(--bottom-base) + 40px) !important;
-    transform: rotate(var(--rot)) scale(1.1);
+    transform: rotate(var(--rot)) scale(.6);
     z-index: 100 !important;
-    /* Always bring hovered card to front */
-    box-shadow: 0px 20px 30px rgba(0, 0, 0, 0.3);
-    background-color: #fff;
 }
 
 .card .value {

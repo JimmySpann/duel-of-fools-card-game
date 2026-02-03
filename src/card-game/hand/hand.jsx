@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Card from '../card/card';
 import './hand.css';
 
 // Constants from your original code
@@ -11,9 +12,9 @@ const DIFF = 0.1;
 const MULTI = 1.6;
 const CARD_WIDTH = 200; // 2.5 * 80
 
-const Hand = () => {
+const Hand = ({ _hand }) => {
     const [deck, setDeck] = useState([]);
-    const [hand, setHand] = useState([]);
+    const [hand, setHand] = useState(_hand);
     const handRef = useRef(null);
 
     // Initialize deck on mount
@@ -91,11 +92,11 @@ const Hand = () => {
     };
 
     return (
-        <div className="container">
+        <div className="hand-container">
             <button className="add-btn" onClick={addCard}>Add Card</button>
 
             <div id="hand" ref={handRef}>
-                {hand.map((card, index) => {
+                {_hand.map((card, index) => {
                     const isRed = card.suit === "hearts" || card.suit === "diamonds";
                     return (
                         <div
@@ -103,10 +104,10 @@ const Hand = () => {
                             className={`card ${isRed ? 'red' : 'black'}`}
                             style={calculateCardStyle(index)}
                         >
-                            <span className="value">{card.value}</span>
-                            <span className="suit">{card.suit === 'spades' ? '♠' :
-                                card.suit === 'hearts' ? '♥' :
-                                    card.suit === 'clubs' ? '♣' : '♦'}</span>
+                            <Card
+                                key={index}
+                                card={card}
+                            />
                         </div>
                     );
                 })}
