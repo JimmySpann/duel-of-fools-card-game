@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import Card from '../card/card.jsx';
-import SelectedCard from '../selected-card/selected-card.jsx';
-import './card-layout.css'
+import Card from '../../card-layouts/full-card/full-card.jsx';
+import SelectedCard from '../../selected-card/selected-card.jsx';
+import './board.css'
 
 const CardLayout = ({ cards }) => {
     const [hoveredCardIndex, setHoveredCardIndex] = useState(null);
@@ -49,7 +49,7 @@ const CardLayout = ({ cards }) => {
 
 
     return (
-        <div className="card-layout">
+        <div className="board">
             {cards.map((card, index) => (
                 <div
                     className={`card-game-card ${hoveredCardIndex === index ? 'card-hover' : ''}`}

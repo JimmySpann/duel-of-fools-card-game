@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Card from "../card/card";
+import Card from "../card-layouts/full-card/full-card";
 import './selected-card.css'
 
 const SelectedCard = ({ card, onFlipClick, onCloseClick }) => {
