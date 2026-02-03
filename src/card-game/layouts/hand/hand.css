@@ -2,6 +2,10 @@
     --cardmult: 80;
 }
 
+.hand-container {
+    width: 100%;
+}
+
 #hand {
     /* width: 60%; */
     position: relative;
@@ -43,18 +47,4 @@
     font-size: 32px;
     line-height: 1;
     color: #333;
-}
-
-.card.red {
-    color: #d12d36;
-}
-
-.card.black {
-    color: #222;
-}
-
-.card .suit {
-    font-size: 40px;
-    align-self: center;
-    margin-top: 10px;
 }

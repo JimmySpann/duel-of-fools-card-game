@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Card from '../../card-layouts/full-card/full-card';
 import './hand.css';
 
@@ -84,7 +84,7 @@ const Hand = ({ _hand }) => {
         const bottomBase = (ypos / K_VAL) * (handRef.current.offsetHeight / 4);
 
         return {
-            left: `${left - 105}px`,
+            left: `${left - 120}px`,
             "--bottom-base": `${bottomBase}px`,
             "--rot": `${rot}deg`,
             zIndex: index
@@ -93,15 +93,12 @@ const Hand = ({ _hand }) => {
 
     return (
         <div className="hand-container">
-            <button className="add-btn" onClick={addCard}>Add Card</button>
-
             <div id="hand" ref={handRef}>
                 {_hand.map((card, index) => {
-                    const isRed = card.suit === "hearts" || card.suit === "diamonds";
                     return (
                         <div
                             key={card.id}
-                            className={`card ${isRed ? 'red' : 'black'}`}
+                            className='card'
                             style={calculateCardStyle(index)}
                         >
                             <Card
