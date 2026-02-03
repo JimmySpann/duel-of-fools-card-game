@@ -5,6 +5,7 @@ import Header from './header/header.jsx';
 import CardLayout from './card-layout/card-layout.jsx';
 import PlayerHUD from './player-hud/player-hud.jsx';
 import SelectedCard from './selected-card/selected-card.jsx';
+import Hand from './hand/hand.jsx'
 import './card-game.css'; // Assume your styles are here
 
 const CardGame = () => {
@@ -22,9 +23,11 @@ const CardGame = () => {
                         <CardLayout
                             cards={player.inPlay}
                         />
+
                     </div>
                 )
             })}
+            <Hand />
         </div >
     );
 };

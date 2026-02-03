@@ -1,0 +1,76 @@
+:root {
+    --cardmult: 80;
+}
+
+#hand {
+    width: 60%;
+    position: relative;
+    height: calc(5px * var(--cardmult));
+    left: 20%;
+    top: 15%;
+    /* Lowered slightly to give hover room */
+}
+
+.card {
+    width: calc(2.5px * var(--cardmult));
+    height: calc(3.5px * var(--cardmult));
+    position: absolute;
+    background-color: white;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    border: 1px solid #ddd;
+
+    /* Use the variables from React */
+    bottom: var(--bottom-base);
+    transform: rotate(var(--rot));
+
+    /* The Secret Sauce: Rotation Point */
+    transform-origin: bottom center;
+
+    /* Transitions: make sure transform is included */
+    transition:
+        left 0.5s ease,
+        bottom 0.5s ease,
+        transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 0.3s ease;
+
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+/* Hover Effect */
+.card:hover {
+    /* Lift the card: -30px up, keep the rotation, and scale up slightly */
+    bottom: calc(var(--bottom-base) + 40px) !important;
+    transform: rotate(var(--rot)) scale(1.1);
+    z-index: 100 !important;
+    /* Always bring hovered card to front */
+    box-shadow: 0px 20px 30px rgba(0, 0, 0, 0.3);
+    background-color: #fff;
+}
+
+.card .value {
+    font-weight: 900;
+    font-size: 32px;
+    line-height: 1;
+    color: #333;
+}
+
+.card.red {
+    color: #d12d36;
+}
+
+.card.black {
+    color: #222;
+}
+
+.card .suit {
+    font-size: 40px;
+    /* Make the symbol big and clear */
+    align-self: center;
+    margin-top: 10px;
+}
