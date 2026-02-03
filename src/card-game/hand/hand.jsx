@@ -84,7 +84,7 @@ const Hand = ({ _hand }) => {
         const bottomBase = (ypos / K_VAL) * (handRef.current.offsetHeight / 4);
 
         return {
-            left: `${left}px`,
+            left: `${left - 105}px`,
             "--bottom-base": `${bottomBase}px`,
             "--rot": `${rot}deg`,
             zIndex: index
