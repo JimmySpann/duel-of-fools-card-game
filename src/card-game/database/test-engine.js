@@ -25,16 +25,32 @@ const testMatch = {
         {
             id: 'player2',
             name: 'Player 2',
-            health: 20,
+            health: 10,
             maxHealth: 20,
             image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQG_JPg5gekN_ku7sulubGGBbruuECU22Bc4Q&s',
             hand: [],
             deck: [],
             discardPile: [],
-            inPlay: randomizeArray([...cards]).slice(0, 8),
+            inPlay: randomizeArray([...cards]).slice(0, 4),
             elements: {
                 air: 3,
                 electric: 3,
+            },
+            statusEffects: []
+        },
+        {
+            id: 'player3',
+            name: 'Player 3',
+            health: 10,
+            maxHealth: 60,
+            image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQG_JPg5gekN_ku7sulubGGBbruuECU22Bc4Q&s',
+            hand: [],
+            deck: [],
+            discardPile: [],
+            inPlay: [],
+            elements: {
+                air: 3,
+                electric: 10,
             },
             statusEffects: []
         }
