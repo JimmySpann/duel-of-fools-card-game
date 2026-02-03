@@ -42,13 +42,13 @@ const cards = [
         image: 'https://wallpapercave.com/wp/wp9171441.jpg',
         description: 'A living furnace that protects the front lines.',
         passives: [
-            { name: 'Thorns of Flame', effect: '2 DMG to melee attackers', description: 'Hurts to touch.' },
-            { name: 'Inner Heat', effect: 'Immunity: Freeze', description: 'The fire within never goes out.' }
+            { name: 'Thorns of Flame', effect: '2 DMG to melee attackers', description: 'Hurts to touch.', type: 'fire' },
+            { name: 'Inner Heat', effect: 'Immunity: Freeze', description: 'The fire within never goes out.', type: 'fire' }
         ],
         actions: [
-            { name: 'Searing Lash', actionInfo: 'Normal Attack', description: 'Attacks and applies burn', limit: 10, usesRemaining: 10 },
-            { name: 'Wall of Fire', actionInfo: 'Damage Reduction 50%', description: 'Reduces incoming damage by 50% for 1 turn', limit: 10, usesRemaining: 10 },
-            { name: 'Supernova', actionInfo: 'Massive DMG / Self-Destruct', description: 'Deals massive damage but kills user', limit: 1, usesRemaining: 1 }
+            { name: 'Searing Lash', actionInfo: 'Normal Attack', description: 'Attacks and applies burn', limit: 10, usesRemaining: 10, type: 'fire' },
+            { name: 'Wall of Fire', actionInfo: 'Damage Reduction 50%', description: 'Reduces incoming damage by 50% for 1 turn', limit: 10, usesRemaining: 10, type: 'fire' },
+            { name: 'Supernova', actionInfo: 'Massive DMG / Self-Destruct', description: 'Deals massive damage but kills user', limit: 1, usesRemaining: 1, type: 'fire' }
         ],
         defense: 10, agility: 3, attack: 5, evasion: 2, health: 15
     },

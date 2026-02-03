@@ -145,6 +145,11 @@
     overflow-y: auto;
 }
 
+.card-passive-ability {
+    display: flex;
+    justify-content: space-between;
+}
+
 .card-action-ability {
     margin-bottom: 3px;
     background: oklch(71.851% 0.03365 78.039);
@@ -152,7 +157,10 @@
     padding: 1px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out
+    transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
+
+    display: flex;
+    justify-content: space-between;
 }
 
 .card-action-ability:hover {
@@ -176,6 +184,13 @@
 
 .ability-description {
     font-style: italic;
+}
+
+.ability-card-right-side {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
 }
 
 .card-action {

@@ -10,29 +10,29 @@ import waterIcon from '../../assets/elements/water-icon.png';
 import deathIcon from '../../assets/elements/death-icon.png';
 
 import './card.css';
+const getElementIcon = (element) => {
+    switch (element) {
+        case 'fire':
+            return fireIcon;
+        case 'ice':
+            return iceIcon;
+        case 'earth':
+            return earthIcon;
+        case 'air':
+            return airIcon;
+        case 'electric':
+            return electricIcon;
+        case 'water':
+            return waterIcon;
+        case 'death':
+            return deathIcon;
+        // Add cases for other elements like earth, air, etc.
+        default:
+            return null;
+    }
+};
 
 const CardHeader = ({ type, elements }) => {
-    const getElementIcon = (element) => {
-        switch (element) {
-            case 'fire':
-                return fireIcon;
-            case 'ice':
-                return iceIcon;
-            case 'earth':
-                return earthIcon;
-            case 'air':
-                return airIcon;
-            case 'electric':
-                return electricIcon;
-            case 'water':
-                return waterIcon;
-            case 'death':
-                return deathIcon;
-            // Add cases for other elements like earth, air, etc.
-            default:
-                return null;
-        }
-    };
 
     const processElements = () => {
         let elementArray = [];
@@ -98,11 +98,21 @@ const Card = ({
                                 key={index}
                                 className="card-passive-ability"
                             >
-                                <div className="ability-first-row">
-                                    <div className="ability-name">{passive.name}</div>
-                                    <div className="ability-effect">{passive.effect}</div>
+                                <div>
+                                    <div className="ability-first-row">
+                                        <div className="ability-name">{passive.name}</div>
+                                        <div className="ability-effect">{passive.effect}</div>
+                                    </div>
+                                    <div className="ability-description">{passive.description}</div>
                                 </div>
-                                <div className="ability-description">{passive.description}</div>
+                                <div className="ability-card-right-side">
+                                    {passive.type && <div className="card-elements-icon" style={{ textAlign: 'right' }}>
+                                        <img src={getElementIcon(passive.type)} className="card-elements-icon-image" />
+                                    </div>}
+                                    {passive.limit &&
+                                        <div style={{ padding: '2px 2px 0 0' }}>{passive.usesRemaining}/{passive.limit}</div>
+                                    }
+                                </div>
                             </div>
                         ))}
                     </div>}
@@ -113,11 +123,19 @@ const Card = ({
                                 key={index}
                                 className="card-action-ability"
                             >
-                                <div className="ability-first-row">
-                                    <div className="ability-name">{action.name}</div>
-                                    <div className="ability-effect">{action.actionInfo}</div>
+                                <div>
+                                    <div className="ability-first-row">
+                                        <div className="ability-name">{action.name}</div>
+                                        <div className="ability-effect">{action.actionInfo}</div>
+                                    </div>
+                                    <div className="ability-description">{action.description}</div>
                                 </div>
-                                <div className="ability-description">{action.description}</div>
+                                <div className="ability-card-right-side">
+                                    {action.type && <div className="card-elements-icon" style={{ textAlign: 'right' }}>
+                                        <img src={getElementIcon(action.type)} className="card-elements-icon-image" />
+                                    </div>}
+                                    <div style={{ padding: '2px 2px 0 0' }}>{action.usesRemaining}/{action.limit}</div>
+                                </div>
                             </div>
                         ))}
                     </div>}
