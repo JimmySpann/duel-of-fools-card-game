@@ -1,19 +1,22 @@
 import testEngine from './database/test-engine.js';
 import Header from './components/header/header.jsx';
 import EnemyLayout from './components/layouts/enemy-layout/enemy-layout.jsx';
-import Hand from './components/hand/hand.jsx'
+import UserLayout from './components/layouts/user-layout/user-layout.jsx';
 import './card-game.css'; // Assume your styles are here
 
-const CardGame = () => {
+const CardGame = ({ currentUserId = 'player1' }) => {
+    const enemies = testEngine.players.filter(player => player.id !== currentUserId)
+    const user = testEngine.players.find(player => player.id === currentUserId)
     return (
         <div className="card-game-container">
             <Header />
 
-            {testEngine.players.map(player =>
-                <EnemyLayout player={player} />
+            {enemies.map(enemy =>
+                <EnemyLayout player={enemy} />
             )}
 
-            <Hand _hand={testEngine.players[0].hand} />
+            <UserLayout player={user} />
+
         </div >
     );
 };

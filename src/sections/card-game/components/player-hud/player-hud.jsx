@@ -10,7 +10,7 @@ import waterIcon from '../../../../assets/elements/water-icon.png';
 import deathIcon from '../../../../assets/elements/death-icon.png';
 
 
-const PlayerHUD = ({ player }) => {
+const PlayerHUD = ({ player, isCurrentUser }) => {
     const [health, setHealth] = useState(player.health);
 
     const getBarStyles = () => {
@@ -87,7 +87,7 @@ const PlayerHUD = ({ player }) => {
                     display: 'flex',
                     justifyContent: 'space-between'
                 }}>
-                    <div className="name">{player.name}</div>
+                    <div className="name">{player.name}  {isCurrentUser ? '(You)' : ''}</div>
                     <div className="health">HP {player.health}/{player.maxHealth}</div>
                 </div>
             </div>
