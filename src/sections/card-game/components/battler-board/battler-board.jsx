@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import MiniCard from '../card-layouts/mini-card/mini-card.jsx';
-import SelectedCard from '../selected-card/selected-card.jsx';
 import './battler-board.css'
 
-const CardLayout = ({ cards }) => {
+const CardLayout = ({ cards, onCardClick }) => {
     const [hoveredCardIndex, setHoveredCardIndex] = useState(null);
-    const [selectedCardIndex, setSelectedCardIndex] = useState(null);
     const [flippedCards, setFlippedCards] = useState({});
 
     const onFlipAllCards = () => {
@@ -19,32 +17,6 @@ const CardLayout = ({ cards }) => {
             });
             setFlippedCards(newFlipped);
         }
-    }
-
-    const onCardClick = (index) => {
-        if (flippedCards[index] === true) {
-            setFlippedCards((prev) => ({
-                ...prev,
-                [index]: false,
-            }));
-        } else {
-            document.body.style.overflow = 'hidden'
-            setSelectedCardIndex(index);
-        }
-    }
-
-    const flipFromButton = () => {
-        setFlippedCards((prev) => ({
-            ...prev,
-            [selectedCardIndex]: true,
-        }));
-        document.body.style.overflow = 'auto';
-        setSelectedCardIndex(null);
-    }
-
-    const onCloseSelectedCard = () => {
-        document.body.style.overflow = 'auto';
-        setSelectedCardIndex(null);
     }
 
 
@@ -68,15 +40,6 @@ const CardLayout = ({ cards }) => {
             {(cards.length === 0) && (
                 <div className="no-battlers-card">No Battlers In Play</div>
             )}
-
-            {selectedCardIndex !== null &&
-                <SelectedCard
-                    index={selectedCardIndex}
-                    card={cards[selectedCardIndex]}
-                    onFlipClick={() => flipFromButton()}
-                    onCloseClick={() => onCloseSelectedCard()}
-                />
-            }
         </ div>
     );
 }

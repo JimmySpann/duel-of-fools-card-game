@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Card from "../../components/card-layouts/full-card/full-card";
 import './selected-card.css'
 
-const SelectedCard = ({ card, onFlipClick, onCloseClick }) => {
+const SelectedCard = ({ card, onCloseClick, buttons }) => {
     const [animationTriggers, setAnimationTriggers] = useState({});
 
     useEffect(() => {
@@ -37,10 +37,6 @@ const SelectedCard = ({ card, onFlipClick, onCloseClick }) => {
         handleCloseAnimation();
     }
 
-    const onFlip = () => {
-        onFlipClick()
-    }
-
     return (
         <div
             className={`selected-card-container ${animationTriggers.showCardContainer ? 'selected-card-container-show' : ''}`}
@@ -50,12 +46,14 @@ const SelectedCard = ({ card, onFlipClick, onCloseClick }) => {
                 <Card card={card} />
             </div>
             <div className={`selected-card-button-container ${animationTriggers.showButtons ? 'selected-card-button-container-show' : ''}`}>
-                <button
-                    className="selected-card-button"
-                    onClick={() => onClose()}
-                >
-                    Close
-                </button>
+                {buttons.map(({ name, onClick }) => (
+                    <button
+                        className="selected-card-button"
+                        onClick={() => onClick === 'close' ? onClose() : onClick()}
+                    >
+                        {name}
+                    </button>
+                ))}
             </div>
         </div>
     );
