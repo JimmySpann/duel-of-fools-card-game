@@ -1,19 +1,85 @@
 .header-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: black;
+    color: white;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    width: 100%;
     display: flex;
-    align-items: center;
+    justify-content: space-between;
     border-bottom: 2px solid white;
-    margin-bottom: 10px;
+    padding: 10px 0px 15px 0px;
+
 }
 
 .header-title {
+    color: rgb(187, 16, 187) !important;
+    margin-left: 10px;
+    font-size: 20px;
+    font-weight: bold;
+    margin: 5px 0px 0px 10px;
+}
+
+.player-container {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: -1;
+}
+
+.player-buttons-container {
+    margin-bottom: 5px;
+}
+
+.player-button {
+    height: 35px;
+    width: 60px;
+    border-radius: 30px;
+    margin-left: 3px;
+    font-weight: 600;
+    background-color: rgb(125, 33, 164);
+    cursor: pointer;
+}
+
+.player-card-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.player-name-card {
+    background-color: purple;
+    min-width: 300px;
+    max-width: 500px;
+    text-align: center;
+    border-radius: 20px;
+    height: 30px;
+}
+
+.player-name-title {
     color: white !important;
     margin-left: 10px;
     font-size: 20px;
     font-weight: bold;
+    margin: 0px 0px 0px 0px;
 }
 
-.button {
-    margin: 0px 0px 0px 20px;
-    height: 40px;
+.account-buttons-container {
+    margin-right: 15px;
+}
+
+.account-button {
+    margin-left: 5px;
+    border-radius: 10px;
+    padding: 3px 6px 3px 6px;
+    background-color: rgb(145, 60, 145);
     cursor: pointer;
 }
