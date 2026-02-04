@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import './player-hud.css';
 
-import fireIcon from '../../assets/elements/fire-icon.png';
-import iceIcon from '../../assets/elements/ice-icon.png';
-import earthIcon from '../../assets/elements/earth-icon.png';
-import airIcon from '../../assets/elements/air-icon.png';
-import electricIcon from '../../assets/elements/lightning-icon.png';
-import waterIcon from '../../assets/elements/water-icon.png';
-import deathIcon from '../../assets/elements/death-icon.png';
+import fireIcon from '../../../../assets/elements/fire-icon.png';
+import iceIcon from '../../../../assets/elements/ice-icon.png';
+import earthIcon from '../../../../assets/elements/earth-icon.png';
+import airIcon from '../../../../assets/elements/air-icon.png';
+import electricIcon from '../../../../assets/elements/lightning-icon.png';
+import waterIcon from '../../../../assets/elements/water-icon.png';
+import deathIcon from '../../../../assets/elements/death-icon.png';
 
 
 const PlayerHUD = ({ player }) => {

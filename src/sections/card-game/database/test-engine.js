@@ -55,9 +55,9 @@ const testMatch = {
             statusEffects: []
         }
     ],
-    turnOrder: [],
-    currentTurn: 0,
-    currentUserId: 'player1'
+    turnOrder: ['player1', 'player2', 'player3'],
+    currentTurn: 'player3',
+    currentUserId: 'player3'
 }
 
 export default testMatch

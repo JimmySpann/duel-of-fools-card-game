@@ -1,4 +1,4 @@
-import CardGame from './card-game/card-game.jsx';
+import CardGame from './sections/card-game/card-game.jsx';
 import './App.css';
 
 function App() {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import MiniCard from '../../card-layouts/mini-card/mini-card.jsx';
-import SelectedCard from '../../selected-card/selected-card.jsx';
-import './board.css'
+import MiniCard from '../card-layouts/mini-card/mini-card.jsx';
+import SelectedCard from '../selected-card/selected-card.jsx';
+import './battler-board.css'
 
 const CardLayout = ({ cards }) => {
     const [hoveredCardIndex, setHoveredCardIndex] = useState(null);

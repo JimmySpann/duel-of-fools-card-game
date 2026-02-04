@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Card from "../card-layouts/full-card/full-card";
+import Card from "../../components/card-layouts/full-card/full-card";
 import './selected-card.css'
 
 const SelectedCard = ({ card, onFlipClick, onCloseClick }) => {
@@ -50,12 +50,6 @@ const SelectedCard = ({ card, onFlipClick, onCloseClick }) => {
                 <Card card={card} />
             </div>
             <div className={`selected-card-button-container ${animationTriggers.showButtons ? 'selected-card-button-container-show' : ''}`}>
-                <button
-                    className="selected-card-button"
-                    onClick={() => onFlip()}
-                >
-                    Flip
-                </button>
                 <button
                     className="selected-card-button"
                     onClick={() => onClose()}

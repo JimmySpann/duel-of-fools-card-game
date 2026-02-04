@@ -23,6 +23,7 @@
 .card-game-card {
     zoom: 0.4;
     transition: 1s;
+    cursor: pointer;
 }
 
 .card-hover {

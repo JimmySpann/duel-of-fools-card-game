@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import Card from '../../card-layouts/full-card/full-card';
+import Card from '../../components/card-layouts/full-card/full-card';
 import './hand.css';
 
 // Constants from your original code
