@@ -97,7 +97,7 @@ const Card = ({
                     </div>
                     <div className='mini-card-health-container'>
                         <div className="mini-health-circle">
-                            {card.health}/{card.health}
+                            {card.currentHealth ?? card.health}/{card.health}
                             <div className="mini-health-text">HP</div>
                         </div>
                     </div>

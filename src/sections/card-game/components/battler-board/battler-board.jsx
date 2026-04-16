@@ -2,7 +2,7 @@ import { useState } from 'react';
 import MiniCard from '../card-layouts/mini-card/mini-card.jsx';
 import './battler-board.css'
 
-const CardLayout = ({ cards, onCardClick }) => {
+const CardLayout = ({ cards, onCardClick, highlight }) => {
     const [hoveredCardIndex, setHoveredCardIndex] = useState(null);
     const [flippedCards, setFlippedCards] = useState({});
 
@@ -21,7 +21,7 @@ const CardLayout = ({ cards, onCardClick }) => {
 
 
     return (
-        <div className="board">
+        <div className={`board${highlight ? ' board-targetable' : ''}`}>
             {cards.map((card, index) => (
                 <div
                     className={`card-game-card ${hoveredCardIndex === index ? 'card-hover' : ''}`}

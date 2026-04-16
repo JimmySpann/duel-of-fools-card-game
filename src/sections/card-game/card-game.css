@@ -5,3 +5,176 @@ body {
 .card-game-container {
     margin-top: 130px;
 }
+
+/* Turn controls */
+.turn-controls {
+    display: flex;
+    justify-content: center;
+    margin: 12px 0 8px;
+}
+
+.turn-btn {
+    padding: 10px 28px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.end-turn-btn {
+    background: #2a6fdb;
+    color: white;
+    box-shadow: 0 0 12px rgba(42, 111, 219, 0.7);
+}
+
+.end-turn-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(42, 111, 219, 1);
+}
+
+.cancel-btn {
+    background: #c0392b;
+    color: white;
+    box-shadow: 0 0 12px rgba(192, 57, 43, 0.7);
+}
+
+.cancel-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(192, 57, 43, 1);
+}
+
+/* Targetable board highlight */
+.board-targetable {
+    outline: 3px solid #e74c3c;
+    outline-offset: 4px;
+    border-radius: 8px;
+    animation: pulse-target 1s infinite alternate;
+}
+
+@keyframes pulse-target {
+    from {
+        outline-color: #e74c3c;
+    }
+
+    to {
+        outline-color: #ff8c00;
+    }
+}
+
+.board-targetable .card-game-card {
+    cursor: crosshair !important;
+}
+
+/* Direct attack button */
+.direct-attack-container {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0;
+}
+
+.direct-attack-btn {
+    background: #8e44ad;
+    box-shadow: 0 0 12px rgba(142, 68, 173, 0.7);
+    animation: pulse-attack 1s infinite alternate;
+}
+
+.direct-attack-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 24px rgba(142, 68, 173, 1);
+}
+
+@keyframes pulse-attack {
+    from {
+        box-shadow: 0 0 12px rgba(142, 68, 173, 0.6);
+    }
+
+    to {
+        box-shadow: 0 0 24px rgba(142, 68, 173, 1);
+    }
+}
+
+/* Battle log */
+.battle-log {
+    margin: 20px auto;
+    width: 90%;
+    max-width: 600px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #ccc;
+    font-size: 13px;
+}
+
+.battle-log-title {
+    font-weight: 700;
+    color: white;
+    margin-bottom: 8px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.battle-log-entry {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.battle-log-entry:last-child {
+    border-bottom: none;
+}
+
+/* Phase subtitle in header */
+.phase-subtitle {
+    color: #e74c3c;
+    font-size: 13px;
+    margin: 2px 0 0;
+    font-weight: 600;
+    animation: pulse-text 0.8s infinite alternate;
+}
+
+@keyframes pulse-text {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0.5;
+    }
+}
+
+/* Game over screen */
+.game-over-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 70vh;
+    gap: 24px;
+}
+
+.game-over-title {
+    color: gold;
+    font-size: 56px;
+    text-shadow: 0 0 30px gold;
+    margin: 0;
+}
+
+.game-over-btn {
+    padding: 14px 40px;
+    border-radius: 14px;
+    border: none;
+    font-size: 20px;
+    font-weight: 700;
+    background: #2a6fdb;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(42, 111, 219, 0.8);
+    transition: transform 0.15s;
+}
+
+.game-over-btn:hover {
+    transform: scale(1.08);
+}

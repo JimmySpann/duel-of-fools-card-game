@@ -12,7 +12,7 @@ const DIFF = 0.1;
 const MULTI = 1.6;
 const CARD_WIDTH = 200; // 2.5 * 80
 
-const Hand = ({ _hand }) => {
+const Hand = ({ _hand, onCardClick }) => {
     const [deck, setDeck] = useState([]);
     const [hand, setHand] = useState(_hand);
     const handRef = useRef(null);
@@ -100,6 +100,7 @@ const Hand = ({ _hand }) => {
                             key={card.id}
                             className='card'
                             style={calculateCardStyle(index)}
+                            onClick={() => onCardClick && onCardClick(index)}
                         >
                             <Card
                                 key={index}

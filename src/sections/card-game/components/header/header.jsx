@@ -1,6 +1,6 @@
 import './header.css'
 
-const Header = ({ }) => {
+const Header = ({ currentPlayerName, phase }) => {
 
     return (
         <div className="header-container">
@@ -15,13 +15,15 @@ const Header = ({ }) => {
                 <div className="player-buttons-container">
                     <button className="player-button">Brief</button>
                     <button className="player-button">Chat</button>
-                    <button className="player-button">Hand</button>
                 </div>
                 <div className="player-card-container">
                     <div className="player-name-card">
                         <h2 className="player-name-title">
-                            Your Turn
+                            {currentPlayerName}'s Turn
                         </h2>
+                        {phase === 'selectingTarget' && (
+                            <p className="phase-subtitle">Select a target to attack</p>
+                        )}
                     </div>
                 </div>
             </div>

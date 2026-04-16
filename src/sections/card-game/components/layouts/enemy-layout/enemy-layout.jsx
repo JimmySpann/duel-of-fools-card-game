@@ -1,44 +1,52 @@
 import { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import BattlerBoard from '../../battler-board/battler-board.jsx';
 import PlayerHUD from '../../player-hud/player-hud.jsx';
 import SelectedCard from '../../selected-card/selected-card.jsx';
+import { attackCard } from '../../../database/cardGameSlice';
 
-
-const EnemyLayout = ({ player }) => {
+const EnemyLayout = ({ player, isTargetable, canDirectAttack, onDirectAttack }) => {
+    const dispatch = useDispatch();
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
 
     const onCardClick = (index) => {
-        document.body.style.overflow = 'hidden'
-        setSelectedCardIndex(index);
-    }
+        if (isTargetable) {
+            dispatch(attackCard({ targetCardIndex: index }));
+        } else {
+            document.body.style.overflow = 'hidden';
+            setSelectedCardIndex(index);
+        }
+    };
+
     const handleSelectionCardClose = () => {
         document.body.style.overflow = 'auto';
         setSelectedCardIndex(null);
-    }
+    };
 
     return (
         <div>
-            <PlayerHUD
-                player={player}
-            />
-
+            <PlayerHUD player={player} />
             <BattlerBoard
                 cards={player.inPlay}
                 onCardClick={onCardClick}
+                highlight={isTargetable}
             />
-
-            {selectedCardIndex !== null &&
+            {canDirectAttack && (
+                <div className="direct-attack-container">
+                    <button className="turn-btn direct-attack-btn" onClick={onDirectAttack}>
+                        Direct Attack!
+                    </button>
+                </div>
+            )}
+            {selectedCardIndex !== null && !isTargetable && (
                 <SelectedCard
-                    index={selectedCardIndex}
                     card={player.inPlay[selectedCardIndex]}
                     onCloseClick={handleSelectionCardClose}
-                    buttons={[
-                        { name: 'Close', onClick: "close" }
-                    ]}
+                    buttons={[{ name: 'Close', onClick: 'close' }]}
                 />
-            }
+            )}
         </div>
-    )
-}
+    );
+};
 
 export default EnemyLayout;
