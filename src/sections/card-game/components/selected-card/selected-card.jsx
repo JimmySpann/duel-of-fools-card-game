@@ -46,10 +46,16 @@ const SelectedCard = ({ card, onCloseClick, buttons }) => {
                 <Card card={card} />
             </div>
             <div className={`selected-card-button-container ${animationTriggers.showButtons ? 'selected-card-button-container-show' : ''}`}>
-                {buttons.map(({ name, onClick }) => (
+                {buttons.map(({ name, onClick, disabled }, i) => (
                     <button
-                        className="selected-card-button"
-                        onClick={() => onClick === 'close' ? onClose() : onClick()}
+                        key={i}
+                        className={`selected-card-button${disabled ? ' selected-card-button-disabled' : ''}`}
+                        disabled={!!disabled}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (disabled) return;
+                            onClick === 'close' ? onClose() : onClick();
+                        }}
                     >
                         {name}
                     </button>

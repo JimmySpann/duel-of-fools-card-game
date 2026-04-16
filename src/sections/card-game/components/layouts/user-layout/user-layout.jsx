@@ -4,7 +4,7 @@ import PlayerHUD from '../../player-hud/player-hud.jsx';
 import BattlerBoard from '../../battler-board/battler-board.jsx';
 import Hand from '../../hand/hand.jsx';
 import SelectedCard from '../../selected-card/selected-card.jsx';
-import { selectAttacker, playCardFromHand } from '../../../database/cardGameSlice';
+import { selectAttacker, initiateAbility, resolveOnAllyCard, playCardFromHand } from '../../../database/cardGameSlice';
 
 const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
     const dispatch = useDispatch();
@@ -13,6 +13,11 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
 
     const onBattlerClick = (index) => {
         if (phase === 'selectingTarget') return;
+        // In ally-targeting phase, clicking own card selects it as target
+        if (phase === 'selectingAllyTarget') {
+            dispatch(resolveOnAllyCard({ targetCardIndex: index }));
+            return;
+        }
         document.body.style.overflow = 'hidden';
         setSelectedBattlerIndex(index);
     };
@@ -35,7 +40,12 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
 
     const handleAttack = () => {
         dispatch(selectAttacker(selectedBattlerIndex));
-        handleBattlerClose();
+        // modal closes via container click bubbling
+    };
+
+    const handleUseAbility = (abilityIndex) => {
+        dispatch(initiateAbility({ casterCardIndex: selectedBattlerIndex, abilityIndex }));
+        // modal closes via container click bubbling
     };
 
     const handlePlayCard = () => {
@@ -43,15 +53,37 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
         handleHandClose();
     };
 
+    // Build buttons for a selected battler card
+    const buildBattlerButtons = (card) => {
+        if (!card) return [];
+        const abilityButtons = (card.actions || []).map((action, idx) => ({
+            name: `${action.name} (${action.usesRemaining}/${action.limit})`,
+            onClick: () => handleUseAbility(idx),
+            disabled: action.usesRemaining <= 0,
+        }));
+        return [
+            { name: 'Attack', onClick: handleAttack },
+            ...abilityButtons,
+            { name: 'Close', onClick: 'close' },
+        ];
+    };
+
+    const isSelectingAlly = phase === 'selectingAllyTarget';
+    const isSelectingEnemy = phase === 'selectingTarget';
+
     return (
         <div>
             <PlayerHUD player={player} isCurrentUser={true} />
-            <BattlerBoard cards={player.inPlay} onCardClick={onBattlerClick} />
+            <BattlerBoard
+                cards={player.inPlay}
+                onCardClick={onBattlerClick}
+                highlight={isSelectingAlly ? 'ally' : false}
+            />
             <Hand _hand={player.hand} onCardClick={onHandCardClick} />
             <div className="turn-controls">
-                {phase === 'selectingTarget' ? (
+                {(isSelectingEnemy || isSelectingAlly) ? (
                     <button className="turn-btn cancel-btn" onClick={onCancelSelection}>
-                        Cancel Attack
+                        Cancel
                     </button>
                 ) : (
                     <button className="turn-btn end-turn-btn" onClick={onEndTurn}>
@@ -64,10 +96,7 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
                 <SelectedCard
                     card={player.inPlay[selectedBattlerIndex]}
                     onCloseClick={handleBattlerClose}
-                    buttons={[
-                        { name: 'Attack', onClick: handleAttack },
-                        { name: 'Close', onClick: 'close' },
-                    ]}
+                    buttons={buildBattlerButtons(player.inPlay[selectedBattlerIndex])}
                 />
             )}
             {selectedHandIndex !== null && phase === 'main' && (

@@ -21,7 +21,7 @@ const CardLayout = ({ cards, onCardClick, highlight }) => {
 
 
     return (
-        <div className={`board${highlight ? ' board-targetable' : ''}`}>
+        <div className={`board${highlight === true ? ' board-targetable' : highlight === 'ally' ? ' board-ally-targetable' : ''}`}>
             {cards.map((card, index) => (
                 <div
                     className={`card-game-card ${hoveredCardIndex === index ? 'card-hover' : ''}`}

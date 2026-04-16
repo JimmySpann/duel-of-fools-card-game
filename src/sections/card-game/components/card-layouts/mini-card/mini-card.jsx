@@ -1,6 +1,42 @@
-import React, { useState } from 'react';
-
+import React from 'react';
 import cardBack from '../../../../../assets/card-back.jpg';
+
+const STATUS_BADGE_CONFIG = {
+    burned: { label: 'BRN', bg: '#c0392b' },
+    frozen: { label: 'FRZ', bg: '#2980b9' },
+    invulnerable: { label: 'INV', bg: '#f39c12' },
+    invisible: { label: 'GHT', bg: '#7f8c8d' },
+    poisoned: { label: 'PSN', bg: '#27ae60' },
+    bleeding: { label: 'BLD', bg: '#922b21' },
+    focused: { label: 'FOC', bg: '#8e44ad' },
+    shielded: { label: 'SHD', bg: '#1abc9c' },
+    def_up: { label: '+DEF', bg: '#2ecc71' },
+    def_down: { label: '-DEF', bg: '#e74c3c' },
+    eva_up: { label: '+EVA', bg: '#3498db' },
+    damage_reduction: { label: '½DMG', bg: '#e67e22' },
+};
+
+const StatusBadges = ({ statusEffects }) => {
+    if (!statusEffects || statusEffects.length === 0) return null;
+    return (
+        <div className="status-badges">
+            {statusEffects.map((s, i) => {
+                const cfg = STATUS_BADGE_CONFIG[s.type];
+                if (!cfg) return null;
+                return (
+                    <span
+                        key={i}
+                        className="status-badge"
+                        style={{ backgroundColor: cfg.bg }}
+                        title={`${s.type}${s.duration !== 999 ? ` (${s.duration})` : ''}`}
+                    >
+                        {cfg.label}
+                    </span>
+                );
+            })}
+        </div>
+    );
+};
 import fireIcon from '../../../../../assets/elements/fire-icon.png';
 import iceIcon from '../../../../../assets/elements/ice-icon.png';
 import earthIcon from '../../../../../assets/elements/earth-icon.png';
@@ -104,6 +140,7 @@ const Card = ({
                 </div>
 
                 <div className="mini-card-footer">
+                    <StatusBadges statusEffects={card.statusEffects} />
                 </div>
             </div>
 
