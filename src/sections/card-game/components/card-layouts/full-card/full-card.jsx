@@ -70,7 +70,8 @@ const CardHeader = ({ type, elements }) => {
 
 const Card = ({
     card,
-    isFlipped
+    isFlipped,
+    onActionClick,
 }) => {
 
     return (
@@ -121,7 +122,11 @@ const Card = ({
                         {card.actions.map((action, index) => (
                             <div
                                 key={index}
-                                className="card-action-ability"
+                                className={`card-action-ability${action.usesRemaining <= 0 ? ' card-action-depleted' : ''}${onActionClick ? ' card-action-clickable' : ''}`}
+                                onClick={onActionClick && action.usesRemaining > 0
+                                    ? (e) => { e.stopPropagation(); onActionClick(index); }
+                                    : undefined
+                                }
                             >
                                 <div>
                                     <div className="ability-first-row">

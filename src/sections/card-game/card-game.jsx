@@ -1,5 +1,5 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { endTurn, resetGame, attackPlayer, cancelSelection } from './database/cardGameSlice';
+import { endTurn, resetGame, cancelSelection } from './database/cardGameSlice';
 import Header from './components/header/header.jsx';
 import EnemyLayout from './components/layouts/enemy-layout/enemy-layout.jsx';
 import UserLayout from './components/layouts/user-layout/user-layout.jsx';
@@ -35,8 +35,6 @@ const CardGame = () => {
             <EnemyLayout
                 player={otherPlayer}
                 isTargetable={phase === 'selectingTarget'}
-                canDirectAttack={phase === 'selectingTarget' && otherPlayer.inPlay.length === 0}
-                onDirectAttack={() => dispatch(attackPlayer())}
             />
             <UserLayout
                 player={currentPlayer}

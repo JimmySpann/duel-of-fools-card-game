@@ -170,6 +170,18 @@
     cursor: pointer;
 }
 
+.card-action-clickable:hover {
+    background: oklch(80% 0.08 145);
+    border-color: #2ecc71;
+}
+
+.card-action-depleted {
+    opacity: 0.35;
+    filter: grayscale(0.7);
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
 .ability-first-row {
     display: flex;
     flex-direction: row;

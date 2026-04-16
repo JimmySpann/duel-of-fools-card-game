@@ -1,5 +1,13 @@
 import React from 'react';
 import cardBack from '../../../../../assets/card-back.jpg';
+import fireIcon from '../../../../../assets/elements/fire-icon.png';
+import iceIcon from '../../../../../assets/elements/ice-icon.png';
+import earthIcon from '../../../../../assets/elements/earth-icon.png';
+import airIcon from '../../../../../assets/elements/air-icon.png';
+import electricIcon from '../../../../../assets/elements/lightning-icon.png';
+import waterIcon from '../../../../../assets/elements/water-icon.png';
+import deathIcon from '../../../../../assets/elements/death-icon.png';
+import './mini-card.css';
 
 const STATUS_BADGE_CONFIG = {
     burned: { label: 'BRN', bg: '#c0392b' },
@@ -37,15 +45,6 @@ const StatusBadges = ({ statusEffects }) => {
         </div>
     );
 };
-import fireIcon from '../../../../../assets/elements/fire-icon.png';
-import iceIcon from '../../../../../assets/elements/ice-icon.png';
-import earthIcon from '../../../../../assets/elements/earth-icon.png';
-import airIcon from '../../../../../assets/elements/air-icon.png';
-import electricIcon from '../../../../../assets/elements/lightning-icon.png';
-import waterIcon from '../../../../../assets/elements/water-icon.png';
-import deathIcon from '../../../../../assets/elements/death-icon.png';
-
-import './mini-card.css';
 
 const getElementIcon = (element) => {
     switch (element) {

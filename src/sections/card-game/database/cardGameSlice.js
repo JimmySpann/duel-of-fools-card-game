@@ -485,9 +485,22 @@ export const cardGameSlice = createSlice({
     selectAttacker: (state, action) => {
       if (state.phase !== 'main' || state.gameOver) return;
       const player = state.players.find((p) => p.id === state.currentTurn);
+      const enemy = state.players.find((p) => p.id !== state.currentTurn);
       const card = player?.inPlay[action.payload];
       if (!card) return;
       if (hasStatus(card, 'frozen')) { state.log.unshift(`${card.name} is Frozen and cannot act!`); return; }
+      // No enemy cards — attack the player directly
+      if (enemy.inPlay.length === 0) {
+        const damage = Math.max(1, card.attack || 5);
+        enemy.health = Math.max(0, enemy.health - damage);
+        state.log.unshift(`${card.name} attacks ${enemy.name} directly for ${damage} damage!`);
+        if (enemy.health <= 0) {
+          state.gameOver = true;
+          state.winner = player.id;
+          state.log.unshift(`${player.name} wins!`);
+        }
+        return;
+      }
       state.pendingAction = { isAbility: false, casterCardIndex: action.payload };
       state.phase = 'selectingTarget';
     },
@@ -508,10 +521,24 @@ export const cardGameSlice = createSlice({
       if (!ability || ability.usesRemaining <= 0) { state.log.unshift(`${ability?.name ?? 'Ability'} has no uses left!`); return; }
 
       const targetType = ABILITY_TARGETS[ability.name] ?? 'enemyCard';
+      const enemy = state.players.find((p) => p.id !== state.currentTurn);
 
       if (targetType === 'self' || targetType === 'allEnemies' || targetType === 'allAllies') {
         executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, null);
       } else if (targetType === 'enemyCard') {
+        // No enemy cards — hit the player directly instead
+        if (enemy.inPlay.length === 0) {
+          ability.usesRemaining -= 1;
+          const dmg = Math.max(1, (card.attack || 5));
+          enemy.health = Math.max(0, enemy.health - dmg);
+          state.log.unshift(`${card.name} uses ${ability.name} on ${enemy.name} directly for ${dmg} damage!`);
+          if (enemy.health <= 0) {
+            state.gameOver = true;
+            state.winner = player.id;
+            state.log.unshift(`${player.name} wins!`);
+          }
+          return;
+        }
         state.pendingAction = { isAbility: true, casterCardIndex, abilityIndex };
         state.phase = 'selectingTarget';
       } else if (targetType === 'allyCard') {

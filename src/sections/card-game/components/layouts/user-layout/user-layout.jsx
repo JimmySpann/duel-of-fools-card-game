@@ -53,20 +53,11 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
         handleHandClose();
     };
 
-    // Build buttons for a selected battler card
-    const buildBattlerButtons = (card) => {
-        if (!card) return [];
-        const abilityButtons = (card.actions || []).map((action, idx) => ({
-            name: `${action.name} (${action.usesRemaining}/${action.limit})`,
-            onClick: () => handleUseAbility(idx),
-            disabled: action.usesRemaining <= 0,
-        }));
-        return [
-            { name: 'Attack', onClick: handleAttack },
-            ...abilityButtons,
-            { name: 'Close', onClick: 'close' },
-        ];
-    };
+    // Build buttons for a selected battler card (Attack + Close only)
+    const buildBattlerButtons = () => [
+        { name: 'Attack', onClick: handleAttack },
+        { name: 'Close', onClick: 'close' },
+    ];
 
     const isSelectingAlly = phase === 'selectingAllyTarget';
     const isSelectingEnemy = phase === 'selectingTarget';
@@ -96,7 +87,10 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
                 <SelectedCard
                     card={player.inPlay[selectedBattlerIndex]}
                     onCloseClick={handleBattlerClose}
-                    buttons={buildBattlerButtons(player.inPlay[selectedBattlerIndex])}
+                    buttons={buildBattlerButtons()}
+                    onActionClick={(abilityIndex) => {
+                        handleUseAbility(abilityIndex);
+                    }}
                 />
             )}
             {selectedHandIndex !== null && phase === 'main' && (

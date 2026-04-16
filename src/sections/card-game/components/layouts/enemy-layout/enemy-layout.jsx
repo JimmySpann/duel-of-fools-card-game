@@ -5,7 +5,7 @@ import PlayerHUD from '../../player-hud/player-hud.jsx';
 import SelectedCard from '../../selected-card/selected-card.jsx';
 import { resolveOnEnemyCard } from '../../../database/cardGameSlice';
 
-const EnemyLayout = ({ player, isTargetable, canDirectAttack, onDirectAttack }) => {
+const EnemyLayout = ({ player, isTargetable }) => {
     const dispatch = useDispatch();
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
 
@@ -31,13 +31,6 @@ const EnemyLayout = ({ player, isTargetable, canDirectAttack, onDirectAttack }) 
                 onCardClick={onCardClick}
                 highlight={isTargetable}
             />
-            {canDirectAttack && (
-                <div className="direct-attack-container">
-                    <button className="turn-btn direct-attack-btn" onClick={onDirectAttack}>
-                        Direct Attack!
-                    </button>
-                </div>
-            )}
             {selectedCardIndex !== null && !isTargetable && (
                 <SelectedCard
                     card={player.inPlay[selectedCardIndex]}

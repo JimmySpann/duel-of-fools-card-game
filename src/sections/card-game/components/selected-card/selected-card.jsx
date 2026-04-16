@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Card from "../../components/card-layouts/full-card/full-card";
 import './selected-card.css'
 
-const SelectedCard = ({ card, onCloseClick, buttons }) => {
+const SelectedCard = ({ card, onCloseClick, buttons, onActionClick }) => {
     const [animationTriggers, setAnimationTriggers] = useState({});
 
     useEffect(() => {
@@ -43,7 +43,7 @@ const SelectedCard = ({ card, onCloseClick, buttons }) => {
             onClick={() => onClose()}
         >
             <div className={`selected-card ${animationTriggers.showCard ? 'selected-card-show' : ''}`} >
-                <Card card={card} />
+                <Card card={card} onActionClick={onActionClick} />
             </div>
             <div className={`selected-card-button-container ${animationTriggers.showButtons ? 'selected-card-button-container-show' : ''}`}>
                 {buttons.map(({ name, onClick, disabled }, i) => (
