@@ -22,14 +22,163 @@
 
 .card-game-card {
     zoom: 0.4;
-    transition: 1s;
+    transition: transform 0.3s, filter 0.3s;
     cursor: pointer;
+    position: relative;
 }
 
 .card-hover {
     transform: scale(1.1);
     z-index: 10;
 }
+
+/* ── Hit flash overlay ─────────────────────────────────────── */
+.card-anim-hit::after,
+.card-anim-defeat::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 15;
+    animation: hit-overlay 0.55s ease-out forwards;
+}
+
+.card-anim-hit::after {
+    background: rgba(255, 50, 50, 0.65);
+}
+
+.card-anim-defeat::after {
+    background: rgba(255, 0, 0, 0.85);
+    animation: defeat-overlay 0.9s ease-out forwards;
+}
+
+.card-anim-defeat {
+    animation: card-defeat 0.9s ease-out forwards;
+}
+
+/* ── Miss shake ────────────────────────────────────────────── */
+.card-anim-miss {
+    animation: card-shake 0.5s ease-out;
+}
+
+/* ── Floating damage number ────────────────────────────────── */
+.damage-float {
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 160px;
+    font-weight: 900;
+    color: #ff3333;
+    text-shadow: 0 0 30px rgba(255, 0, 0, 0.9), 3px 3px 0 #000, -1px -1px 0 #000;
+    pointer-events: none;
+    z-index: 20;
+    animation: float-damage 0.85s ease-out forwards;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.damage-float-miss,
+.damage-float-blocked {
+    font-size: 110px;
+    color: #aaaacc;
+    text-shadow: 0 0 20px rgba(180, 180, 255, 0.8), 2px 2px 0 #000;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────── */
+@keyframes float-damage {
+    0% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    20% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-60px) scale(1.35);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-200px) scale(0.8);
+    }
+}
+
+@keyframes hit-overlay {
+    0% {
+        opacity: 0;
+    }
+
+    15% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes defeat-overlay {
+    0% {
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    60% {
+        opacity: 0.7;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes card-defeat {
+    0% {
+        filter: brightness(1) grayscale(0);
+    }
+
+    15% {
+        filter: brightness(4) grayscale(0) drop-shadow(0 0 20px red);
+    }
+
+    60% {
+        filter: brightness(1.2) grayscale(0.6);
+    }
+
+    100% {
+        filter: brightness(0.4) grayscale(1);
+        opacity: 0.3;
+    }
+}
+
+@keyframes card-shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-20px) rotate(-2deg);
+    }
+
+    40% {
+        transform: translateX(20px) rotate(2deg);
+    }
+
+    60% {
+        transform: translateX(-12px) rotate(-1deg);
+    }
+
+    80% {
+        transform: translateX(12px) rotate(1deg);
+    }
+}
+
 
 
 /* Mobile styles */

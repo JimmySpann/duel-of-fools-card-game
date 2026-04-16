@@ -141,6 +141,12 @@ const Card = ({
                 <div className="mini-card-footer">
                     <StatusBadges statusEffects={card.statusEffects} />
                 </div>
+
+                {(card.acted || card.justPlayed) && (
+                    <div className={`card-exhausted-overlay${card.justPlayed ? ' card-not-ready' : ''}`}>
+                        {card.justPlayed ? 'NOT READY' : 'ACTED'}
+                    </div>
+                )}
             </div>
 
             <div className={`mini-card-back ${isFlipped ? 'rotateY-0' : ''}`}>

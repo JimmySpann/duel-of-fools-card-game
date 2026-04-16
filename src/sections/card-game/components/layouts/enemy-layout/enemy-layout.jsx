@@ -30,6 +30,7 @@ const EnemyLayout = ({ player, isTargetable }) => {
                 cards={player.inPlay}
                 onCardClick={onCardClick}
                 highlight={isTargetable}
+                playerId={player.id}
             />
             {selectedCardIndex !== null && !isTargetable && (
                 <SelectedCard

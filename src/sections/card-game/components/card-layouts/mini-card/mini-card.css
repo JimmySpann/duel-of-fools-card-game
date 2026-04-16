@@ -44,6 +44,31 @@
 
 .mini-card-front {
     background-color: oklch(39.22% 0.016 214.52);
+    position: relative;
+}
+
+/* ── Exhausted / not-ready overlay ───────────────────────── */
+.card-exhausted-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.58);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 52px;
+    font-weight: 900;
+    color: #888;
+    letter-spacing: 3px;
+    pointer-events: none;
+    z-index: 6;
+    transform: rotate(-20deg);
+    text-shadow: 1px 1px 3px #000;
+}
+
+.card-not-ready {
+    background: rgba(100, 70, 0, 0.55);
+    color: #ffc84a;
 }
 
 .mini-card-back {

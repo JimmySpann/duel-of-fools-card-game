@@ -40,12 +40,12 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
 
     const handleAttack = () => {
         dispatch(selectAttacker(selectedBattlerIndex));
-        // modal closes via container click bubbling
+        handleBattlerClose();
     };
 
     const handleUseAbility = (abilityIndex) => {
         dispatch(initiateAbility({ casterCardIndex: selectedBattlerIndex, abilityIndex }));
-        // modal closes via container click bubbling
+        handleBattlerClose();
     };
 
     const handlePlayCard = () => {
@@ -54,10 +54,14 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
     };
 
     // Build buttons for a selected battler card (Attack + Close only)
-    const buildBattlerButtons = () => [
-        { name: 'Attack', onClick: handleAttack },
-        { name: 'Close', onClick: 'close' },
-    ];
+    const buildBattlerButtons = () => {
+        const currentCard = player.inPlay[selectedBattlerIndex];
+        const isExhausted = !!(currentCard?.acted || currentCard?.justPlayed);
+        return [
+            { name: isExhausted ? (currentCard?.justPlayed ? 'Not Ready' : 'Already Acted') : 'Attack', onClick: handleAttack, disabled: isExhausted },
+            { name: 'Close', onClick: 'close' },
+        ];
+    };
 
     const isSelectingAlly = phase === 'selectingAllyTarget';
     const isSelectingEnemy = phase === 'selectingTarget';
@@ -69,6 +73,7 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
                 cards={player.inPlay}
                 onCardClick={onBattlerClick}
                 highlight={isSelectingAlly ? 'ally' : false}
+                playerId={player.id}
             />
             <Hand _hand={player.hand} onCardClick={onHandCardClick} />
             <div className="turn-controls">
@@ -89,6 +94,8 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
                     onCloseClick={handleBattlerClose}
                     buttons={buildBattlerButtons()}
                     onActionClick={(abilityIndex) => {
+                        const currentCard = player.inPlay[selectedBattlerIndex];
+                        if (currentCard?.acted || currentCard?.justPlayed) return;
                         handleUseAbility(abilityIndex);
                     }}
                 />
