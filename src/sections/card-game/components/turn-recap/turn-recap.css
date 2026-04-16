@@ -1,0 +1,232 @@
+/* ── Overlay ───────────────────────────────────────────────── */
+.recap-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: recap-fade-in 0.25s ease-out;
+}
+
+@keyframes recap-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* ── Modal ─────────────────────────────────────────────────── */
+.recap-modal {
+    background: linear-gradient(160deg, #1a1f2e 0%, #12161f 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 28px 32px 24px;
+    width: min(560px, 92vw);
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+    animation: recap-slide-up 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes recap-slide-up {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+.recap-header {
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.recap-title {
+    margin: 0 0 6px;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
+.recap-subtitle {
+    margin: 0;
+    color: #8899aa;
+    font-size: 0.9rem;
+}
+
+/* ── Summary stats row ─────────────────────────────────────── */
+.recap-summary-row {
+    display: flex;
+    justify-content: space-around;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 14px 8px;
+    margin-bottom: 20px;
+}
+
+.recap-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.recap-stat-value {
+    font-size: 1.7rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+}
+
+.recap-stat-damage {
+    color: #e74c3c;
+}
+
+.recap-stat-defeats {
+    color: #9b59b6;
+}
+
+.recap-stat-label {
+    font-size: 0.7rem;
+    color: #778899;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ── Events list ───────────────────────────────────────────── */
+.recap-events {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.recap-event {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    padding: 10px 14px;
+    border-left: 3px solid transparent;
+    opacity: 0;
+    animation: recap-event-in 0.35s ease-out forwards;
+}
+
+@keyframes recap-event-in {
+    from {
+        opacity: 0;
+        transform: translateX(-18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Type-specific left border colours */
+.recap-hit {
+    border-left-color: #e74c3c;
+}
+
+.recap-defeat {
+    border-left-color: #9b59b6;
+}
+
+.recap-miss {
+    border-left-color: #7f8c8d;
+}
+
+.recap-blocked {
+    border-left-color: #f39c12;
+}
+
+.recap-direct {
+    border-left-color: #e67e22;
+}
+
+.recap-dot {
+    border-left-color: #8e44ad;
+}
+
+.recap-event-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.recap-event-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.recap-event-msg {
+    font-size: 0.92rem;
+    color: #dce4ef;
+    line-height: 1.35;
+}
+
+/* ── HP bar ────────────────────────────────────────────────── */
+.recap-hp-bar-track {
+    position: relative;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 99px;
+    height: 14px;
+    overflow: hidden;
+}
+
+.recap-hp-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.4s ease;
+}
+
+.recap-hp-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Continue button ───────────────────────────────────────── */
+.recap-continue-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.2s, transform 0.1s;
+    letter-spacing: 0.5px;
+}
+
+.recap-continue-btn:hover {
+    filter: brightness(1.15);
+}
+
+.recap-continue-btn:active {
+    transform: scale(0.97);
+}

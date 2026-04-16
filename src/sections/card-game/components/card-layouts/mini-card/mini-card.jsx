@@ -24,6 +24,27 @@ const STATUS_BADGE_CONFIG = {
     damage_reduction: { label: '½DMG', bg: '#e67e22' },
 };
 
+// Returns the net modifier for a given stat from statusEffects
+const getStatMod = (statusEffects, stat) => {
+    if (!statusEffects?.length) return 0;
+    let mod = 0;
+    for (const s of statusEffects) {
+        if (stat === 'def' && s.type === 'def_up') mod += s.value;
+        if (stat === 'def' && s.type === 'def_down') mod -= s.value;
+        if (stat === 'eva' && s.type === 'eva_up') mod += s.value;
+    }
+    return mod;
+};
+
+const StatMod = ({ mod }) => {
+    if (!mod) return null;
+    return (
+        <span className={`stat-mod ${mod > 0 ? 'stat-mod-up' : 'stat-mod-down'}`}>
+            {mod > 0 ? `+${mod}` : mod}
+        </span>
+    );
+};
+
 const StatusBadges = ({ statusEffects }) => {
     if (!statusEffects || statusEffects.length === 0) return null;
     return (
@@ -124,11 +145,11 @@ const Card = ({
                 <div className="mini-card-info-container">
                     <div className="mini-card-attribute-container">
                         <div className="mini-card-attibute">ATK: {card.attack}</div>
-                        <div className="mini-card-attibute">DEF: {card.defense}</div>
+                        <div className="mini-card-attibute">DEF: {card.defense}<StatMod mod={getStatMod(card.statusEffects, 'def')} /></div>
                     </div>
                     <div className="mini-card-attribute-container">
                         <div className="mini-card-attibute">AGI: {card.agility}</div>
-                        <div className="mini-card-attibute">EVA: {card.evasion}</div>
+                        <div className="mini-card-attibute">EVA: {card.evasion}<StatMod mod={getStatMod(card.statusEffects, 'eva')} /></div>
                     </div>
                     <div className='mini-card-health-container'>
                         <div className="mini-health-circle">

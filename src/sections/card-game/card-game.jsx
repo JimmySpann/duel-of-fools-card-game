@@ -3,6 +3,7 @@ import { endTurn, resetGame, cancelSelection } from './database/cardGameSlice';
 import Header from './components/header/header.jsx';
 import EnemyLayout from './components/layouts/enemy-layout/enemy-layout.jsx';
 import UserLayout from './components/layouts/user-layout/user-layout.jsx';
+import TurnRecap from './components/turn-recap/turn-recap.jsx';
 import './card-game.css';
 
 const CardGame = () => {
@@ -50,6 +51,7 @@ const CardGame = () => {
                     ))}
                 </div>
             </div>
+            <TurnRecap currentPlayer={currentPlayer} players={players} />
         </div>
     );
 };

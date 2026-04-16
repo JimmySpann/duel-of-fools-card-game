@@ -176,6 +176,20 @@
     font-weight: 500;
 }
 
+.stat-mod {
+    font-size: 22px;
+    font-weight: 700;
+    margin-left: 6px;
+}
+
+.stat-mod-up {
+    color: #2ecc71;
+}
+
+.stat-mod-down {
+    color: #e74c3c;
+}
+
 .mini-card-health-container {
     margin-top: 20px;
     width: 100%;

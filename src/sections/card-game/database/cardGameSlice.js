@@ -40,7 +40,9 @@ const createInitialState = () => ({
   log: ['Game started! Player 1 goes first.'],
   gameOver: false,
   winner: null,
-  lastHitEvents: [], // [{ defenderPlayerId, cardId, damage, type: 'hit'|'miss'|'blocked'|'defeat' }]
+  lastHitEvents: [], // animation events for the current action
+  recapEvents: [],   // structured events accumulating this turn
+  turnSummary: [],   // snapshot shown to incoming player as recap
 });
 
 // ── Status helpers ────────────────────────────────────────────────────────────
@@ -77,8 +79,13 @@ const getEffectiveEva = (card) => {
 
 // ── Animation event helpers ───────────────────────────────────────────────────
 
-const pushHitEvent = (state, defenderPlayerId, cardId, damage, type) => {
+const pushHitEvent = (state, defenderPlayerId, cardId, damage, type, cardName, healthAfter, maxHealth) => {
   state.lastHitEvents.push({ defenderPlayerId, cardId, damage, type });
+  state.recapEvents.push({ type, cardId, cardName: cardName ?? '?', damage, healthAfter: healthAfter ?? null, maxHealth: maxHealth ?? null, targetPlayerId: defenderPlayerId });
+};
+
+const pushRecapEvent = (state, event) => {
+  state.recapEvents.push(event);
 };
 
 const cleanupDefeated = (state) => {
@@ -97,7 +104,7 @@ const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state) => {
 
   if (hasStatus(defender, 'invulnerable') || hasStatus(defender, 'invisible')) {
     state.log.unshift(`${defender.name} is untouchable!`);
-    pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'blocked');
+    pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'blocked', defender.name, defender.currentHealth, defender.health);
     return 0;
   }
 
@@ -120,11 +127,11 @@ const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state) => {
 
   defender.currentHealth = Math.max(0, defender.currentHealth - damage);
   if (defender.currentHealth <= 0) {
-    pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'defeat');
+    pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'defeat', defender.name, 0, defender.health);
     defender.dying = true;
     state.log.unshift(`${defender.name} was defeated!`);
   } else {
-    pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'hit');
+    pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'hit', defender.name, defender.currentHealth, defender.health);
   }
   return damage;
 };
@@ -134,7 +141,7 @@ const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state) => {
 const resolveBasicAttack = (attacker, defender, defenderPlayer, state) => {
   const evadeRoll = Math.floor(Math.random() * 10);
   if (evadeRoll < getEffectiveEva(defender)) {
-    pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'miss');
+    pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'miss', defender.name, defender.currentHealth, defender.health);
     return { hit: false, damage: 0 };
   }
 
@@ -482,12 +489,14 @@ const processStatusEffects = (player, state) => {
     for (const status of card.statusEffects) {
       if (DOT_TYPES.includes(status.type)) {
         card.currentHealth = Math.max(0, card.currentHealth - status.value);
+        pushRecapEvent(state, { type: 'dot', cardName: card.name, targetPlayerId: player.id, damage: status.value, dotType: status.type, healthAfter: card.currentHealth, maxHealth: card.health });
         state.log.unshift(`${card.name} takes ${status.value} ${status.type} damage!`);
       }
     }
     if (card.currentHealth <= 0) {
       player.discardPile.push({ ...card });
       player.inPlay.splice(i, 1);
+      pushRecapEvent(state, { type: 'dotDefeat', cardName: card.name, targetPlayerId: player.id });
       state.log.unshift(`${card.name} was defeated by status effects!`);
       continue;
     }
@@ -520,6 +529,7 @@ export const cardGameSlice = createSlice({
         const damage = Math.max(1, card.attack || 5);
         card.acted = true;
         enemy.health = Math.max(0, enemy.health - damage);
+        pushRecapEvent(state, { type: 'directHit', cardName: card.name, targetPlayerId: enemy.id, damage, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
         state.log.unshift(`${card.name} attacks ${enemy.name} directly for ${damage} damage!`);
         if (enemy.health <= 0) {
           state.gameOver = true;
@@ -563,6 +573,7 @@ export const cardGameSlice = createSlice({
           card.acted = true;
           const dmg = Math.max(1, (card.attack || 5));
           enemy.health = Math.max(0, enemy.health - dmg);
+          pushRecapEvent(state, { type: 'directHit', cardName: card.name, targetPlayerId: enemy.id, damage: dmg, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
           state.log.unshift(`${card.name} uses ${ability.name} on ${enemy.name} directly for ${dmg} damage!`);
           if (enemy.health <= 0) {
             state.gameOver = true;
@@ -652,6 +663,10 @@ export const cardGameSlice = createSlice({
       state.lastHitEvents = [];
     },
 
+    dismissRecap: (state) => {
+      state.turnSummary = [];
+    },
+
     endTurn: (state) => {
       if (state.gameOver) return;
       cleanupDefeated(state);
@@ -667,6 +682,9 @@ export const cardGameSlice = createSlice({
       state.pendingAction = null;
       // Process status effects at the start of the next player's turn
       processStatusEffects(nextPlayer, state);
+      // Save all events (attacks + DOTs) as turnSummary for the incoming player's recap
+      state.turnSummary = [...state.recapEvents];
+      state.recapEvents = [];
       if (nextPlayer.health <= 0) {
         const winner = state.players.find((p) => p.id !== nextPlayer.id);
         state.gameOver = true;
@@ -695,6 +713,7 @@ export const {
   attackPlayer,
   playCardFromHand,
   commitDefeats,
+  dismissRecap,
   endTurn,
   resetGame,
 } = cardGameSlice.actions;
