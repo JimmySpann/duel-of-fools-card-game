@@ -17,6 +17,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
+    "deploy-build": "npm i && npm run build",
     "server": "cd server && npm start",
     "server:dev": "cd server && npm run dev",
     "install:server": "cd server && npm install"

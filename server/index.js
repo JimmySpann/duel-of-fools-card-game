@@ -395,7 +395,7 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
 /**
  * POST /api/sessions/join
  * Body: { joinCode }
- * Joins an existing waiting session as player2.
+ * Joins an existing waiting session by invite code.
  */
 app.post('/api/sessions/join', requireAuth, async (req, res) => {
     try {
@@ -409,13 +409,43 @@ app.post('/api/sessions/join', requireAuth, async (req, res) => {
         const alreadyIn = session.players.some((p) => String(p.userId) === req.user.id);
         if (alreadyIn) return res.json({ session }); // idempotent re-join
 
-        if (session.players.length >= 2) return res.status(409).json({ error: 'Session is full' });
+        const SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
+        const usedSlots = new Set(session.players.map((p) => p.slot));
+        const nextSlot = SLOTS.find((s) => !usedSlots.has(s));
+        if (!nextSlot) return res.status(409).json({ error: 'Session is full' });
 
-        session.players.push({ userId: req.user.id, username: req.user.username, slot: 'player2' });
+        session.players.push({ userId: req.user.id, username: req.user.username, slot: nextSlot });
         await session.save();
         res.json({ session });
     } catch (err) {
         console.error('POST /api/sessions/join error:', err);
+        res.status(500).json({ error: 'Failed to join session' });
+    }
+});
+
+/**
+ * POST /api/sessions/:id/join
+ * Joins a waiting session directly by its MongoDB _id (no code required).
+ */
+app.post('/api/sessions/:id/join', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Session is no longer open' });
+
+        const alreadyIn = session.players.some((p) => String(p.userId) === req.user.id);
+        if (alreadyIn) return res.json({ session }); // idempotent
+
+        const SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
+        const usedSlots = new Set(session.players.map((p) => p.slot));
+        const nextSlot = SLOTS.find((s) => !usedSlots.has(s));
+        if (!nextSlot) return res.status(409).json({ error: 'Session is full' });
+
+        session.players.push({ userId: req.user.id, username: req.user.username, slot: nextSlot });
+        await session.save();
+        res.json({ session });
+    } catch (err) {
+        console.error('POST /api/sessions/:id/join error:', err);
         res.status(500).json({ error: 'Failed to join session' });
     }
 });

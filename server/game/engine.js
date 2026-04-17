@@ -86,6 +86,7 @@ const createInitialState = (playerConfigs, settings = {}) => {
         lastHitEvents: [],
         recapEvents: [],
         turnSummary: [],
+        cardPlayedThisTurn: false,
     };
 };
 
@@ -732,6 +733,7 @@ const actions = {
 
     playCardFromHand(state, { cardIndex }) {
         if (state.phase !== 'main' || state.gameOver) return;
+        if (state.cardPlayedThisTurn) return;
         const player = state.players.find((p) => p.id === state.currentTurn);
         if (!player || cardIndex >= player.hand.length) return;
         const maxBattlers = state.settings?.maxBattlers ?? 8;
@@ -742,6 +744,7 @@ const actions = {
         const [card] = player.hand.splice(cardIndex, 1);
         card.justPlayed = true;
         player.inPlay.push(card);
+        state.cardPlayedThisTurn = true;
         state.log.unshift(`${player.name} played ${card.name} to the board!`);
     },
 
@@ -777,6 +780,7 @@ const actions = {
         state.currentTurn = nextPlayer.id;
         state.phase = 'main';
         state.pendingAction = null;
+        state.cardPlayedThisTurn = false;
         processStatusEffects(nextPlayer, state);
         state.turnSummary = [...state.recapEvents];
         state.recapEvents = [];

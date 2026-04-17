@@ -46,23 +46,30 @@ const CardGame = () => {
     // Actions are only allowed when it is this client's turn
     const isMyTurn = !isOnline || currentTurn === myPlayerId;
 
-    // Join the game socket room and sync state from server
+    // Join the game socket room and sync state from server.
+    // Also re-join whenever the socket reconnects (socket.io leaves all rooms on disconnect).
     useEffect(() => {
         if (!activeGameId) return;
         const socket = getSocket();
         if (!socket) return;
 
-        socket.emit('game:join', { gameId: activeGameId });
+        const joinRoom = () => {
+            socket.emit('game:join', { gameId: activeGameId });
+        };
+
+        joinRoom(); // join immediately
 
         const handleState = (state) => dispatch(setGameState(state));
         const handleError = ({ message }) => console.error('game:error', message);
 
         socket.on('game:state', handleState);
         socket.on('game:error', handleError);
+        socket.on('connect', joinRoom); // re-join if the socket reconnects
 
         return () => {
             socket.off('game:state', handleState);
             socket.off('game:error', handleError);
+            socket.off('connect', joinRoom);
         };
     }, [activeGameId, dispatch]);
 

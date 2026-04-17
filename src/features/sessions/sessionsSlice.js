@@ -39,6 +39,17 @@ export const joinSession = createAsyncThunk('sessions/join', async ({ joinCode }
     return data.session;
 });
 
+export const joinSessionById = createAsyncThunk('sessions/joinById', async ({ sessionId }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/join`, {
+        method: 'POST',
+        headers: authHeader(token),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.session;
+});
+
 export const startSession = createAsyncThunk('sessions/start', async ({ sessionId }, { getState, rejectWithValue }) => {
     const token = getState().auth.token;
     const res = await fetch(`${API}/${sessionId}/start`, {
@@ -155,7 +166,17 @@ const sessionsSlice = createSlice({
                 const idx = state.list.findIndex((s) => s._id === action.payload._id);
                 if (idx >= 0) state.list[idx] = action.payload;
             })
-            .addCase(updateTeam.rejected, (state, action) => { state.error = action.payload; });
+            .addCase(updateTeam.rejected, (state, action) => { state.error = action.payload; })
+
+            .addCase(joinSessionById.pending, (state) => { state.loading = true; state.error = null; })
+            .addCase(joinSessionById.fulfilled, (state, action) => {
+                state.loading = false;
+                state.activeSession = action.payload;
+                const idx = state.list.findIndex((s) => s._id === action.payload._id);
+                if (idx >= 0) state.list[idx] = action.payload;
+                else state.list.unshift(action.payload);
+            })
+            .addCase(joinSessionById.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
     },
 });
 

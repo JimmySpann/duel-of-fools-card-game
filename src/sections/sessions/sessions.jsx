@@ -4,6 +4,7 @@ import {
     fetchSessions,
     createSession,
     joinSession,
+    joinSessionById,
     startSession,
     pollSession,
     updateSettings,
@@ -12,6 +13,7 @@ import {
     clearSessionError,
 } from '../../features/sessions/sessionsSlice';
 import { logout } from '../../features/auth/authSlice';
+import { setGameState } from '../card-game/database/cardGameSlice';
 import LobbyChat from '../../features/chat/LobbyChat';
 import DMPanel from '../../features/chat/DMPanel';
 import Profile from '../../features/profile/Profile';
@@ -219,6 +221,15 @@ const Sessions = () => {
         [dispatch]
     );
 
+    const handleJoinDirectly = useCallback(
+        (session) => {
+            dispatch(joinSessionById({ sessionId: session._id })).then((res) => {
+                if (!res.error) setView('lobby');
+            });
+        },
+        [dispatch]
+    );
+
     const handleBack = useCallback(() => {
         setView('list');
         setNewName('');
@@ -237,7 +248,13 @@ const Sessions = () => {
                     loading={loading}
                     error={error}
                     onBack={handleBack}
-                    onStart={() => dispatch(startSession({ sessionId: activeSession._id }))}
+                    onStart={() => {
+                        dispatch(startSession({ sessionId: activeSession._id })).then((res) => {
+                            // Pre-populate card game state with real player names immediately
+                            // so the game header shows actual names without waiting for socket sync
+                            if (res.payload?.state) dispatch(setGameState(res.payload.state));
+                        });
+                    }}
                     dispatch={dispatch}
                 />
                 <DMPanel />
@@ -373,11 +390,18 @@ const Sessions = () => {
                                     )}
                                     <button
                                         className="session-card-btn"
-                                        onClick={() => handleEnterSession(session)}
+                                        onClick={() => {
+                                            if (isParticipant || session.status !== 'waiting') {
+                                                handleEnterSession(session);
+                                            } else {
+                                                handleJoinDirectly(session);
+                                            }
+                                        }}
+                                        disabled={loading}
                                     >
                                         {isParticipant
                                             ? session.status === 'in-progress' ? 'Rejoin' : 'Open Lobby'
-                                            : 'View Lobby'}
+                                            : session.status === 'waiting' ? 'Join' : 'View'}
                                     </button>
                                 </div>
                             );

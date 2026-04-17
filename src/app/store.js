@@ -12,8 +12,10 @@ const LOCAL_ONLY_ACTIONS = new Set(['cardGame/setGameState', 'cardGame/resetGame
 
 /**
  * Middleware: when an active online game exists, intercept cardGame actions
- * and emit them via socket instead of updating local state directly.
- * The server will broadcast back a 'game:state' event to sync all clients.
+ * and emit them via socket for the server to process authoritatively.
+ * The action is ALSO applied to local state (optimistic update) so the UI
+ * responds immediately. When the server broadcasts back 'game:state', the
+ * setGameState reducer replaces local state with the canonical server copy.
  */
 const onlineGameMiddleware = (store) => (next) => (action) => {
   const activeGameId = store.getState().sessions?.activeGameId;
@@ -28,7 +30,8 @@ const onlineGameMiddleware = (store) => (next) => (action) => {
     if (socket?.connected) {
       const type = action.type.replace('cardGame/', '');
       socket.emit('game:action', { gameId: activeGameId, type, payload: action.payload ?? {} });
-      return; // skip local reducer — state comes back via game:state event
+      // Fall through to next(action) so local state updates optimistically.
+      // The server's authoritative 'game:state' broadcast will overwrite shortly after.
     }
   }
 
