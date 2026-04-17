@@ -14,8 +14,12 @@ import './chat.css';
 /**
  * DMPanel — floating DM inbox + conversation window.
  * Rendered once at the sessions-page level; listens globally for incoming DMs.
+ *
+ * Props:
+ *   anchor — 'header' positions the panel opening downward from the button (for toolbar use)
+ *            omit for the default fixed bottom-right float
  */
-const DMPanel = () => {
+const DMPanel = ({ anchor }) => {
     const dispatch = useDispatch();
     const myUsername = useSelector((s) => s.auth.username);
     const dmList = useSelector((s) => s.chat.dmList);
@@ -24,13 +28,16 @@ const DMPanel = () => {
     const activeDm = useSelector((s) => s.chat.activeDm);
     const messages = useSelector((s) => s.chat.dms[activeDm] || []);
     const unreadDm = useSelector((s) => s.chat.unreadDm);
+    const unreadLobby = useSelector((s) => s.chat.unreadLobby);
 
     const [open, setOpen] = useState(false);
     const [newRecipient, setNewRecipient] = useState('');
     const [text, setText] = useState('');
     const bottomRef = useRef(null);
 
-    const totalUnread = Object.values(unreadDm).reduce((a, b) => a + b, 0);
+    const totalUnreadDm = Object.values(unreadDm).reduce((a, b) => a + b, 0);
+    const totalUnreadLobby = Object.values(unreadLobby).reduce((a, b) => a + b, 0);
+    const totalUnread = totalUnreadDm + totalUnreadLobby;
 
     // Fetch DM list on mount and register socket listener
     useEffect(() => {
@@ -83,10 +90,10 @@ const DMPanel = () => {
     };
 
     return (
-        <div className="dm-container">
+        <div className={`dm-container${anchor === 'header' ? ' dm-container--header' : ''}`}>
             {/* Toggle button */}
             <button
-                className={`dm-toggle-btn ${totalUnread > 0 ? 'has-unread' : ''}`}
+                className={`dm-toggle-btn${anchor === 'header' ? ' dm-toggle-btn--header' : ''}${totalUnread > 0 ? ' has-unread' : ''}`}
                 onClick={() => setOpen((v) => !v)}
             >
                 💬 Messages{totalUnread > 0 && <span className="dm-badge">{totalUnread}</span>}

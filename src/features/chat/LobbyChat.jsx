@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchLobbyHistory, receiveLobbyMessage } from '../../features/chat/chatSlice';
 import { getSocket } from '../../features/chat/socket';
+import useNotifications from '../notifications/useNotifications';
 import './chat.css';
 
 /**
@@ -14,9 +15,17 @@ const LobbyChat = ({ sessionId, isWatching = true }) => {
     const dispatch = useDispatch();
     const messages = useSelector((s) => s.chat.lobby[sessionId] || []);
     const myUsername = useSelector((s) => s.auth.username);
+    const notifyLobby = useSelector((s) => s.profile.notifyLobby);
+    const { notify } = useNotifications();
 
     const [text, setText] = useState('');
     const bottomRef = useRef(null);
+
+    // Keep a ref so the socket handler always sees the latest value without re-binding
+    const isWatchingRef = useRef(isWatching);
+    useEffect(() => { isWatchingRef.current = isWatching; }, [isWatching]);
+    const notifyLobbyRef = useRef(notifyLobby);
+    useEffect(() => { notifyLobbyRef.current = notifyLobby; }, [notifyLobby]);
 
     // Fetch history and join socket room
     useEffect(() => {
@@ -28,8 +37,11 @@ const LobbyChat = ({ sessionId, isWatching = true }) => {
         socket.emit('lobby:join', { sessionId });
 
         const handler = (msg) => {
-            // isWatching comes from closure — if panel visible, mark as read immediately
-            dispatch(receiveLobbyMessage({ sessionId, message: msg, isWatching }));
+            dispatch(receiveLobbyMessage({ sessionId, message: msg, isWatching: isWatchingRef.current }));
+            // Play sound + browser notification when a message arrives from someone else
+            if (notifyLobbyRef.current && msg.fromUsername !== myUsername) {
+                notify(`💬 ${msg.fromUsername}`, msg.text.slice(0, 80), undefined, 'dm');
+            }
         };
         socket.on('lobby:message', handler);
 
@@ -38,7 +50,7 @@ const LobbyChat = ({ sessionId, isWatching = true }) => {
             socket.emit('lobby:leave', { sessionId });
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sessionId, dispatch]);
+    }, [sessionId, dispatch, myUsername]);
 
     // Auto-scroll to bottom
     useEffect(() => {

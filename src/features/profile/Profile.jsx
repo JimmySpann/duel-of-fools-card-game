@@ -10,6 +10,7 @@ import {
     clearProfileError,
     setNotifyTurn,
     setNotifyDM,
+    setNotifyLobby,
     setSoundVolume,
 } from './profileSlice';
 import sounds from '../sound/soundManager';
@@ -20,7 +21,7 @@ const TABS = ['Profile', 'Friends', 'Blocked', 'Options'];
 
 const Profile = ({ onClose, initialTab = 'Profile' }) => {
     const dispatch = useDispatch();
-    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM, soundVolume } = useSelector((s) => s.profile);
+    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM, notifyLobby, soundVolume } = useSelector((s) => s.profile);
     const username = useSelector((s) => s.auth.username);
     const { permission, request } = useNotifications();
 
@@ -157,7 +158,24 @@ const Profile = ({ onClose, initialTab = 'Profile' }) => {
                                         <span className="profile-toggle-knob" />
                                     </button>
                                 </div>
-                                {permission === 'default' && (notifyTurn || notifyDM) && (
+                                <div className="profile-toggle-row">
+                                    <span className="profile-toggle-label">
+                                        Lobby chat
+                                        <span className="profile-toggle-hint">Alert when someone messages in a lobby</span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className={`profile-toggle ${notifyLobby ? 'on' : 'off'}`}
+                                        onClick={async () => {
+                                            if (!notifyLobby && permission !== 'granted') await request();
+                                            dispatch(setNotifyLobby(!notifyLobby));
+                                        }}
+                                        aria-label="Toggle lobby chat notifications"
+                                    >
+                                        <span className="profile-toggle-knob" />
+                                    </button>
+                                </div>
+                                {permission === 'default' && (notifyTurn || notifyDM || notifyLobby) && (
                                     <button
                                         type="button"
                                         className="profile-perm-btn"

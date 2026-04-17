@@ -420,6 +420,7 @@ const Sessions = () => {
                 <header className="sessions-header">
                     <h1 className="sessions-title">Card Game</h1>
                     <div className="sessions-header-right">
+                        <DMPanel anchor="header" />
                         <button className="sessions-profile-btn" onClick={() => setShowProfile(true)}>
                             <img
                                 className="sessions-profile-avatar"
@@ -512,7 +513,6 @@ const Sessions = () => {
                     </div>
                 </section>
             </div>
-            <DMPanel />
             {showProfile && <Profile onClose={() => setShowProfile(false)} />}
         </div>
     );

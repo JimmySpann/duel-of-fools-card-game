@@ -152,6 +152,23 @@
     gap: 0.5rem;
 }
 
+/* Header-anchored mode: sits inline in the header, panel opens downward */
+.dm-container--header {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    z-index: 500;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.dm-container--header .dm-panel {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 500;
+}
+
 .dm-toggle-btn {
     background: #1e2235;
     color: #dde0f0;
@@ -168,12 +185,35 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
+/* Header variant — matches header pill style */
+.dm-toggle-btn--header {
+    background: transparent;
+    border-color: #2e3148;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.88rem;
+    box-shadow: none;
+    color: #dde0f0;
+}
+
+.dm-toggle-btn--header:hover {
+    background: #252942;
+    border-color: #4a5280;
+}
+
 .dm-toggle-btn:hover {
     background: #2a4a7f;
 }
 
 .dm-toggle-btn.has-unread {
     background: #2a4a7f;
+    border-color: #c9a227;
+    animation: dm-unread-pulse 1.6s ease-in-out infinite;
+    color: #f5e08a;
+}
+
+.dm-toggle-btn--header.has-unread {
+    background: rgba(42, 74, 127, 0.5);
     border-color: #c9a227;
     animation: dm-unread-pulse 1.6s ease-in-out infinite;
     color: #f5e08a;
