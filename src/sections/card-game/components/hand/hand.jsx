@@ -5,10 +5,12 @@ import airIcon from '../../../../assets/elements/air-icon.png';
 import electricIcon from '../../../../assets/elements/lightning-icon.png';
 import waterIcon from '../../../../assets/elements/water-icon.png';
 import deathIcon from '../../../../assets/elements/death-icon.png';
+import MiniCard from '../card-layouts/mini-card/mini-card.jsx';
 import './hand.css';
 
 const ELEMENT_ICONS = { fire: fireIcon, ice: iceIcon, earth: earthIcon, air: airIcon, electric: electricIcon, water: waterIcon, death: deathIcon };
 
+/* ── Mobile thumbnail card ─────────────────────────────────────────────── */
 const HandCard = ({ card, index, locked, dimmed, onCardClick }) => {
     const elements = Object.entries(card.elements ?? {})
         .filter(([k]) => k !== 'normal')
@@ -36,7 +38,30 @@ const HandCard = ({ card, index, locked, dimmed, onCardClick }) => {
 
             <div className="hand-card-footer">
                 <span className="hand-card-name">{card.name}</span>
+                <div className="hand-card-stats">
+                    <span className="hand-stat">HP {card.currentHealth ?? card.health}</span>
+                    <span className="hand-stat">ATK {card.attack}</span>
+                    <span className="hand-stat">DEF {card.defense}</span>
+                    <span className="hand-stat">AGI {card.agility}</span>
+                    <span className="hand-stat">EVA {card.evasion}</span>
+                </div>
             </div>
+        </div>
+    );
+};
+
+/* ── Desktop mini-card hand entry ──────────────────────────────────────── */
+const DesktopHandCard = ({ card, index, locked, dimmed, onCardClick }) => {
+    return (
+        <div
+            className={`desktop-hand-entry${locked ? ' hand-card-locked' : ''}${dimmed ? ' hand-card-dimmed' : ''}`}
+            onClick={() => !locked && onCardClick && onCardClick(index)}
+            role="button"
+            tabIndex={locked ? -1 : 0}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && !locked && onCardClick && onCardClick(index)}
+            aria-label={card.name}
+        >
+            <MiniCard card={card} isFlipped={false} />
         </div>
     );
 };
@@ -51,18 +76,35 @@ const Hand = ({ _hand, onCardClick, locked = false, dimmed = false }) => {
     }
 
     return (
-        <div className="hand-container">
-            {_hand.map((card, index) => (
-                <HandCard
-                    key={card.id ?? index}
-                    card={card}
-                    index={index}
-                    locked={locked}
-                    dimmed={dimmed}
-                    onCardClick={onCardClick}
-                />
-            ))}
-        </div>
+        <>
+            {/* Wide-screen: full mini-card layout */}
+            <div className="hand-container hand-container--desktop">
+                {_hand.map((card, index) => (
+                    <DesktopHandCard
+                        key={card.id ?? index}
+                        card={card}
+                        index={index}
+                        locked={locked}
+                        dimmed={dimmed}
+                        onCardClick={onCardClick}
+                    />
+                ))}
+            </div>
+
+            {/* Small-screen: thumbnail layout */}
+            <div className="hand-container hand-container--mobile">
+                {_hand.map((card, index) => (
+                    <HandCard
+                        key={card.id ?? index}
+                        card={card}
+                        index={index}
+                        locked={locked}
+                        dimmed={dimmed}
+                        onCardClick={onCardClick}
+                    />
+                ))}
+            </div>
+        </>
     );
 };
 

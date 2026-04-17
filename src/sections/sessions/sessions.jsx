@@ -172,6 +172,7 @@ const Sessions = () => {
     const { list, activeSession, loading, error } = useSelector((s) => s.sessions);
     const { username } = useSelector((s) => s.auth);
     const { displayName, avatarUrl, friendRequests } = useSelector((s) => s.profile);
+    const unreadLobby = useSelector((s) => s.chat.unreadLobby);
 
     const [view, setView] = useState('list'); // 'list' | 'create' | 'join' | 'lobby'
     const [newName, setNewName] = useState('');
@@ -373,12 +374,22 @@ const Sessions = () => {
                             const openSlots = 6 - session.players.length;
                             const mySlot = session.players.find((p) => p.username === username)?.slot;
                             const isMyTurn = session.status === 'in-progress' && mySlot != null && session.currentTurn === mySlot;
+                            const currentTurnName = session.status === 'in-progress'
+                                ? session.players.find((p) => p.slot === session.currentTurn)?.username
+                                : null;
+                            const sessionUnread = unreadLobby[session._id] || 0;
                             return (
-                                <div key={session._id} className={`session-card ${session.status}`}>
+                                <div key={session._id} className={`session-card ${session.status}${sessionUnread > 0 ? ' session-card--unread-chat' : ''}`}>
                                     <div className="session-card-info">
                                         <span className="session-card-name">{session.name}</span>
                                         <span className={`session-card-status ${session.status}`}>{statusLabel(session.status)}</span>
                                         {isMyTurn && <span className="session-card-your-turn">⚔ Your Turn!</span>}
+                                        {!isMyTurn && currentTurnName && (
+                                            <span className="session-card-their-turn">🎲 {currentTurnName}'s Turn</span>
+                                        )}
+                                        {sessionUnread > 0 && (
+                                            <span className="session-card-chat-badge">💬 {sessionUnread}</span>
+                                        )}
                                     </div>
                                     <div className="session-card-players">
                                         {session.players.map((p) => (

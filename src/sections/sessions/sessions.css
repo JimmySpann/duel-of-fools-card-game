@@ -211,6 +211,50 @@
     animation: your-turn-pulse 1.4s ease-in-out infinite;
 }
 
+/* ── Whose turn indicator (opponent's turn) ──────────────────────────────── */
+.session-card-their-turn {
+    display: inline-block;
+    background: rgba(100, 100, 130, 0.35);
+    color: #aab0cc;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 10px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+/* ── Unread lobby chat badge ─────────────────────────────────────────────── */
+.session-card-chat-badge {
+    display: inline-block;
+    background: rgba(230, 190, 60, 0.18);
+    color: #e2c97e;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+    animation: chat-badge-pulse 2s ease-in-out infinite;
+}
+
+.session-card--unread-chat {
+    border-color: rgba(230, 190, 60, 0.45);
+    box-shadow: 0 0 10px 1px rgba(230, 190, 60, 0.2);
+}
+
+@keyframes chat-badge-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 4px rgba(230, 190, 60, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 10px rgba(230, 190, 60, 0.8);
+    }
+}
+
 @keyframes your-turn-pulse {
 
     0%,
