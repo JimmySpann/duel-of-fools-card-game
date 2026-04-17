@@ -323,3 +323,173 @@
     margin: 0;
     padding: 0.5rem 0;
 }
+
+/* ── Notification toggles ────────────────────────────────────────────────── */
+.profile-notif-section {
+    background: #12151f;
+    border: 1px solid #2e3148;
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.profile-notif-blocked {
+    color: #e05a5a;
+    font-size: 0.75rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+}
+
+.profile-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.profile-toggle-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.88rem;
+    color: #dde0f0;
+}
+
+.profile-toggle-hint {
+    font-size: 0.75rem;
+    color: #5a607a;
+    font-weight: 400;
+}
+
+.profile-toggle {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    padding: 0;
+}
+
+.profile-toggle.on {
+    background: #5fc98e;
+}
+
+.profile-toggle.off {
+    background: #2e3148;
+}
+
+.profile-toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s;
+    display: block;
+}
+
+.profile-toggle.on .profile-toggle-knob {
+    transform: translateX(18px);
+}
+
+.profile-toggle.off .profile-toggle-knob {
+    transform: translateX(0);
+}
+
+.profile-perm-btn {
+    margin-top: 0.25rem;
+    padding: 0.45rem 0.85rem;
+    background: rgba(226, 201, 126, 0.12);
+    color: #e2c97e;
+    border: 1px solid rgba(226, 201, 126, 0.3);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    align-self: flex-start;
+}
+
+.profile-perm-btn:hover {
+    background: rgba(226, 201, 126, 0.2);
+}
+
+/* ── In-game bell toggle ─────────────────────────────────────────────────── */
+.game-notif-toggle {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    background: transparent;
+    border: 1px solid #2e3148;
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #8890b0;
+    transition: color 0.15s, border-color 0.15s;
+    line-height: 1;
+    z-index: 10;
+}
+
+.game-notif-toggle.on {
+    color: #e2c97e;
+    border-color: #e2c97e;
+}
+
+.game-notif-toggle.off {
+    color: #5a607a;
+}
+
+.game-notif-toggle:hover {
+    color: #dde0f0;
+    border-color: #4a5280;
+}
+
+
+.profile-friend-btn.accept {
+    background: #5fc98e;
+    color: #0f1117;
+}
+
+.profile-friend-btn.decline,
+.profile-friend-btn.remove {
+    background: #2e3148;
+    color: #8890b0;
+}
+
+.profile-friend-btn.block {
+    background: rgba(224, 90, 90, 0.15);
+    color: #e05a5a;
+}
+
+.profile-friend-btn:hover:not(:disabled) {
+    opacity: 0.8;
+}
+
+/* ── Feedback ────────────────────────────────────────────────────────────── */
+.profile-error {
+    color: #e05a5a;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.profile-success {
+    color: #5fc98e;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.profile-empty {
+    color: #5a607a;
+    font-size: 0.88rem;
+    font-style: italic;
+    margin: 0;
+    padding: 0.5rem 0;
+}

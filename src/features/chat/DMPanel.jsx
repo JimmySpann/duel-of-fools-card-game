@@ -8,6 +8,7 @@ import {
     closeDm,
 } from '../../features/chat/chatSlice';
 import { getSocket } from '../../features/chat/socket';
+import useNotifications from '../notifications/useNotifications';
 import './chat.css';
 
 /**
@@ -18,6 +19,8 @@ const DMPanel = () => {
     const dispatch = useDispatch();
     const myUsername = useSelector((s) => s.auth.username);
     const dmList = useSelector((s) => s.chat.dmList);
+    const notifyDM = useSelector((s) => s.profile.notifyDM);
+    const { notify } = useNotifications();
     const activeDm = useSelector((s) => s.chat.activeDm);
     const messages = useSelector((s) => s.chat.dms[activeDm] || []);
     const unreadDm = useSelector((s) => s.chat.unreadDm);
@@ -38,10 +41,14 @@ const DMPanel = () => {
 
         const handler = (msg) => {
             dispatch(receiveDmMessage({ myUsername, message: msg }));
+            // Notify if: message is from someone else AND DM notifications are enabled
+            if (notifyDM && msg.fromUsername !== myUsername) {
+                notify(`💬 ${msg.fromUsername}`, msg.text.slice(0, 80));
+            }
         };
         socket.on('dm:message', handler);
         return () => socket.off('dm:message', handler);
-    }, [dispatch, myUsername]);
+    }, [dispatch, myUsername, notifyDM, notify]);
 
     // Fetch history when opening a thread
     useEffect(() => {

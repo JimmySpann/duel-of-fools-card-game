@@ -8,15 +8,19 @@ import {
     blockUser,
     unblockUser,
     clearProfileError,
+    setNotifyTurn,
+    setNotifyDM,
 } from './profileSlice';
+import useNotifications from '../notifications/useNotifications';
 import './profile.css';
 
 const TABS = ['Profile', 'Friends', 'Blocked'];
 
 const Profile = ({ onClose }) => {
     const dispatch = useDispatch();
-    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error } = useSelector((s) => s.profile);
+    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM } = useSelector((s) => s.profile);
     const username = useSelector((s) => s.auth.username);
+    const { permission, request } = useNotifications();
 
     const [tab, setTab] = useState('Profile');
     const [nameInput, setNameInput] = useState(displayName);
@@ -102,6 +106,60 @@ const Profile = ({ onClose }) => {
                                     onChange={(e) => setAvatarInput(e.target.value)}
                                 />
                             </label>
+
+                            {/* Notification preferences */}
+                            <div className="profile-notif-section">
+                                <div className="profile-subsection-title" style={{ marginBottom: '0.5rem' }}>
+                                    Notifications
+                                    {permission === 'denied' && (
+                                        <span className="profile-notif-blocked"> (blocked by browser)</span>
+                                    )}
+                                </div>
+                                <div className="profile-toggle-row">
+                                    <span className="profile-toggle-label">
+                                        Your turn
+                                        <span className="profile-toggle-hint">Alert when it's your turn in a game</span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className={`profile-toggle ${notifyTurn ? 'on' : 'off'}`}
+                                        onClick={async () => {
+                                            if (!notifyTurn && permission !== 'granted') await request();
+                                            dispatch(setNotifyTurn(!notifyTurn));
+                                        }}
+                                        aria-label="Toggle turn notifications"
+                                    >
+                                        <span className="profile-toggle-knob" />
+                                    </button>
+                                </div>
+                                <div className="profile-toggle-row">
+                                    <span className="profile-toggle-label">
+                                        Direct messages
+                                        <span className="profile-toggle-hint">Alert when you receive a DM</span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className={`profile-toggle ${notifyDM ? 'on' : 'off'}`}
+                                        onClick={async () => {
+                                            if (!notifyDM && permission !== 'granted') await request();
+                                            dispatch(setNotifyDM(!notifyDM));
+                                        }}
+                                        aria-label="Toggle DM notifications"
+                                    >
+                                        <span className="profile-toggle-knob" />
+                                    </button>
+                                </div>
+                                {permission === 'default' && (notifyTurn || notifyDM) && (
+                                    <button
+                                        type="button"
+                                        className="profile-perm-btn"
+                                        onClick={request}
+                                    >
+                                        Enable browser notifications
+                                    </button>
+                                )}
+                            </div>
+
                             {error && <p className="profile-error">{error}</p>}
                             <button className="profile-save-btn" type="submit" disabled={loading}>
                                 {loading ? 'Saving…' : 'Save Changes'}

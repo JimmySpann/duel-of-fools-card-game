@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { endTurn, resetGame, cancelSelection, setGameState } from './database/cardGameSlice';
 import { getSocket } from '../../features/chat/socket';
+import useNotifications from '../../features/notifications/useNotifications';
 import Header from './components/header/header.jsx';
 import EnemyLayout from './components/layouts/enemy-layout/enemy-layout.jsx';
 import UserLayout from './components/layouts/user-layout/user-layout.jsx';
@@ -14,6 +15,13 @@ const CardGame = () => {
     const activeGameId = useSelector((s) => s.sessions.activeGameId);
     const activeSession = useSelector((s) => s.sessions.activeSession);
     const username = useSelector((s) => s.auth.username);
+    const notifyTurnGlobal = useSelector((s) => s.profile.notifyTurn);
+
+    // Per-game notification override (defaults to global setting)
+    const [notifyThisGame, setNotifyThisGame] = useState(notifyTurnGlobal);
+
+    const { notify, permission, request } = useNotifications();
+    const prevTurnRef = useRef(null);
 
     // Determine which player slot belongs to the logged-in user
     const myPlayerId = activeSession?.players?.find((p) => p.username === username)?.slot ?? null;
@@ -49,6 +57,20 @@ const CardGame = () => {
         };
     }, [activeGameId, dispatch]);
 
+    // Fire a browser notification when the turn transitions to this player
+    useEffect(() => {
+        if (!isOnline || !notifyThisGame) return;
+        if (prevTurnRef.current === null) {
+            prevTurnRef.current = currentTurn;
+            return;
+        }
+        const justBecameMyTurn = prevTurnRef.current !== currentTurn && currentTurn === myPlayerId;
+        prevTurnRef.current = currentTurn;
+        if (justBecameMyTurn) {
+            notify("It's your turn!", `${activeSession?.name ?? 'Card Game'} — make your move.`);
+        }
+    }, [currentTurn, isOnline, notifyThisGame, myPlayerId, notify, activeSession]);
+
     if (gameOver) {
         const winnerName = players.find((p) => p.id === winner)?.name;
         return (
@@ -70,6 +92,18 @@ const CardGame = () => {
                 phase={phase}
                 isMyTurn={isMyTurn}
             />
+            {isOnline && (
+                <button
+                    className={`game-notif-toggle ${notifyThisGame ? 'on' : 'off'}`}
+                    title={notifyThisGame ? 'Turn notifications on' : 'Turn notifications off'}
+                    onClick={async () => {
+                        if (!notifyThisGame && permission !== 'granted') await request();
+                        setNotifyThisGame((v) => !v);
+                    }}
+                >
+                    🔔
+                </button>
+            )}
             <EnemyLayout
                 player={opponentPlayer}
                 isTargetable={isMyTurn && phase === 'selectingTarget'}

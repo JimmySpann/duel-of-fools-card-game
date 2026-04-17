@@ -84,6 +84,18 @@ export const unblockUser = createAsyncThunk('profile/unblock', async ({ username
     return data;
 });
 
+// Read notification prefs from localStorage so they survive page reloads
+const loadNotifPrefs = () => {
+    try {
+        return {
+            notifyTurn: localStorage.getItem('cg_notifyTurn') !== 'false',
+            notifyDM: localStorage.getItem('cg_notifyDM') !== 'false',
+        };
+    } catch {
+        return { notifyTurn: true, notifyDM: true };
+    }
+};
+
 const profileSlice = createSlice({
     name: 'profile',
     initialState: {
@@ -94,9 +106,18 @@ const profileSlice = createSlice({
         blocked: [],
         loading: false,
         error: null,
+        ...loadNotifPrefs(),
     },
     reducers: {
         clearProfileError(state) { state.error = null; },
+        setNotifyTurn(state, action) {
+            state.notifyTurn = action.payload;
+            try { localStorage.setItem('cg_notifyTurn', action.payload); } catch { }
+        },
+        setNotifyDM(state, action) {
+            state.notifyDM = action.payload;
+            try { localStorage.setItem('cg_notifyDM', action.payload); } catch { }
+        },
         resetProfile(state) {
             state.displayName = '';
             state.avatarUrl = '';
@@ -104,6 +125,7 @@ const profileSlice = createSlice({
             state.friendRequests = [];
             state.blocked = [];
             state.error = null;
+            // keep notification prefs across logout
         },
     },
     extraReducers: (builder) => {
@@ -171,5 +193,5 @@ const profileSlice = createSlice({
     },
 });
 
-export const { clearProfileError, resetProfile } = profileSlice.actions;
+export const { clearProfileError, resetProfile, setNotifyTurn, setNotifyDM } = profileSlice.actions;
 export default profileSlice.reducer;
