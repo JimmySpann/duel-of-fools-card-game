@@ -820,7 +820,7 @@ io.on('connection', (socket) => {
                 await Session.findOneAndUpdate(
                     { gameId },
                     { currentTurn: nextState.currentTurn }
-                ).catch(() => {});
+                ).catch(() => { });
 
                 io.to(`game:${gameId}`).emit('game:state', nextState);
             } catch (err) {

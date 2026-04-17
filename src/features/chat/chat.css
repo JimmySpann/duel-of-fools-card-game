@@ -180,8 +180,15 @@
 }
 
 @keyframes dm-unread-pulse {
-    0%, 100% { box-shadow: 0 0 7px 2px rgba(201, 162, 39, 0.55); }
-    50%       { box-shadow: 0 0 18px 5px rgba(201, 162, 39, 0.9); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 7px 2px rgba(201, 162, 39, 0.55);
+    }
+
+    50% {
+        box-shadow: 0 0 18px 5px rgba(201, 162, 39, 0.9);
+    }
 }
 
 .dm-badge {

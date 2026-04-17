@@ -38,7 +38,7 @@ const CardGame = () => {
     // Request browser notification permission proactively when the game loads
     useEffect(() => {
         request();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Clear unread lobby counter whenever the chat panel is opened

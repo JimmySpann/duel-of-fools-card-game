@@ -37,7 +37,7 @@ const LobbyChat = ({ sessionId, isWatching = true }) => {
             socket.off('lobby:message', handler);
             socket.emit('lobby:leave', { sessionId });
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionId, dispatch]);
 
     // Auto-scroll to bottom

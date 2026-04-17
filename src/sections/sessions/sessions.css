@@ -212,8 +212,15 @@
 }
 
 @keyframes your-turn-pulse {
-    0%, 100% { box-shadow: 0 0 5px rgba(39, 174, 96, 0.55); }
-    50%       { box-shadow: 0 0 14px rgba(39, 174, 96, 0.95); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(39, 174, 96, 0.55);
+    }
+
+    50% {
+        box-shadow: 0 0 14px rgba(39, 174, 96, 0.95);
+    }
 }
 
 .session-card-players {
