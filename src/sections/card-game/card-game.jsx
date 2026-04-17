@@ -67,13 +67,15 @@ const CardGame = () => {
     const myPlayer = isOnline
         ? players.find((p) => p.id === myPlayerId) ?? players[0]
         : players.find((p) => p.id === currentTurn);
-    const opponentPlayer = players.find((p) => p.id !== myPlayer?.id);
+    // All players other than me, excluding eliminated players
+    const opponents = players.filter((p) => p.id !== myPlayer?.id && !p.eliminated);
 
     // Actions are only allowed when it is this client's turn
     const isMyTurn = !isOnline || currentTurn === myPlayerId;
 
     const prevTurnRef = useRef(null);
-    const prevOpponentHealthRef = useRef(null);
+    // Track all opponents' health to detect any direct hit
+    const prevOpponentHealthMapRef = useRef({});
     const gameOverSoundFiredRef = useRef(false);
 
     // ── Sound: combat hit events ────────────────────────────────────────────
@@ -89,15 +91,16 @@ const CardGame = () => {
         });
     }, [lastHitEvents]);
 
-    // ── Sound: direct player hit (opponent health decreases) ───────────────
+    // ── Sound: direct player hit (any opponent health decreases) ────────
     useEffect(() => {
-        if (!opponentPlayer) return;
-        const prev = prevOpponentHealthRef.current;
-        if (prev !== null && opponentPlayer.health < prev) {
-            sounds.directHit();
-        }
-        prevOpponentHealthRef.current = opponentPlayer.health;
-    }, [opponentPlayer?.health]); // eslint-disable-line react-hooks/exhaustive-deps
+        const prevMap = prevOpponentHealthMapRef.current;
+        let hit = false;
+        opponents.forEach((p) => {
+            if (prevMap[p.id] !== undefined && p.health < prevMap[p.id]) hit = true;
+            prevMap[p.id] = p.health;
+        });
+        if (hit) sounds.directHit();
+    }); // runs every render — intentional shallow check
 
     // ── Sound: it's now my turn ─────────────────────────────────────────────
     useEffect(() => {
@@ -156,11 +159,15 @@ const CardGame = () => {
     }, [currentTurn, isOnline, notifyThisGame, myPlayerId, notify, activeSession]);
 
     if (gameOver) {
-        const winnerName = players.find((p) => p.id === winner)?.name;
+        // winner is a player id in FFA, or a team letter in team mode
+        const winnerPlayer = players.find((p) => p.id === winner);
+        const winnerLabel = winnerPlayer
+            ? winnerPlayer.id === myPlayerId ? 'You Win!' : `${winnerPlayer.name} Wins!`
+            : `Team ${winner} Wins!`;
         return (
             <div className="card-game-container">
                 <div className="game-over-screen">
-                    <h1 className="game-over-title">{winnerName} Wins!</h1>
+                    <h1 className="game-over-title">{winnerLabel}</h1>
                     <button className="game-over-btn" onClick={() => dispatch(resetGame())}>
                         Play Again
                     </button>
@@ -199,10 +206,15 @@ const CardGame = () => {
                     🔔
                 </button>
             )}
-            <EnemyLayout
-                player={opponentPlayer}
-                isTargetable={isMyTurn && phase === 'selectingTarget'}
-            />
+            <div className={`opponents-area opponents-${opponents.length}`}>
+                {opponents.map((opp) => (
+                    <EnemyLayout
+                        key={opp.id}
+                        player={opp}
+                        isTargetable={isMyTurn && phase === 'selectingTarget'}
+                    />
+                ))}
+            </div>
             <UserLayout
                 player={myPlayer}
                 phase={isMyTurn ? phase : 'waiting'}

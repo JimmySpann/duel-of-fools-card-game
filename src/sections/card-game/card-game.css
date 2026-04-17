@@ -1,3 +1,28 @@
+/* Opponents area — flex row so multiple opponents sit side by side */
+.opponents-area {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 8px;
+}
+
+/* When there are 3 or more opponents, shrink each panel slightly */
+.opponents-area.opponents-3>*,
+.opponents-area.opponents-4>*,
+.opponents-area.opponents-5>* {
+    flex: 1 1 calc(33% - 12px);
+    min-width: 220px;
+}
+
+.opponents-area.opponents-1>* {
+    flex: 1 1 100%;
+}
+
+.opponents-area.opponents-2>* {
+    flex: 1 1 calc(50% - 12px);
+}
+
 body {
     background: black;
 }

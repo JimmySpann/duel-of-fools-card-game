@@ -11,7 +11,7 @@ const EnemyLayout = ({ player, isTargetable }) => {
 
     const onCardClick = (index) => {
         if (isTargetable) {
-            dispatch(resolveOnEnemyCard({ targetCardIndex: index }));
+            dispatch(resolveOnEnemyCard({ targetCardIndex: index, targetPlayerId: player.id }));
         } else {
             document.body.style.overflow = 'hidden';
             setSelectedCardIndex(index);
