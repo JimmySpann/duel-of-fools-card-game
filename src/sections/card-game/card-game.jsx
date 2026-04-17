@@ -298,6 +298,5 @@ const CardGame = () => {
         </div>
     );
 };
-};
 
 export default CardGame;
