@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import './header.css'
 
 const phaseMessage = (phase) => {
@@ -6,21 +7,69 @@ const phaseMessage = (phase) => {
     return null;
 };
 
-const Header = ({ currentPlayerName, phase }) => {
+const Header = ({
+    currentPlayerName,
+    phase,
+    onLobbies,
+    onBriefToggle,
+    onChatToggle,
+    showBrief,
+    showChat,
+    displayName,
+    avatarUrl,
+    username,
+    onSignOut,
+}) => {
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
     const msg = phaseMessage(phase);
+
     return (
         <div className="header-container">
-            <h2 className="header-title">
+            <h2 className="header-title header-title--clickable" onClick={onLobbies}>
                 Duel of Fools
             </h2>
             <div className="account-buttons-container">
-                <button className="account-button">Switch <br /> Games</button>
-                <button className="account-button">Sign <br /> Out</button>
+                <button className="account-button" onClick={onLobbies}>Lobbies</button>
+                <div className="header-profile-wrap">
+                    <button
+                        className="header-profile-btn"
+                        onClick={() => setShowProfileMenu((v) => !v)}
+                    >
+                        <img
+                            className="header-profile-avatar"
+                            src={avatarUrl || `https://i.pravatar.cc/40?u=${username}`}
+                            alt="avatar"
+                            onError={(e) => { e.target.src = `https://i.pravatar.cc/40?u=${username}`; }}
+                        />
+                        <span className="header-profile-name">{displayName || username}</span>
+                        <span className="header-profile-caret">▾</span>
+                    </button>
+                    {showProfileMenu && (
+                        <div className="header-profile-dropdown">
+                            <button
+                                className="header-profile-dropdown-item signout"
+                                onClick={() => { setShowProfileMenu(false); onSignOut(); }}
+                            >
+                                Sign Out
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
             <div className="player-container">
                 <div className="player-buttons-container">
-                    <button className="player-button">Brief</button>
-                    <button className="player-button">Chat</button>
+                    <button
+                        className={`player-button${showBrief ? ' player-button--active' : ''}`}
+                        onClick={onBriefToggle}
+                    >
+                        Brief
+                    </button>
+                    <button
+                        className={`player-button${showChat ? ' player-button--active' : ''}`}
+                        onClick={onChatToggle}
+                    >
+                        Chat
+                    </button>
                 </div>
                 <div className="player-card-container">
                     <div className="player-name-card">

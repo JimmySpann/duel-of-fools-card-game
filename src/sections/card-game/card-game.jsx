@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { endTurn, resetGame, cancelSelection, setGameState } from './database/cardGameSlice';
 import { getSocket } from '../../features/chat/socket';
+import { leaveSession } from '../../features/sessions/sessionsSlice';
+import { logout } from '../../features/auth/authSlice';
 import useNotifications from '../../features/notifications/useNotifications';
+import LobbyChat from '../../features/chat/LobbyChat';
 import Header from './components/header/header.jsx';
 import EnemyLayout from './components/layouts/enemy-layout/enemy-layout.jsx';
 import UserLayout from './components/layouts/user-layout/user-layout.jsx';
@@ -16,6 +19,12 @@ const CardGame = () => {
     const activeSession = useSelector((s) => s.sessions.activeSession);
     const username = useSelector((s) => s.auth.username);
     const notifyTurnGlobal = useSelector((s) => s.profile.notifyTurn);
+    const displayName = useSelector((s) => s.profile.displayName);
+    const avatarUrl = useSelector((s) => s.profile.avatarUrl);
+
+    // Panel state
+    const [showBrief, setShowBrief] = useState(false);
+    const [showChat, setShowChat] = useState(false);
 
     // Per-game notification override (defaults to global setting)
     const [notifyThisGame, setNotifyThisGame] = useState(notifyTurnGlobal);
@@ -91,6 +100,15 @@ const CardGame = () => {
                 currentPlayerName={players.find((p) => p.id === currentTurn)?.name}
                 phase={phase}
                 isMyTurn={isMyTurn}
+                onLobbies={() => dispatch(leaveSession())}
+                onSignOut={() => dispatch(logout())}
+                onBriefToggle={() => { setShowBrief((v) => !v); setShowChat(false); }}
+                onChatToggle={() => { setShowChat((v) => !v); setShowBrief(false); }}
+                showBrief={showBrief}
+                showChat={showChat}
+                displayName={displayName}
+                avatarUrl={avatarUrl}
+                username={username}
             />
             {isOnline && (
                 <button
@@ -124,6 +142,81 @@ const CardGame = () => {
                 </div>
             </div>
             <TurnRecap currentPlayer={myPlayer} players={players} />
+
+            {/* ── Brief panel ─────────────────────────────────────────── */}
+            {showBrief && (
+                <div className="game-panel-overlay" onClick={() => setShowBrief(false)}>
+                    <div className="game-panel" onClick={(e) => e.stopPropagation()}>
+                        <div className="game-panel-header">
+                            <h3 className="game-panel-title">Game Brief</h3>
+                            <button className="game-panel-close" onClick={() => setShowBrief(false)}>✕</button>
+                        </div>
+
+                        {activeSession && (
+                            <p className="game-panel-session-name">{activeSession.name}</p>
+                        )}
+
+                        <div className="game-panel-section">
+                            <h4 className="game-panel-section-title">Players</h4>
+                            <div className="game-panel-players">
+                                {players.map((p) => {
+                                    const pct = Math.max(0, Math.round((p.health / p.maxHealth) * 100));
+                                    const isCurrent = p.id === currentTurn;
+                                    return (
+                                        <div key={p.id} className={`game-panel-player${isCurrent ? ' current-turn' : ''}`}>
+                                            <div className="game-panel-player-row">
+                                                <span className="game-panel-player-name">
+                                                    {isCurrent ? '▶ ' : ''}{p.name}
+                                                    {p.id === myPlayerId && isOnline ? ' (You)' : ''}
+                                                </span>
+                                                <span className="game-panel-player-hp">{p.health} / {p.maxHealth} HP</span>
+                                            </div>
+                                            <div className="game-panel-hp-bar">
+                                                <div
+                                                    className="game-panel-hp-fill"
+                                                    style={{
+                                                        width: `${pct}%`,
+                                                        background: pct > 50 ? '#5fc98e' : pct > 25 ? '#e2c97e' : '#e05a5a',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="game-panel-player-stats">
+                                                <span>Hand: {p.hand.length}</span>
+                                                <span>In Play: {p.inPlay.length}</span>
+                                                <span>Deck: {p.deck.length}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="game-panel-section">
+                            <h4 className="game-panel-section-title">How to Play</h4>
+                            <ul className="game-panel-rules">
+                                <li>Play a card from your hand to put a battler into play.</li>
+                                <li>Only one card can be played per turn.</li>
+                                <li>Select a battler to <strong>Attack</strong> or use an <strong>Ability</strong>.</li>
+                                <li>Battlers that just entered play are <em>Not Ready</em> — they can't act this turn.</li>
+                                <li>Battlers that have already acted this turn are marked <em>Acted</em>.</li>
+                                <li>Defeat all enemy battlers to win, or reduce the opponent's HP to 0.</li>
+                                <li>Press <strong>End Turn</strong> to pass play to your opponent.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Chat panel ──────────────────────────────────────────── */}
+            {showChat && activeSession && (
+                <div className="game-chat-panel">
+                    <div className="game-panel-header">
+                        <h3 className="game-panel-title">Lobby Chat</h3>
+                        <button className="game-panel-close" onClick={() => setShowChat(false)}>✕</button>
+                    </div>
+                    <LobbyChat sessionId={activeSession._id} />
+                </div>
+            )}
         </div>
     );
 };
