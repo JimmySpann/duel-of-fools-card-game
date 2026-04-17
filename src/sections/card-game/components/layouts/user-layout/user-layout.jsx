@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import PlayerHUD from '../../player-hud/player-hud.jsx';
 import BattlerBoard from '../../battler-board/battler-board.jsx';
 import Hand from '../../hand/hand.jsx';
@@ -8,6 +8,7 @@ import { selectAttacker, initiateAbility, resolveOnAllyCard, playCardFromHand } 
 
 const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = false }) => {
     const dispatch = useDispatch();
+    const cardPlayedThisTurn = useSelector((s) => s.cardGame.cardPlayedThisTurn);
     const [selectedBattlerIndex, setSelectedBattlerIndex] = useState(null);
     const [selectedHandIndex, setSelectedHandIndex] = useState(null);
 
@@ -26,6 +27,7 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = fa
     const onHandCardClick = (index) => {
         if (disabled) return;
         if (phase !== 'main') return;
+        if (cardPlayedThisTurn) return;
         document.body.style.overflow = 'hidden';
         setSelectedHandIndex(index);
     };
@@ -77,7 +79,7 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = fa
                 highlight={isSelectingAlly ? 'ally' : false}
                 playerId={player.id}
             />
-            <Hand _hand={player.hand} onCardClick={onHandCardClick} />
+            <Hand _hand={player.hand} onCardClick={onHandCardClick} locked={cardPlayedThisTurn || disabled} />
             <div className="turn-controls">
                 {disabled ? (
                     <button className="turn-btn end-turn-btn" disabled>

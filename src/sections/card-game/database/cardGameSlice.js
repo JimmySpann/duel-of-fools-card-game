@@ -43,6 +43,7 @@ const createInitialState = () => ({
   lastHitEvents: [], // animation events for the current action
   recapEvents: [],   // structured events accumulating this turn
   turnSummary: [],   // snapshot shown to incoming player as recap
+  cardPlayedThisTurn: false,
 });
 
 // ── Status helpers ────────────────────────────────────────────────────────────
@@ -649,12 +650,14 @@ export const cardGameSlice = createSlice({
 
     playCardFromHand: (state, action) => {
       if (state.phase !== 'main' || state.gameOver) return;
+      if (state.cardPlayedThisTurn) return;
       const { cardIndex } = action.payload;
       const player = state.players.find((p) => p.id === state.currentTurn);
       if (!player || cardIndex >= player.hand.length) return;
       const [card] = player.hand.splice(cardIndex, 1);
       card.justPlayed = true;
       player.inPlay.push(card);
+      state.cardPlayedThisTurn = true;
       state.log.unshift(`${player.name} played ${card.name} to the board!`);
     },
 
@@ -677,6 +680,7 @@ export const cardGameSlice = createSlice({
         c.acted = false;
         c.justPlayed = false;
       }
+      state.cardPlayedThisTurn = false;
       state.currentTurn = nextPlayer.id;
       state.phase = 'main';
       state.pendingAction = null;

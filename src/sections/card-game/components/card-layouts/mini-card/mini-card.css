@@ -62,7 +62,6 @@
     letter-spacing: 3px;
     pointer-events: none;
     z-index: 6;
-    transform: rotate(-20deg);
     text-shadow: 1px 1px 3px #000;
 }
 

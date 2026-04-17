@@ -42,6 +42,12 @@
     z-index: 100 !important;
 }
 
+.hand-card-locked {
+    cursor: not-allowed;
+    opacity: 0.45;
+    pointer-events: none;
+}
+
 .card .value {
     font-weight: 900;
     font-size: 32px;

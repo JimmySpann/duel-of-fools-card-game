@@ -12,7 +12,7 @@ const DIFF = 0.1;
 const MULTI = 1.6;
 const CARD_WIDTH = 200; // 2.5 * 80
 
-const Hand = ({ _hand, onCardClick }) => {
+const Hand = ({ _hand, onCardClick, locked = false }) => {
     const [deck, setDeck] = useState([]);
     const [hand, setHand] = useState(_hand);
     const handRef = useRef(null);
@@ -98,9 +98,9 @@ const Hand = ({ _hand, onCardClick }) => {
                     return (
                         <div
                             key={card.id}
-                            className='card'
+                            className={`card${locked ? ' hand-card-locked' : ''}`}
                             style={calculateCardStyle(index)}
-                            onClick={() => onCardClick && onCardClick(index)}
+                            onClick={() => !locked && onCardClick && onCardClick(index)}
                         >
                             <Card
                                 key={index}
