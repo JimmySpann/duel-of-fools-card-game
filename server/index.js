@@ -495,6 +495,7 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
         await Game.create({ gameId, state });
         session.gameId = gameId;
         session.status = 'in-progress';
+        session.currentTurn = state.currentTurn;
         await session.save();
 
         res.json({ session, gameId, state });
@@ -814,6 +815,12 @@ io.on('connection', (socket) => {
                 game.state = nextState;
                 game.markModified('state');
                 await game.save();
+
+                // Keep session's currentTurn in sync so the lobby list can show "Your Turn"
+                await Session.findOneAndUpdate(
+                    { gameId },
+                    { currentTurn: nextState.currentTurn }
+                ).catch(() => {});
 
                 io.to(`game:${gameId}`).emit('game:state', nextState);
             } catch (err) {

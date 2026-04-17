@@ -37,6 +37,7 @@ const sessionSchema = new mongoose.Schema(
         // 'waiting' → lobby open, 'in-progress' → game running, 'finished' → game over
         status: { type: String, enum: ['waiting', 'in-progress', 'finished'], default: 'waiting' },
         gameId: { type: String, default: null },
+        currentTurn: { type: String, default: null },
     },
     { timestamps: true }
 );

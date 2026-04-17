@@ -211,3 +211,23 @@
     background-color: rgb(100, 0, 130) !important;
     box-shadow: 0 0 8px rgba(187, 16, 187, 0.6);
 }
+
+/* ── Unread chat indicator ─────────────────────────────────────────────── */
+.player-button--unread {
+    background-color: rgb(125, 33, 164);
+    box-shadow: 0 0 10px 2px rgba(230, 190, 60, 0.75);
+    animation: chat-pulse 1.8s ease-in-out infinite;
+    color: #f5e08a;
+}
+
+@keyframes chat-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 8px 2px rgba(230, 190, 60, 0.65);
+    }
+
+    50% {
+        box-shadow: 0 0 18px 6px rgba(230, 190, 60, 0.9);
+    }
+}

@@ -48,6 +48,9 @@ const chatSlice = createSlice({
         // Lobby messages keyed by sessionId
         lobby: {},        // { [sessionId]: Message[] }
 
+        // Unread lobby message counts keyed by sessionId
+        unreadLobby: {},  // { [sessionId]: number }
+
         // DM threads keyed by the other user's username
         dms: {},          // { [username]: Message[] }
 
@@ -63,9 +66,19 @@ const chatSlice = createSlice({
     reducers: {
         // Called by the Socket.IO listener when a lobby message arrives
         receiveLobbyMessage(state, action) {
-            const { sessionId, message } = action.payload;
+            const { sessionId, message, isWatching } = action.payload;
             if (!state.lobby[sessionId]) state.lobby[sessionId] = [];
             state.lobby[sessionId].push(message);
+            // Increment unread count if the chat panel isn't currently open
+            if (!isWatching) {
+                state.unreadLobby[sessionId] = (state.unreadLobby[sessionId] || 0) + 1;
+            }
+        },
+
+        // Mark all lobby messages for a session as read
+        markLobbyRead(state, action) {
+            const sessionId = action.payload;
+            delete state.unreadLobby[sessionId];
         },
 
         // Called by the Socket.IO listener when a DM arrives
@@ -104,6 +117,7 @@ const chatSlice = createSlice({
 
         clearChat(state) {
             state.lobby = {};
+            state.unreadLobby = {};
             state.dms = {};
             state.dmList = [];
             state.activeDm = null;
@@ -128,6 +142,7 @@ const chatSlice = createSlice({
 
 export const {
     receiveLobbyMessage,
+    markLobbyRead,
     receiveDmMessage,
     openDm,
     closeDm,

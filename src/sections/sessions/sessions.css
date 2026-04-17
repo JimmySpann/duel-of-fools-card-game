@@ -198,6 +198,24 @@
     color: #8890b0;
 }
 
+.session-card-your-turn {
+    display: inline-block;
+    background: #1e8c4e;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+    animation: your-turn-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes your-turn-pulse {
+    0%, 100% { box-shadow: 0 0 5px rgba(39, 174, 96, 0.55); }
+    50%       { box-shadow: 0 0 14px rgba(39, 174, 96, 0.95); }
+}
+
 .session-card-players {
     display: flex;
     gap: 0.5rem;

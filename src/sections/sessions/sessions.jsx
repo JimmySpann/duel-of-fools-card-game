@@ -371,11 +371,14 @@ const Sessions = () => {
                         {list.map((session) => {
                             const isParticipant = session.players.some((p) => p.username === username);
                             const openSlots = 6 - session.players.length;
+                            const mySlot = session.players.find((p) => p.username === username)?.slot;
+                            const isMyTurn = session.status === 'in-progress' && mySlot != null && session.currentTurn === mySlot;
                             return (
                                 <div key={session._id} className={`session-card ${session.status}`}>
                                     <div className="session-card-info">
                                         <span className="session-card-name">{session.name}</span>
                                         <span className={`session-card-status ${session.status}`}>{statusLabel(session.status)}</span>
+                                        {isMyTurn && <span className="session-card-your-turn">⚔ Your Turn!</span>}
                                     </div>
                                     <div className="session-card-players">
                                         {session.players.map((p) => (

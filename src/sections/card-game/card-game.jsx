@@ -4,6 +4,7 @@ import { endTurn, resetGame, cancelSelection, setGameState } from './database/ca
 import { getSocket } from '../../features/chat/socket';
 import { leaveSession } from '../../features/sessions/sessionsSlice';
 import { logout } from '../../features/auth/authSlice';
+import { markLobbyRead } from '../../features/chat/chatSlice';
 import useNotifications from '../../features/notifications/useNotifications';
 import LobbyChat from '../../features/chat/LobbyChat';
 import Header from './components/header/header.jsx';
@@ -21,6 +22,9 @@ const CardGame = () => {
     const notifyTurnGlobal = useSelector((s) => s.profile.notifyTurn);
     const displayName = useSelector((s) => s.profile.displayName);
     const avatarUrl = useSelector((s) => s.profile.avatarUrl);
+    const unreadLobby = useSelector((s) =>
+        activeSession ? (s.chat.unreadLobby[activeSession._id] || 0) : 0
+    );
 
     // Panel state
     const [showBrief, setShowBrief] = useState(false);
@@ -30,6 +34,19 @@ const CardGame = () => {
     const [notifyThisGame, setNotifyThisGame] = useState(notifyTurnGlobal);
 
     const { notify, permission, request } = useNotifications();
+
+    // Request browser notification permission proactively when the game loads
+    useEffect(() => {
+        request();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Clear unread lobby counter whenever the chat panel is opened
+    useEffect(() => {
+        if (showChat && activeSession) {
+            dispatch(markLobbyRead(activeSession._id));
+        }
+    }, [showChat, activeSession, dispatch]);
     const prevTurnRef = useRef(null);
 
     // Determine which player slot belongs to the logged-in user
@@ -83,7 +100,7 @@ const CardGame = () => {
         const justBecameMyTurn = prevTurnRef.current !== currentTurn && currentTurn === myPlayerId;
         prevTurnRef.current = currentTurn;
         if (justBecameMyTurn) {
-            notify("It's your turn!", `${activeSession?.name ?? 'Card Game'} — make your move.`);
+            notify("It's your turn!", `${activeSession?.name ?? 'Card Game'} — make your move.`, undefined, 'turn');
         }
     }, [currentTurn, isOnline, notifyThisGame, myPlayerId, notify, activeSession]);
 
@@ -113,6 +130,7 @@ const CardGame = () => {
                 onChatToggle={() => { setShowChat((v) => !v); setShowBrief(false); }}
                 showBrief={showBrief}
                 showChat={showChat}
+                hasUnreadChat={unreadLobby > 0}
                 displayName={displayName}
                 avatarUrl={avatarUrl}
                 username={username}
@@ -221,7 +239,7 @@ const CardGame = () => {
                         <h3 className="game-panel-title">Lobby Chat</h3>
                         <button className="game-panel-close" onClick={() => setShowChat(false)}>✕</button>
                     </div>
-                    <LobbyChat sessionId={activeSession._id} />
+                    <LobbyChat sessionId={activeSession._id} isWatching={true} />
                 </div>
             )}
         </div>

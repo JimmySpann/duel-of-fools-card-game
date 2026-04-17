@@ -15,6 +15,7 @@ const Header = ({
     onChatToggle,
     showBrief,
     showChat,
+    hasUnreadChat = false,
     displayName,
     avatarUrl,
     username,
@@ -71,10 +72,10 @@ const Header = ({
                         Brief
                     </button>
                     <button
-                        className={`player-button${showChat ? ' player-button--active' : ''}`}
+                        className={`player-button${showChat ? ' player-button--active' : ''}${(!showChat && hasUnreadChat) ? ' player-button--unread' : ''}`}
                         onClick={onChatToggle}
                     >
-                        Chat
+                        Chat{!showChat && hasUnreadChat ? ' •' : ''}
                     </button>
                 </div>
                 <div className="player-card-container">

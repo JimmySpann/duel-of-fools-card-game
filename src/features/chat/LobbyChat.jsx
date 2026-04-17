@@ -7,9 +7,10 @@ import './chat.css';
 /**
  * Lobby chat panel — embedded in the lobby view.
  * Props:
- *   sessionId  — MongoDB _id of the session
+ *   sessionId   — MongoDB _id of the session
+ *   isWatching  — true when the chat panel is currently visible (suppresses unread counter)
  */
-const LobbyChat = ({ sessionId }) => {
+const LobbyChat = ({ sessionId, isWatching = true }) => {
     const dispatch = useDispatch();
     const messages = useSelector((s) => s.chat.lobby[sessionId] || []);
     const myUsername = useSelector((s) => s.auth.username);
@@ -27,7 +28,8 @@ const LobbyChat = ({ sessionId }) => {
         socket.emit('lobby:join', { sessionId });
 
         const handler = (msg) => {
-            dispatch(receiveLobbyMessage({ sessionId, message: msg }));
+            // isWatching comes from closure — if panel visible, mark as read immediately
+            dispatch(receiveLobbyMessage({ sessionId, message: msg, isWatching }));
         };
         socket.on('lobby:message', handler);
 
@@ -35,6 +37,7 @@ const LobbyChat = ({ sessionId }) => {
             socket.off('lobby:message', handler);
             socket.emit('lobby:leave', { sessionId });
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionId, dispatch]);
 
     // Auto-scroll to bottom
