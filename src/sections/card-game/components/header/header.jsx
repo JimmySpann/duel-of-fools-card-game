@@ -47,6 +47,12 @@ const Header = ({
                     {showProfileMenu && (
                         <div className="header-profile-dropdown">
                             <button
+                                className="header-profile-dropdown-item lobbies-mobile"
+                                onClick={() => { setShowProfileMenu(false); onLobbies(); }}
+                            >
+                                Lobbies
+                            </button>
+                            <button
                                 className="header-profile-dropdown-item signout"
                                 onClick={() => { setShowProfileMenu(false); onSignOut(); }}
                             >

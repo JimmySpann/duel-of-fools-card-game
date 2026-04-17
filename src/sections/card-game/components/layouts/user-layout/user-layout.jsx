@@ -25,9 +25,8 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = fa
     };
 
     const onHandCardClick = (index) => {
-        if (disabled) return;
         if (phase !== 'main') return;
-        if (cardPlayedThisTurn) return;
+        // Allow viewing a card even when it's not our turn; just can't play it.
         document.body.style.overflow = 'hidden';
         setSelectedHandIndex(index);
     };
@@ -79,7 +78,7 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = fa
                 highlight={isSelectingAlly ? 'ally' : false}
                 playerId={player.id}
             />
-            <Hand _hand={player.hand} onCardClick={onHandCardClick} locked={cardPlayedThisTurn || disabled} />
+            <Hand _hand={player.hand} onCardClick={onHandCardClick} locked={false} dimmed={cardPlayedThisTurn || disabled} />
             <div className="turn-controls">
                 {disabled ? (
                     <button className="turn-btn end-turn-btn" disabled>
@@ -112,10 +111,14 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = fa
                 <SelectedCard
                     card={player.hand[selectedHandIndex]}
                     onCloseClick={handleHandClose}
-                    buttons={[
-                        { name: 'Play Card', onClick: handlePlayCard },
-                        { name: 'Close', onClick: 'close' },
-                    ]}
+                    buttons={
+                        disabled || cardPlayedThisTurn
+                            ? [{ name: 'Close', onClick: 'close' }]
+                            : [
+                                { name: 'Play Card', onClick: handlePlayCard },
+                                { name: 'Close', onClick: 'close' },
+                            ]
+                    }
                 />
             )}
         </div>

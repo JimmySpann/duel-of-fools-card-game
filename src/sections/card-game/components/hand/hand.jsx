@@ -1,115 +1,67 @@
-import { useState, useEffect, useRef } from 'react';
-import Card from '../../components/card-layouts/full-card/full-card';
+import fireIcon from '../../../../assets/elements/fire-icon.png';
+import iceIcon from '../../../../assets/elements/ice-icon.png';
+import earthIcon from '../../../../assets/elements/earth-icon.png';
+import airIcon from '../../../../assets/elements/air-icon.png';
+import electricIcon from '../../../../assets/elements/lightning-icon.png';
+import waterIcon from '../../../../assets/elements/water-icon.png';
+import deathIcon from '../../../../assets/elements/death-icon.png';
 import './hand.css';
 
-// Constants from your original code
-const SUITS = ["spades", "diamonds", "clubs", "hearts"];
-const VALUES = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-const A_VAL = -0.02;
-const H_VAL = 5;
-const K_VAL = 0.5;
-const DIFF = 0.1;
-const MULTI = 1.6;
-const CARD_WIDTH = 200; // 2.5 * 80
+const ELEMENT_ICONS = { fire: fireIcon, ice: iceIcon, earth: earthIcon, air: airIcon, electric: electricIcon, water: waterIcon, death: deathIcon };
 
-const Hand = ({ _hand, onCardClick, locked = false }) => {
-    const [deck, setDeck] = useState([]);
-    const [hand, setHand] = useState(_hand);
-    const handRef = useRef(null);
+const HandCard = ({ card, index, locked, dimmed, onCardClick }) => {
+    const elements = Object.entries(card.elements ?? {})
+        .filter(([k]) => k !== 'normal')
+        .flatMap(([k, v]) => Array(v).fill(k))
+        .slice(0, 3);
 
-    // Initialize deck on mount
-    useEffect(() => {
-        const newDeck = [];
-        SUITS.forEach(suit => {
-            VALUES.forEach(value => {
-                newDeck.push({ suit, value, id: `${suit}-${value}` });
-            });
-        });
-        setDeck(newDeck);
-    }, []);
+    return (
+        <div
+            className={`hand-card${locked ? ' hand-card-locked' : ''}${dimmed ? ' hand-card-dimmed' : ''}`}
+            onClick={() => !locked && onCardClick && onCardClick(index)}
+            role="button"
+            tabIndex={locked ? -1 : 0}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && !locked && onCardClick && onCardClick(index)}
+            aria-label={card.name}
+        >
+            <img className="hand-card-image" src={card.image} alt={card.name} />
 
-    const addCard = () => {
-        if (deck.length === 0) return;
+            {elements.length > 0 && (
+                <div className="hand-card-elements">
+                    {elements.map((el, i) => (
+                        <img key={i} src={ELEMENT_ICONS[el]} className="hand-card-element-icon" alt={el} />
+                    ))}
+                </div>
+            )}
 
-        const newDeck = [...deck];
-        const card = newDeck.shift();
+            <div className="hand-card-footer">
+                <span className="hand-card-name">{card.name}</span>
+            </div>
+        </div>
+    );
+};
 
-        setDeck(newDeck);
-        setHand(prevHand => [...prevHand, card]);
-    };
-
-    const getypos = (xpos) => {
-        return A_VAL * Math.pow((xpos - H_VAL), 2) + K_VAL;
-    };
-
-    const getRotation = (xpos) => {
-        // xpos ranges from 0 to 10. H_VAL is 5 (the center).
-        // Cards at xpos 0 should tilt left, at xpos 10 should tilt right.
-        const distanceFromCenter = xpos - H_VAL;
-
-        // This produces a linear rotation from -8 to +8 (adjustable by multi)
-        // For a more dramatic curve, you can multiply this further
-        let angle = distanceFromCenter * MULTI * 2;
-
-        return angle;
-    };
-
-
-    const calculateCardStyle = (index) => {
-        if (!handRef.current) return {};
-
-        const count = hand.length;
-        const handWidth = handRef.current.offsetWidth;
-        const cardWidth = 200;
-
-        // Calculate spacing so cards never exceed hand width
-        let spacing = cardWidth / 2;
-        let totalNeeded = (count - 1) * spacing + cardWidth;
-
-        if (totalNeeded > handWidth) {
-            spacing = (handWidth - cardWidth) / (count - 1 || 1);
-            totalNeeded = handWidth;
-        }
-
-        const startOffset = (handWidth - totalNeeded) / 2;
-        const left = startOffset + (index * spacing);
-
-        // xpos: 0 (left edge) to 10 (right edge) for the parabola
-        const cardCenter = left + cardWidth / 2;
-        const xpos = (cardCenter / handWidth) * 10;
-
-        const ypos = getypos(xpos);
-        const rot = getRotation(xpos);
-        // Calculate base bottom position
-        const bottomBase = (ypos / K_VAL) * (handRef.current.offsetHeight / 4);
-
-        return {
-            left: `${left - 120}px`,
-            "--bottom-base": `${bottomBase}px`,
-            "--rot": `${rot}deg`,
-            zIndex: index
-        };
-    };
+const Hand = ({ _hand, onCardClick, locked = false, dimmed = false }) => {
+    if (!_hand || _hand.length === 0) {
+        return (
+            <div className="hand-container hand-container--empty">
+                <span className="hand-empty-label">No cards in hand</span>
+            </div>
+        );
+    }
 
     return (
         <div className="hand-container">
-            <div id="hand" ref={handRef}>
-                {_hand.map((card, index) => {
-                    return (
-                        <div
-                            key={card.id}
-                            className={`card${locked ? ' hand-card-locked' : ''}`}
-                            style={calculateCardStyle(index)}
-                            onClick={() => !locked && onCardClick && onCardClick(index)}
-                        >
-                            <Card
-                                key={index}
-                                card={card}
-                            />
-                        </div>
-                    );
-                })}
-            </div>
+            {_hand.map((card, index) => (
+                <HandCard
+                    key={card.id ?? index}
+                    card={card}
+                    index={index}
+                    locked={locked}
+                    dimmed={dimmed}
+                    onCardClick={onCardClick}
+                />
+            ))}
         </div>
     );
 };

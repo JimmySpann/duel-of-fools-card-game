@@ -188,6 +188,24 @@
     background: rgba(224, 90, 90, 0.12);
 }
 
+/* Hide standalone Lobbies button on narrow screens; it moves into the profile dropdown */
+@media (max-width: 480px) {
+    .account-button {
+        display: none;
+    }
+}
+
+/* Show the Lobbies dropdown item only on narrow screens (hidden on wide since button is visible) */
+.lobbies-mobile {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    .lobbies-mobile {
+        display: block;
+    }
+}
+
 /* ── Active player button ───────────────────────────────────────────────── */
 .player-button--active {
     background-color: rgb(100, 0, 130) !important;
