@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     updateProfile,
@@ -10,23 +10,31 @@ import {
     clearProfileError,
     setNotifyTurn,
     setNotifyDM,
+    setSoundVolume,
 } from './profileSlice';
+import sounds from '../sound/soundManager';
 import useNotifications from '../notifications/useNotifications';
 import './profile.css';
 
-const TABS = ['Profile', 'Friends', 'Blocked'];
+const TABS = ['Profile', 'Friends', 'Blocked', 'Options'];
 
-const Profile = ({ onClose }) => {
+const Profile = ({ onClose, initialTab = 'Profile' }) => {
     const dispatch = useDispatch();
-    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM } = useSelector((s) => s.profile);
+    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM, soundVolume } = useSelector((s) => s.profile);
     const username = useSelector((s) => s.auth.username);
     const { permission, request } = useNotifications();
 
-    const [tab, setTab] = useState('Profile');
+    const [tab, setTab] = useState(initialTab);
     const [nameInput, setNameInput] = useState(displayName);
     const [avatarInput, setAvatarInput] = useState(avatarUrl);
     const [addInput, setAddInput] = useState('');
     const [addStatus, setAddStatus] = useState(null); // { ok, msg }
+    const [localVolume, setLocalVolume] = useState(soundVolume ?? 0.7);
+
+    // Keep sound manager in sync with stored volume on mount
+    useEffect(() => {
+        sounds.setVolume(soundVolume ?? 0.7);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSaveProfile = async (e) => {
         e.preventDefault();
@@ -292,6 +300,70 @@ const Profile = ({ onClose }) => {
                             ))
                         )}
                         {error && <p className="profile-error">{error}</p>}
+                    </div>
+                )}
+                {/* ── Options Tab ── */}
+                {tab === 'Options' && (
+                    <div className="profile-section">
+                        <div className="profile-notif-section">
+                            <div className="profile-subsection-title" style={{ marginBottom: '0.5rem' }}>
+                                Sound
+                            </div>
+
+                            {/* Mute toggle */}
+                            <div className="profile-toggle-row">
+                                <span className="profile-toggle-label">
+                                    Sound effects
+                                    <span className="profile-toggle-hint">Plays sounds for attacks, abilities &amp; turns</span>
+                                </span>
+                                <button
+                                    type="button"
+                                    className={`profile-toggle ${localVolume > 0 ? 'on' : 'off'}`}
+                                    onClick={() => {
+                                        const next = localVolume > 0 ? 0 : (soundVolume > 0 ? soundVolume : 0.7);
+                                        setLocalVolume(next);
+                                        sounds.setVolume(next);
+                                        dispatch(setSoundVolume(next));
+                                    }}
+                                    aria-label="Toggle sound effects"
+                                >
+                                    <span className="profile-toggle-knob" />
+                                </button>
+                            </div>
+
+                            {/* Volume slider */}
+                            <div className="profile-volume-row">
+                                <span className="profile-volume-label">Volume</span>
+                                <div className="profile-volume-slider-wrap">
+                                    <span className="profile-volume-icon">🔇</span>
+                                    <input
+                                        className="profile-volume-slider"
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.05"
+                                        value={localVolume}
+                                        onChange={(e) => {
+                                            const v = parseFloat(e.target.value);
+                                            setLocalVolume(v);
+                                            sounds.setVolume(v);
+                                            dispatch(setSoundVolume(v));
+                                        }}
+                                    />
+                                    <span className="profile-volume-icon">🔊</span>
+                                </div>
+                                <span className="profile-volume-pct">{Math.round(localVolume * 100)}%</span>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="profile-save-btn"
+                                style={{ marginTop: '0.25rem' }}
+                                onClick={() => sounds.hit()}
+                            >
+                                Test Sound
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

@@ -5,6 +5,7 @@ import BattlerBoard from '../../battler-board/battler-board.jsx';
 import Hand from '../../hand/hand.jsx';
 import SelectedCard from '../../selected-card/selected-card.jsx';
 import { selectAttacker, initiateAbility, resolveOnAllyCard, playCardFromHand } from '../../../database/cardGameSlice';
+import sounds from '../../../../../features/sound/soundManager';
 
 const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = false }) => {
     const dispatch = useDispatch();
@@ -47,11 +48,13 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = fa
     };
 
     const handleUseAbility = (abilityIndex) => {
+        sounds.ability();
         dispatch(initiateAbility({ casterCardIndex: selectedBattlerIndex, abilityIndex }));
         handleBattlerClose();
     };
 
     const handlePlayCard = () => {
+        sounds.cardPlay();
         dispatch(playCardFromHand({ cardIndex: selectedHandIndex }));
         handleHandClose();
     };

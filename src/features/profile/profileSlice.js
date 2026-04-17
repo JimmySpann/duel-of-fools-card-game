@@ -90,9 +90,10 @@ const loadNotifPrefs = () => {
         return {
             notifyTurn: localStorage.getItem('cg_notifyTurn') !== 'false',
             notifyDM: localStorage.getItem('cg_notifyDM') !== 'false',
+            soundVolume: parseFloat(localStorage.getItem('cg_soundVolume') ?? '0.7'),
         };
     } catch {
-        return { notifyTurn: true, notifyDM: true };
+        return { notifyTurn: true, notifyDM: true, soundVolume: 0.7 };
     }
 };
 
@@ -117,6 +118,10 @@ const profileSlice = createSlice({
         setNotifyDM(state, action) {
             state.notifyDM = action.payload;
             try { localStorage.setItem('cg_notifyDM', action.payload); } catch { }
+        },
+        setSoundVolume(state, action) {
+            state.soundVolume = Math.max(0, Math.min(1, action.payload));
+            try { localStorage.setItem('cg_soundVolume', state.soundVolume); } catch { }
         },
         resetProfile(state) {
             state.displayName = '';
@@ -193,5 +198,5 @@ const profileSlice = createSlice({
     },
 });
 
-export const { clearProfileError, resetProfile, setNotifyTurn, setNotifyDM } = profileSlice.actions;
+export const { clearProfileError, resetProfile, setNotifyTurn, setNotifyDM, setSoundVolume } = profileSlice.actions;
 export default profileSlice.reducer;

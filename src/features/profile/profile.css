@@ -421,6 +421,73 @@
     background: rgba(226, 201, 126, 0.2);
 }
 
+/* ── Volume slider (Options tab) ─────────────────────────────────────────── */
+.profile-volume-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.profile-volume-label {
+    font-size: 0.88rem;
+    color: #dde0f0;
+}
+
+.profile-volume-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.profile-volume-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.profile-volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 6px;
+    border-radius: 99px;
+    background: #2e3148;
+    outline: none;
+    cursor: pointer;
+}
+
+.profile-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #e2c97e;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 4px rgba(226, 201, 126, 0.5);
+    transition: box-shadow 0.15s;
+}
+
+.profile-volume-slider::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 10px rgba(226, 201, 126, 0.8);
+}
+
+.profile-volume-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #e2c97e;
+    cursor: pointer;
+    border: none;
+}
+
+.profile-volume-pct {
+    font-size: 0.82rem;
+    color: #8890b0;
+    min-width: 2.5rem;
+    text-align: right;
+}
+
 /* ── In-game bell toggle ─────────────────────────────────────────────────── */
 .game-notif-toggle {
     position: absolute;

@@ -20,6 +20,7 @@ const Header = ({
     avatarUrl,
     username,
     onSignOut,
+    onProfileOpen,
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const msg = phaseMessage(phase);
@@ -52,6 +53,12 @@ const Header = ({
                                 onClick={() => { setShowProfileMenu(false); onLobbies(); }}
                             >
                                 Lobbies
+                            </button>
+                            <button
+                                className="header-profile-dropdown-item"
+                                onClick={() => { setShowProfileMenu(false); onProfileOpen?.(); }}
+                            >
+                                Profile
                             </button>
                             <button
                                 className="header-profile-dropdown-item signout"

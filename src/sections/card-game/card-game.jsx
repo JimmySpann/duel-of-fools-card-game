@@ -7,15 +7,17 @@ import { logout } from '../../features/auth/authSlice';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import useNotifications from '../../features/notifications/useNotifications';
 import LobbyChat from '../../features/chat/LobbyChat';
+import Profile from '../../features/profile/Profile';
 import Header from './components/header/header.jsx';
 import EnemyLayout from './components/layouts/enemy-layout/enemy-layout.jsx';
 import UserLayout from './components/layouts/user-layout/user-layout.jsx';
 import TurnRecap from './components/turn-recap/turn-recap.jsx';
+import sounds from '../../features/sound/soundManager';
 import './card-game.css';
 
 const CardGame = () => {
     const dispatch = useDispatch();
-    const { players, currentTurn, phase, gameOver, winner, log } = useSelector((state) => state.cardGame);
+    const { players, currentTurn, phase, gameOver, winner, log, lastHitEvents } = useSelector((state) => state.cardGame);
     const activeGameId = useSelector((s) => s.sessions.activeGameId);
     const activeSession = useSelector((s) => s.sessions.activeSession);
     const username = useSelector((s) => s.auth.username);
@@ -29,11 +31,18 @@ const CardGame = () => {
     // Panel state
     const [showBrief, setShowBrief] = useState(false);
     const [showChat, setShowChat] = useState(false);
+    const [showProfile, setShowProfile] = useState(false);
 
     // Per-game notification override (defaults to global setting)
     const [notifyThisGame, setNotifyThisGame] = useState(notifyTurnGlobal);
 
+    const soundVolume = useSelector((s) => s.profile.soundVolume);
     const { notify, permission, request } = useNotifications();
+
+    // Sync sound volume from persisted profile state on mount
+    useEffect(() => {
+        sounds.setVolume(soundVolume ?? 0.7);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Request browser notification permission proactively when the game loads
     useEffect(() => {
@@ -48,6 +57,46 @@ const CardGame = () => {
         }
     }, [showChat, activeSession, dispatch]);
     const prevTurnRef = useRef(null);
+    const prevOpponentHealthRef = useRef(null);
+    const gameOverSoundFiredRef = useRef(false);
+
+    // ── Sound: combat hit events ────────────────────────────────────────────
+    useEffect(() => {
+        if (!lastHitEvents || lastHitEvents.length === 0) return;
+        lastHitEvents.forEach((evt, i) => {
+            setTimeout(() => {
+                if (evt.type === 'hit') sounds.hit();
+                else if (evt.type === 'miss') sounds.miss();
+                else if (evt.type === 'defeat') sounds.defeat();
+                else if (evt.type === 'blocked') sounds.blocked();
+            }, i * 130);
+        });
+    }, [lastHitEvents]);
+
+    // ── Sound: direct player hit (opponent health decreases) ───────────────
+    useEffect(() => {
+        if (!opponentPlayer) return;
+        const prev = prevOpponentHealthRef.current;
+        if (prev !== null && opponentPlayer.health < prev) {
+            sounds.directHit();
+        }
+        prevOpponentHealthRef.current = opponentPlayer.health;
+    }, [opponentPlayer?.health]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ── Sound: it's now my turn ─────────────────────────────────────────────
+    useEffect(() => {
+        if (prevTurnRef.current !== null && currentTurn === myPlayerId) {
+            sounds.yourTurn();
+        }
+    }, [currentTurn]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ── Sound: game over ────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!gameOver || gameOverSoundFiredRef.current) return;
+        gameOverSoundFiredRef.current = true;
+        if (winner === myPlayerId) sounds.gameWin();
+        else sounds.gameLose();
+    }, [gameOver]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Determine which player slot belongs to the logged-in user
     const myPlayerId = activeSession?.players?.find((p) => p.username === username)?.slot ?? null;
@@ -125,6 +174,7 @@ const CardGame = () => {
                 phase={phase}
                 isMyTurn={isMyTurn}
                 onLobbies={() => dispatch(leaveSession())}
+                onProfileOpen={() => setShowProfile(true)}
                 onSignOut={() => dispatch(logout())}
                 onBriefToggle={() => { setShowBrief((v) => !v); setShowChat(false); }}
                 onChatToggle={() => { setShowChat((v) => !v); setShowBrief(false); }}
@@ -154,7 +204,7 @@ const CardGame = () => {
             <UserLayout
                 player={myPlayer}
                 phase={isMyTurn ? phase : 'waiting'}
-                onEndTurn={() => dispatch(endTurn())}
+                onEndTurn={() => { sounds.endTurn(); dispatch(endTurn()); }}
                 onCancelSelection={() => dispatch(cancelSelection())}
                 disabled={!isMyTurn}
             />
@@ -242,8 +292,12 @@ const CardGame = () => {
                     <LobbyChat sessionId={activeSession._id} isWatching={true} />
                 </div>
             )}
+
+            {/* ── Profile modal ────────────────────────────────────────── */}
+            {showProfile && <Profile onClose={() => setShowProfile(false)} initialTab="Options" />}
         </div>
     );
+};
 };
 
 export default CardGame;
