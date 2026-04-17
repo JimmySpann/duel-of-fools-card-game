@@ -9,6 +9,8 @@ import {
     pollSession,
     updateSettings,
     updateTeam,
+    leaveSessionLobby,
+    deleteSession,
     setActiveSession,
     clearSessionError,
 } from '../../features/sessions/sessionsSlice';
@@ -36,7 +38,7 @@ const defaultMaxBattlers = (count) => {
 };
 
 // ── Lobby view ─────────────────────────────────────────────────────────────────
-const Lobby = ({ session, username, onStart, onBack, loading, error, dispatch }) => {
+const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading, error, dispatch }) => {
     const isHost = session.host.username === username;
     const settings = session.settings || {};
     const teamMode = settings.teamMode || 'ffa';
@@ -74,7 +76,7 @@ const Lobby = ({ session, username, onStart, onBack, loading, error, dispatch })
                             />
                         </label>
                         <label className="lobby-setting-label">
-                            Max Battlers
+                            Max In Play
                             <input
                                 className="lobby-setting-input"
                                 type="number"
@@ -85,6 +87,21 @@ const Lobby = ({ session, username, onStart, onBack, loading, error, dispatch })
                                 onBlur={(e) => {
                                     const v = e.target.value.trim();
                                     handleSettingChange('maxBattlers', v === '' ? null : Number(v));
+                                }}
+                            />
+                        </label>
+                        <label className="lobby-setting-label">
+                            Deck Size
+                            <input
+                                className="lobby-setting-input"
+                                type="number"
+                                min={4}
+                                max={50}
+                                placeholder="All cards"
+                                defaultValue={settings.deckSize ?? ''}
+                                onBlur={(e) => {
+                                    const v = e.target.value.trim();
+                                    handleSettingChange('deckSize', v === '' ? null : Number(v));
                                 }}
                             />
                         </label>
@@ -142,7 +159,8 @@ const Lobby = ({ session, username, onStart, onBack, loading, error, dispatch })
             {!isHost && (
                 <div className="lobby-settings lobby-settings--readonly">
                     <span>HP: {settings.startingHp ?? 20}</span>
-                    <span>Max Battlers: {settings.maxBattlers ?? `Auto (${defaultMaxBattlers(playerCount)})`}</span>
+                    <span>Max In Play: {settings.maxBattlers ?? `Auto (${defaultMaxBattlers(playerCount)})`}</span>
+                    <span>Deck: {settings.deckSize ?? 'All'}</span>
                     <span>Mode: {teamMode === 'teams' ? 'Teams' : 'Free for All'}</span>
                 </div>
             )}
@@ -150,15 +168,25 @@ const Lobby = ({ session, username, onStart, onBack, loading, error, dispatch })
             {error && <p className="sessions-error">{error}</p>}
 
             {isHost ? (
-                <button
-                    className="lobby-start-btn"
-                    onClick={onStart}
-                    disabled={playerCount < 2 || loading}
-                >
-                    {loading ? 'Starting…' : playerCount < 2 ? 'Need at least 2 players…' : 'Start Game'}
-                </button>
+                <div className="lobby-actions">
+                    <button
+                        className="lobby-start-btn"
+                        onClick={onStart}
+                        disabled={playerCount < 2 || loading}
+                    >
+                        {loading ? 'Starting…' : playerCount < 2 ? 'Need at least 2 players…' : 'Start Game'}
+                    </button>
+                    <button className="lobby-delete-btn" onClick={onDelete} disabled={loading}>
+                        Delete Session
+                    </button>
+                </div>
             ) : (
-                <p className="lobby-waiting-msg">Waiting for the host to start the game…</p>
+                <div className="lobby-actions">
+                    <p className="lobby-waiting-msg">Waiting for the host to start the game…</p>
+                    <button className="lobby-leave-btn" onClick={onLeave} disabled={loading}>
+                        Leave Session
+                    </button>
+                </div>
             )}
 
             <LobbyChat sessionId={session._id} />
@@ -174,9 +202,10 @@ const Sessions = () => {
     const { displayName, avatarUrl, friendRequests } = useSelector((s) => s.profile);
     const unreadLobby = useSelector((s) => s.chat.unreadLobby);
 
-    const [view, setView] = useState('list'); // 'list' | 'create' | 'join' | 'lobby'
+    const [view, setView] = useState('list'); // 'list' | 'create' | 'join' | 'preview' | 'lobby'
     const [newName, setNewName] = useState('');
     const [joinCode, setJoinCode] = useState('');
+    const [previewSession, setPreviewSession] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
 
     useEffect(() => {
@@ -235,9 +264,59 @@ const Sessions = () => {
         setView('list');
         setNewName('');
         setJoinCode('');
+        setPreviewSession(null);
         dispatch(clearSessionError());
         dispatch(fetchSessions());
     }, [dispatch]);
+
+    // ── Session preview (confirm before join) ───────────────────────────────────
+    if (view === 'preview' && previewSession) {
+        const ps = previewSession;
+        const psSettings = ps.settings || {};
+        const psPlayerCount = ps.players.length;
+        return (
+            <div className="sessions-backdrop">
+                <div className="sessions-card">
+                    <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
+                    <h2 className="sessions-card-title">{ps.name}</h2>
+                    <p className="lobby-code-label">Invite code</p>
+                    <div className="lobby-code">{ps.joinCode}</div>
+                    <div className="preview-settings">
+                        <span>HP: {psSettings.startingHp ?? 20}</span>
+                        <span>Max In Play: {psSettings.maxBattlers ?? `Auto (${defaultMaxBattlers(psPlayerCount)})`}</span>
+                        <span>Deck: {psSettings.deckSize ?? 'All'}</span>
+                        <span>Mode: {(psSettings.teamMode === 'teams') ? 'Teams' : 'FFA'}</span>
+                    </div>
+                    <div className="lobby-slots" style={{ marginTop: '1.5rem' }}>
+                        {SLOTS.map((slot, i) => {
+                            const player = ps.players.find((p) => p.slot === slot);
+                            return (
+                                <div key={slot} className={`lobby-slot ${player ? 'filled' : 'empty'}`}>
+                                    <span className="lobby-slot-label">Player {i + 1}</span>
+                                    <span className="lobby-slot-name">{player ? player.username : 'Open'}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {error && <p className="sessions-error" style={{ marginTop: '0.75rem' }}>{error}</p>}
+                    <div className="preview-actions">
+                        <button
+                            className="sessions-submit"
+                            disabled={loading}
+                            onClick={() => {
+                                dispatch(joinSessionById({ sessionId: ps._id })).then((res) => {
+                                    if (!res.error) setView('lobby');
+                                });
+                            }}
+                        >
+                            {loading ? 'Joining…' : 'Join Session'}
+                        </button>
+                    </div>
+                </div>
+                <DMPanel />
+            </div>
+        );
+    }
 
     // ── Lobby ────────────────────────────────────────────────────────────────────
     if (view === 'lobby' && activeSession) {
@@ -251,9 +330,17 @@ const Sessions = () => {
                     onBack={handleBack}
                     onStart={() => {
                         dispatch(startSession({ sessionId: activeSession._id })).then((res) => {
-                            // Pre-populate card game state with real player names immediately
-                            // so the game header shows actual names without waiting for socket sync
                             if (res.payload?.state) dispatch(setGameState(res.payload.state));
+                        });
+                    }}
+                    onLeave={() => {
+                        dispatch(leaveSessionLobby({ sessionId: activeSession._id })).then((res) => {
+                            if (!res.error) handleBack();
+                        });
+                    }}
+                    onDelete={() => {
+                        dispatch(deleteSession({ sessionId: activeSession._id })).then((res) => {
+                            if (!res.error) handleBack();
                         });
                     }}
                     dispatch={dispatch}
@@ -408,7 +495,9 @@ const Sessions = () => {
                                             if (isParticipant || session.status !== 'waiting') {
                                                 handleEnterSession(session);
                                             } else {
-                                                handleJoinDirectly(session);
+                                                dispatch(clearSessionError());
+                                                setPreviewSession(session);
+                                                setView('preview');
                                             }
                                         }}
                                         disabled={loading}

@@ -93,6 +93,32 @@ export const updateTeam = createAsyncThunk('sessions/updateTeam', async ({ sessi
     return data.session;
 });
 
+export const leaveSessionLobby = createAsyncThunk('sessions/leaveLobby', async ({ sessionId }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/leave`, {
+        method: 'DELETE',
+        headers: authHeader(token),
+    });
+    if (!res.ok) {
+        const data = await res.json();
+        return rejectWithValue(data.error);
+    }
+    return sessionId;
+});
+
+export const deleteSession = createAsyncThunk('sessions/delete', async ({ sessionId }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}`, {
+        method: 'DELETE',
+        headers: authHeader(token),
+    });
+    if (!res.ok) {
+        const data = await res.json();
+        return rejectWithValue(data.error);
+    }
+    return sessionId;
+});
+
 const sessionsSlice = createSlice({
     name: 'sessions',
     initialState: {
@@ -176,9 +202,24 @@ const sessionsSlice = createSlice({
                 if (idx >= 0) state.list[idx] = action.payload;
                 else state.list.unshift(action.payload);
             })
-            .addCase(joinSessionById.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
+            .addCase(joinSessionById.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+
+            .addCase(leaveSessionLobby.pending, (state) => { state.loading = true; state.error = null; })
+            .addCase(leaveSessionLobby.fulfilled, (state, action) => {
+                state.loading = false;
+                state.activeSession = null;
+                state.list = state.list.filter((s) => s._id !== action.payload);
+            })
+            .addCase(leaveSessionLobby.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+
+            .addCase(deleteSession.pending, (state) => { state.loading = true; state.error = null; })
+            .addCase(deleteSession.fulfilled, (state, action) => {
+                state.loading = false;
+                state.activeSession = null;
+                state.list = state.list.filter((s) => s._id !== action.payload);
+            })
+            .addCase(deleteSession.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
     },
 });
 
-export const { clearSessionError, leaveSession, setActiveSession } = sessionsSlice.actions;
-export default sessionsSlice.reducer;
+export const { clearSessionError, leaveSession, setActiveSession } = sessionsSlice.actions; export default sessionsSlice.reducer;

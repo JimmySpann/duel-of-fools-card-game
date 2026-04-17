@@ -19,6 +19,7 @@ const settingsSchema = new mongoose.Schema(
     {
         startingHp: { type: Number, default: 20, min: 1, max: 200 },
         maxBattlers: { type: Number, default: null, min: 1, max: 20 }, // null = auto-scale
+        deckSize: { type: Number, default: null, min: 4, max: 50 },   // null = all cards
         teamMode: { type: String, enum: ['ffa', 'teams'], default: 'ffa' },
     },
     { _id: false }

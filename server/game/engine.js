@@ -31,8 +31,8 @@ const defaultMaxBattlers = (playerCount) => {
     return 4;
 };
 
-const buildPlayer = (id, name, image, startingHp = 20, team = null) => {
-    const pool = shuffle(cards).map((c) => ({
+const buildPlayer = (id, name, image, startingHp = 20, team = null, deckSize = null) => {
+    let pool = shuffle(cards).map((c) => ({
         ...c,
         currentHealth: c.health,
         statusEffects: [],
@@ -41,6 +41,8 @@ const buildPlayer = (id, name, image, startingHp = 20, team = null) => {
         acted: false,
         justPlayed: false,
     }));
+    // Cap deck size if specified (minimum 4 so there are always cards to draw)
+    if (deckSize !== null && deckSize > 0) pool = pool.slice(0, Math.max(4, deckSize));
     return {
         id,
         name,
@@ -66,15 +68,16 @@ const createInitialState = (playerConfigs, settings = {}) => {
     const { startingHp = 20, teamMode = 'ffa' } = settings;
     const playerCount = playerConfigs.length;
     const maxBattlers = settings.maxBattlers ?? defaultMaxBattlers(playerCount);
+    const deckSize = settings.deckSize ?? null;
 
     const players = playerConfigs.map(({ id, name, image, team }, i) =>
-        buildPlayer(id, name, image ?? AVATAR_URLS[i] ?? AVATAR_URLS[0], startingHp, teamMode === 'teams' ? (team ?? null) : null)
+        buildPlayer(id, name, image ?? AVATAR_URLS[i] ?? AVATAR_URLS[0], startingHp, teamMode === 'teams' ? (team ?? null) : null, deckSize)
     );
 
     const turnOrder = players.map((p) => p.id);
     return {
         players,
-        settings: { startingHp, maxBattlers, teamMode },
+        settings: { startingHp, maxBattlers, deckSize, teamMode },
         turnOrder,
         turnIndex: 0,
         currentTurn: turnOrder[0],

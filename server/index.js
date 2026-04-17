@@ -486,6 +486,7 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
         const settings = {
             startingHp: session.settings?.startingHp ?? 20,
             maxBattlers: session.settings?.maxBattlers ?? null,
+            deckSize: session.settings?.deckSize ?? null,
             teamMode: session.settings?.teamMode ?? 'ffa',
         };
 
@@ -506,8 +507,47 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
 });
 
 /**
+ * DELETE /api/sessions/:id
+ * Host-only; deletes the session entirely.
+ */
+app.delete('/api/sessions/:id', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can delete the session' });
+        if (session.status === 'in-progress') return res.status(409).json({ error: 'Cannot delete a session that is in progress' });
+
+        await Session.deleteOne({ _id: req.params.id });
+        res.status(204).send();
+    } catch (err) {
+        console.error('DELETE /api/sessions/:id error:', err);
+        res.status(500).json({ error: 'Failed to delete session' });
+    }
+});
+
+/**
+ * DELETE /api/sessions/:id/leave
+ * Removes the calling user from a waiting session.
+ */
+app.delete('/api/sessions/:id/leave', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot leave a session that has already started' });
+        if (String(session.host.userId) === req.user.id) return res.status(400).json({ error: 'Host cannot leave — delete the session instead' });
+
+        session.players = session.players.filter((p) => String(p.userId) !== req.user.id);
+        await session.save();
+        res.status(204).send();
+    } catch (err) {
+        console.error('DELETE /api/sessions/:id/leave error:', err);
+        res.status(500).json({ error: 'Failed to leave session' });
+    }
+});
+
+/**
  * PATCH /api/sessions/:id/settings
- * Body: { startingHp?, maxBattlers?, teamMode? }
+ * Body: { startingHp?, maxBattlers?, deckSize?, teamMode? }
  * Host-only; updates lobby settings before game starts.
  */
 app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
@@ -517,9 +557,10 @@ app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
         if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can update settings' });
         if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change settings after game starts' });
 
-        const { startingHp, maxBattlers, teamMode } = req.body;
+        const { startingHp, maxBattlers, deckSize, teamMode } = req.body;
         if (startingHp !== undefined) session.settings.startingHp = Number(startingHp);
         if (maxBattlers !== undefined) session.settings.maxBattlers = maxBattlers === null ? null : Number(maxBattlers);
+        if (deckSize !== undefined) session.settings.deckSize = deckSize === null ? null : Number(deckSize);
         if (teamMode !== undefined) session.settings.teamMode = teamMode === 'teams' ? 'teams' : 'ffa';
         session.markModified('settings');
         await session.save();
