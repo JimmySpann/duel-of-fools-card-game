@@ -537,6 +537,41 @@ const dmRoom = (a, b) => {
 io.on('connection', (socket) => {
     const { username } = socket.user;
 
+    // ── Game (real-time actions) ──────────────────────────────────────────────
+
+    // Join the socket room for a specific game and receive current state
+    socket.on('game:join', async ({ gameId }) => {
+        if (!gameId) return;
+        socket.join(`game:${gameId}`);
+        try {
+            const game = await Game.findOne({ gameId }).lean();
+            if (game) socket.emit('game:state', game.state);
+        } catch (err) {
+            console.error('game:join error:', err);
+        }
+    });
+
+    // Dispatch a game action, persist, and broadcast updated state to all players
+    socket.on('game:action', async ({ gameId, type, payload = {} }) => {
+        if (!gameId || !type) return;
+        try {
+            const game = await Game.findOne({ gameId });
+            if (!game) return socket.emit('game:error', { message: 'Game not found' });
+
+            const { state: nextState, error } = dispatch(game.state, type, payload);
+            if (error) return socket.emit('game:error', { message: error });
+
+            game.state = nextState;
+            game.markModified('state');
+            await game.save();
+
+            io.to(`game:${gameId}`).emit('game:state', nextState);
+        } catch (err) {
+            console.error('game:action error:', err);
+            socket.emit('game:error', { message: 'Failed to process action' });
+        }
+    });
+
     // ── Lobby chat ────────────────────────────────────────────────────────────
 
     socket.on('lobby:join', ({ sessionId }) => {

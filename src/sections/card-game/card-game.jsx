@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { endTurn, resetGame, cancelSelection } from './database/cardGameSlice';
+import { endTurn, resetGame, cancelSelection, setGameState } from './database/cardGameSlice';
+import { getSocket } from '../../features/chat/socket';
 import Header from './components/header/header.jsx';
 import EnemyLayout from './components/layouts/enemy-layout/enemy-layout.jsx';
 import UserLayout from './components/layouts/user-layout/user-layout.jsx';
@@ -9,9 +11,43 @@ import './card-game.css';
 const CardGame = () => {
     const dispatch = useDispatch();
     const { players, currentTurn, phase, gameOver, winner, log } = useSelector((state) => state.cardGame);
+    const activeGameId = useSelector((s) => s.sessions.activeGameId);
+    const activeSession = useSelector((s) => s.sessions.activeSession);
+    const username = useSelector((s) => s.auth.username);
 
-    const currentPlayer = players.find((p) => p.id === currentTurn);
-    const otherPlayer = players.find((p) => p.id !== currentTurn);
+    // Determine which player slot belongs to the logged-in user
+    const myPlayerId = activeSession?.players?.find((p) => p.username === username)?.slot ?? null;
+    const isOnline = !!activeGameId;
+
+    // In online mode: my board is always at the bottom regardless of turn.
+    // In local (solo) mode: keep existing behaviour — current turn player at bottom.
+    const myPlayer = isOnline
+        ? players.find((p) => p.id === myPlayerId) ?? players[0]
+        : players.find((p) => p.id === currentTurn);
+    const opponentPlayer = players.find((p) => p.id !== myPlayer?.id);
+
+    // Actions are only allowed when it is this client's turn
+    const isMyTurn = !isOnline || currentTurn === myPlayerId;
+
+    // Join the game socket room and sync state from server
+    useEffect(() => {
+        if (!activeGameId) return;
+        const socket = getSocket();
+        if (!socket) return;
+
+        socket.emit('game:join', { gameId: activeGameId });
+
+        const handleState = (state) => dispatch(setGameState(state));
+        const handleError = ({ message }) => console.error('game:error', message);
+
+        socket.on('game:state', handleState);
+        socket.on('game:error', handleError);
+
+        return () => {
+            socket.off('game:state', handleState);
+            socket.off('game:error', handleError);
+        };
+    }, [activeGameId, dispatch]);
 
     if (gameOver) {
         const winnerName = players.find((p) => p.id === winner)?.name;
@@ -30,18 +66,20 @@ const CardGame = () => {
     return (
         <div className="card-game-container">
             <Header
-                currentPlayerName={currentPlayer.name}
+                currentPlayerName={players.find((p) => p.id === currentTurn)?.name}
                 phase={phase}
+                isMyTurn={isMyTurn}
             />
             <EnemyLayout
-                player={otherPlayer}
-                isTargetable={phase === 'selectingTarget'}
+                player={opponentPlayer}
+                isTargetable={isMyTurn && phase === 'selectingTarget'}
             />
             <UserLayout
-                player={currentPlayer}
-                phase={phase}
+                player={myPlayer}
+                phase={isMyTurn ? phase : 'waiting'}
                 onEndTurn={() => dispatch(endTurn())}
                 onCancelSelection={() => dispatch(cancelSelection())}
+                disabled={!isMyTurn}
             />
             <div className="battle-log">
                 <div className="battle-log-title">Battle Log</div>
@@ -51,7 +89,7 @@ const CardGame = () => {
                     ))}
                 </div>
             </div>
-            <TurnRecap currentPlayer={currentPlayer} players={players} />
+            <TurnRecap currentPlayer={myPlayer} players={players} />
         </div>
     );
 };

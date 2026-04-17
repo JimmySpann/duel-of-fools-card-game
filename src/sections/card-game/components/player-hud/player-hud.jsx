@@ -52,12 +52,12 @@ const PlayerHUD = ({ player, isCurrentUser }) => {
 
     const processElements = () => {
         let elementArray = [];
-        for (const [key, value] of Object.entries(player.elements)) {
+        for (const [key, value] of Object.entries(player.elements ?? {})) {
             for (let i = 0; i < value; i++) {
                 elementArray.push(key);
             }
         }
-        let normalCount = player.elements['normal'] || 0;
+        let normalCount = player.elements?.['normal'] || 0;
         elementArray = elementArray.filter((el) => el !== 'normal');
         return { elementArray, normalCount };
     }

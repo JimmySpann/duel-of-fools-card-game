@@ -20,9 +20,9 @@ const buildPlayer = (id, name, image) => {
     maxHealth: 20,
     image,
     hand: pool.slice(0, 3),
-    deck: pool.slice(3, 7),
+    deck: pool.slice(3),
     discardPile: [],
-    inPlay: pool.slice(7),
+    inPlay: [],
     elements: {},
     statusEffects: [],
   };
@@ -701,6 +701,9 @@ export const cardGameSlice = createSlice({
     },
 
     resetGame: () => createInitialState(),
+
+    // Replace entire state with server-driven state (online multiplayer)
+    setGameState: (_state, action) => action.payload,
   },
 });
 
@@ -716,6 +719,7 @@ export const {
   dismissRecap,
   endTurn,
   resetGame,
+  setGameState,
 } = cardGameSlice.actions;
 
 export default cardGameSlice.reducer;

@@ -6,12 +6,13 @@ import Hand from '../../hand/hand.jsx';
 import SelectedCard from '../../selected-card/selected-card.jsx';
 import { selectAttacker, initiateAbility, resolveOnAllyCard, playCardFromHand } from '../../../database/cardGameSlice';
 
-const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
+const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = false }) => {
     const dispatch = useDispatch();
     const [selectedBattlerIndex, setSelectedBattlerIndex] = useState(null);
     const [selectedHandIndex, setSelectedHandIndex] = useState(null);
 
     const onBattlerClick = (index) => {
+        if (disabled) return;
         if (phase === 'selectingTarget') return;
         // In ally-targeting phase, clicking own card selects it as target
         if (phase === 'selectingAllyTarget') {
@@ -23,6 +24,7 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
     };
 
     const onHandCardClick = (index) => {
+        if (disabled) return;
         if (phase !== 'main') return;
         document.body.style.overflow = 'hidden';
         setSelectedHandIndex(index);
@@ -77,7 +79,11 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection }) => {
             />
             <Hand _hand={player.hand} onCardClick={onHandCardClick} />
             <div className="turn-controls">
-                {(isSelectingEnemy || isSelectingAlly) ? (
+                {disabled ? (
+                    <button className="turn-btn end-turn-btn" disabled>
+                        Opponent's Turn…
+                    </button>
+                ) : (isSelectingEnemy || isSelectingAlly) ? (
                     <button className="turn-btn cancel-btn" onClick={onCancelSelection}>
                         Cancel
                     </button>
