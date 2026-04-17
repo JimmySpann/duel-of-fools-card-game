@@ -13,9 +13,9 @@ const mongoose = require('mongoose');
 const messageSchema = new mongoose.Schema(
     {
         fromUsername: { type: String, required: true, index: true },
-        toUsername:   { type: String, default: null, index: true },   // null → lobby
-        sessionId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Session', default: null, index: true },
-        text:         { type: String, required: true, maxlength: 1000, trim: true },
+        toUsername: { type: String, default: null, index: true },   // null → lobby
+        sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', default: null, index: true },
+        text: { type: String, required: true, maxlength: 1000, trim: true },
     },
     { timestamps: true }
 );
