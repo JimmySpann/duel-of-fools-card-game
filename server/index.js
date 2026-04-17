@@ -768,6 +768,21 @@ const dmRoom = (a, b) => {
     return `dm:${u1}:${u2}`;
 };
 
+// ── Per-game action queue (prevents race conditions) ─────────────────────────
+// Multiple socket messages for the same game arriving in parallel would all
+// read the same old state from MongoDB, process independently, and the last
+// write would silently discard earlier changes.  A per-game Promise chain
+// serialises them so each action reads the result of the previous one.
+
+const gameQueues = new Map(); // gameId → Promise
+
+const enqueueGameAction = (gameId, fn) => {
+    const prev = gameQueues.get(gameId) ?? Promise.resolve();
+    const next = prev.then(fn).catch(() => { }); // keep chain alive on error
+    gameQueues.set(gameId, next);
+    return next;
+};
+
 io.on('connection', (socket) => {
     const { username } = socket.user;
 
@@ -788,22 +803,24 @@ io.on('connection', (socket) => {
     // Dispatch a game action, persist, and broadcast updated state to all players
     socket.on('game:action', async ({ gameId, type, payload = {} }) => {
         if (!gameId || !type) return;
-        try {
-            const game = await Game.findOne({ gameId });
-            if (!game) return socket.emit('game:error', { message: 'Game not found' });
+        enqueueGameAction(gameId, async () => {
+            try {
+                const game = await Game.findOne({ gameId });
+                if (!game) return socket.emit('game:error', { message: 'Game not found' });
 
-            const { state: nextState, error } = dispatch(game.state, type, payload);
-            if (error) return socket.emit('game:error', { message: error });
+                const { state: nextState, error } = dispatch(game.state, type, payload);
+                if (error) return socket.emit('game:error', { message: error });
 
-            game.state = nextState;
-            game.markModified('state');
-            await game.save();
+                game.state = nextState;
+                game.markModified('state');
+                await game.save();
 
-            io.to(`game:${gameId}`).emit('game:state', nextState);
-        } catch (err) {
-            console.error('game:action error:', err);
-            socket.emit('game:error', { message: 'Failed to process action' });
-        }
+                io.to(`game:${gameId}`).emit('game:state', nextState);
+            } catch (err) {
+                console.error('game:action error:', err);
+                socket.emit('game:error', { message: 'Failed to process action' });
+            }
+        });
     });
 
     // ── Lobby chat ────────────────────────────────────────────────────────────
