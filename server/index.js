@@ -6,9 +6,12 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { createGame, dispatch } = require('./game/engine');
 const Game = require('./models/Game');
+const User = require('./models/User');
+const Session = require('./models/Session');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +21,12 @@ const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGODB_URI;
 if (!MONGO_URI) {
     console.error('ERROR: MONGODB_URI is not set. Add it to server/.env');
+    process.exit(1);
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('ERROR: JWT_SECRET is not set. Add it to server/.env');
     process.exit(1);
 }
 
@@ -34,6 +43,210 @@ app.use(express.json());
 // Serve the React production build (run `npm run build` in the root first)
 const BUILD_DIR = path.join(__dirname, '..', 'build');
 app.use(express.static(BUILD_DIR));
+
+// ── Auth middleware ───────────────────────────────────────────────────────────
+
+const requireAuth = (req, res, next) => {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    try {
+        req.user = jwt.verify(header.slice(7), JWT_SECRET);
+        next();
+    } catch {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusable chars
+const generateJoinCode = () =>
+    Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('');
+
+const signToken = (user) =>
+    jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+
+// ── Auth routes ───────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/auth/me
+ * Validates a token and returns the user's info.
+ */
+app.get('/api/auth/me', requireAuth, (req, res) => {
+    res.json({ username: req.user.username });
+});
+
+/**
+ * POST /api/auth/signup
+ * Body: { username, password }
+ */
+app.post('/api/auth/signup', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+        if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+        const exists = await User.findOne({ username });
+        if (exists) return res.status(409).json({ error: 'Username already taken' });
+
+        const passwordHash = await User.hashPassword(password);
+        const user = await User.create({ username, passwordHash });
+        const token = signToken(user);
+        res.status(201).json({ token, username: user.username });
+    } catch (err) {
+        console.error('POST /api/auth/signup error:', err);
+        res.status(500).json({ error: 'Failed to create account' });
+    }
+});
+
+/**
+ * POST /api/auth/login
+ * Body: { username, password }
+ */
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+
+        const user = await User.findOne({ username });
+        if (!user) return res.status(401).json({ error: 'Invalid username or password' });
+
+        const valid = await user.verifyPassword(password);
+        if (!valid) return res.status(401).json({ error: 'Invalid username or password' });
+
+        const token = signToken(user);
+        res.json({ token, username: user.username });
+    } catch (err) {
+        console.error('POST /api/auth/login error:', err);
+        res.status(500).json({ error: 'Failed to log in' });
+    }
+});
+
+// ── Session (lobby) routes ────────────────────────────────────────────────────
+
+/**
+ * GET /api/sessions
+ * Returns sessions the authenticated user is part of, plus open waiting sessions.
+ */
+app.get('/api/sessions', requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const sessions = await Session.find({
+            $or: [
+                { 'players.userId': userId },
+                { status: 'waiting' },
+            ],
+        }).sort({ updatedAt: -1 }).lean();
+        res.json({ sessions });
+    } catch (err) {
+        console.error('GET /api/sessions error:', err);
+        res.status(500).json({ error: 'Failed to fetch sessions' });
+    }
+});
+
+/**
+ * POST /api/sessions
+ * Body: { name }
+ * Creates a new lobby session; the creator is automatically player1.
+ */
+app.post('/api/sessions', requireAuth, async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name || !name.trim()) return res.status(400).json({ error: 'Session name is required' });
+
+        let joinCode;
+        let attempts = 0;
+        do {
+            joinCode = generateJoinCode();
+            attempts++;
+        } while (attempts < 10 && (await Session.exists({ joinCode })));
+
+        const session = await Session.create({
+            name: name.trim(),
+            joinCode,
+            host: { userId: req.user.id, username: req.user.username },
+            players: [{ userId: req.user.id, username: req.user.username, slot: 'player1' }],
+        });
+        res.status(201).json({ session });
+    } catch (err) {
+        console.error('POST /api/sessions error:', err);
+        res.status(500).json({ error: 'Failed to create session' });
+    }
+});
+
+/**
+ * POST /api/sessions/join
+ * Body: { joinCode }
+ * Joins an existing waiting session as player2.
+ */
+app.post('/api/sessions/join', requireAuth, async (req, res) => {
+    try {
+        const { joinCode } = req.body;
+        if (!joinCode) return res.status(400).json({ error: 'Join code is required' });
+
+        const session = await Session.findOne({ joinCode: joinCode.toUpperCase().trim() });
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Session is no longer open' });
+
+        const alreadyIn = session.players.some((p) => String(p.userId) === req.user.id);
+        if (alreadyIn) return res.json({ session }); // idempotent re-join
+
+        if (session.players.length >= 2) return res.status(409).json({ error: 'Session is full' });
+
+        session.players.push({ userId: req.user.id, username: req.user.username, slot: 'player2' });
+        await session.save();
+        res.json({ session });
+    } catch (err) {
+        console.error('POST /api/sessions/join error:', err);
+        res.status(500).json({ error: 'Failed to join session' });
+    }
+});
+
+/**
+ * GET /api/sessions/:id
+ * Returns a single session by its MongoDB _id.
+ */
+app.get('/api/sessions/:id', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id).lean();
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        res.json({ session });
+    } catch (err) {
+        console.error('GET /api/sessions/:id error:', err);
+        res.status(500).json({ error: 'Failed to retrieve session' });
+    }
+});
+
+/**
+ * POST /api/sessions/:id/start
+ * Host starts the game. Creates a Game document and marks session in-progress.
+ */
+app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can start the game' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Session already started' });
+        if (session.players.length < 2) return res.status(409).json({ error: 'Need 2 players to start' });
+
+        const p1 = session.players.find((p) => p.slot === 'player1');
+        const p2 = session.players.find((p) => p.slot === 'player2');
+        const gameId = uuidv4();
+        const state = createGame(p1.username, p2.username);
+
+        await Game.create({ gameId, state });
+        session.gameId = gameId;
+        session.status = 'in-progress';
+        await session.save();
+
+        res.json({ session, gameId, state });
+    } catch (err) {
+        console.error('POST /api/sessions/:id/start error:', err);
+        res.status(500).json({ error: 'Failed to start game' });
+    }
+});
 
 // ── API routes ────────────────────────────────────────────────────────────────
 
