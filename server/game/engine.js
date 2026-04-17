@@ -266,20 +266,68 @@ const resolveBasicAttack = (attacker, defender, defenderPlayer, state) => {
     return { hit: true, damage };
 };
 
-// ── Ability target type map ───────────────────────────────────────────────────
+// ── Ability definitions ─────────────────────────────────────────────────────
+// Each ability is a pure-data object. Add new abilities here only —
+// no switch-case edits required anywhere in the codebase.
+//
+// targetType: 'self' | 'enemyCard' | 'allyCard' | 'allEnemies' | 'allAllies'
+//
+// Effect types:
+//   damage        — deal damage to target(s)
+//     useBasicAttack bool    use resolveBasicAttack (evasion + focused bonus)
+//     multiplier   float    ATK multiplier                      (default 1)
+//     flatBonus    int      added to ATK before DEF             (default 0)
+//     defPiercing  int      reduce effective DEF by this amount (default 0)
+//     ignoreDef    bool     bypass all DEF                      (default false)
+//     ignoreEvasion bool    skip evasion roll                   (default false)
+//     floor|round  bool     how to truncate ATK × multiplier
+//     lifesteal    bool     heal caster for damage dealt
+//     onHitStatus  object   { status, value, duration } applied on hit
+//     repeat       int      number of hits
+//     randomTarget bool     each hit picks a random card (e.g. Volley)
+//   status        — apply a status effect;  status, value|valueFn, duration
+//   heal          — restore HP to the target card;  amount
+//   healSelf      — restore HP to the caster card;  amount
+//   cleanse       — remove debuffs from target(s);  debuffs[]
+//   resetCooldowns — restore all usesRemaining on the target card
+//   selfDestruct   — remove caster from play immediately
 
-const ABILITY_TARGETS = {
-    'Crack Attack': 'enemyCard', 'Smoke Break': 'self',
-    'Ice Slash': 'enemyCard', 'Freeze': 'enemyCard', 'Blizzard': 'self',
-    'Searing Lash': 'enemyCard', 'Wall of Fire': 'self', 'Supernova': 'enemyCard',
-    'Quick Bolt': 'enemyCard', 'Thunder Dash': 'self', 'Short Circuit': 'enemyCard',
-    'Quake': 'allEnemies', 'Rock Toss': 'enemyCard', 'Fossilize': 'self',
-    'Backstab': 'enemyCard', 'Vanish': 'self', 'Soul Reap': 'enemyCard',
-    'Healing Tide': 'allyCard', 'Bubble Shield': 'allyCard', 'Mind Wash': 'allyCard',
-    'Scepter Smash': 'enemyCard', 'Fortify': 'allAllies', 'Rallying Cry': 'allAllies',
-    'Gale Shot': 'enemyCard', 'Volley': 'allEnemies', 'Focus': 'self',
-    'Venom Spit': 'enemyCard', 'Lacerate': 'enemyCard', 'Noxious Cloud': 'allEnemies',
+const ABILITY_DEFS = {
+    'Crack Attack': { targetType: 'enemyCard', effects: [{ type: 'damage', defPiercing: 2 }] },
+    'Smoke Break': { targetType: 'self', effects: [{ type: 'status', status: 'invulnerable', value: 1, duration: 1 }] },
+    'Ice Slash': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true }] },
+    'Freeze': { targetType: 'enemyCard', effects: [{ type: 'status', status: 'frozen', value: 1, duration: 1 }] },
+    'Blizzard': { targetType: 'self', effects: [{ type: 'status', status: 'invulnerable', value: 1, duration: 1 }] },
+    'Searing Lash': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true, onHitStatus: { status: 'burned', value: 2, duration: 3 } }] },
+    'Wall of Fire': { targetType: 'self', effects: [{ type: 'status', status: 'damage_reduction', value: 1, duration: 1 }] },
+    'Supernova': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 3, ignoreEvasion: true, ignoreDef: true }, { type: 'selfDestruct' }] },
+    'Quick Bolt': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 0.5, floor: true, ignoreEvasion: true, ignoreDef: true }] },
+    'Thunder Dash': { targetType: 'self', effects: [{ type: 'status', status: 'eva_up', value: 4, duration: 2 }] },
+    'Short Circuit': { targetType: 'enemyCard', effects: [{ type: 'status', status: 'def_down', valueFn: 'targetDef', duration: 1 }] },
+    'Quake': { targetType: 'allEnemies', effects: [{ type: 'damage', flatBonus: -3, ignoreEvasion: true, ignoreDef: true }] },
+    'Rock Toss': { targetType: 'enemyCard', effects: [{ type: 'damage', ignoreEvasion: true }] },
+    'Fossilize': { targetType: 'self', effects: [{ type: 'healSelf', amount: 5 }, { type: 'status', status: 'def_up', value: 2, duration: 2 }] },
+    'Backstab': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 2, ignoreEvasion: true }] },
+    'Vanish': { targetType: 'self', effects: [{ type: 'status', status: 'invisible', value: 1, duration: 1 }] },
+    'Soul Reap': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true, lifesteal: true }] },
+    'Healing Tide': { targetType: 'allyCard', effects: [{ type: 'heal', amount: 4 }] },
+    'Bubble Shield': { targetType: 'allyCard', effects: [{ type: 'status', status: 'shielded', value: 3, duration: 999 }] },
+    'Mind Wash': { targetType: 'allyCard', effects: [{ type: 'resetCooldowns' }] },
+    'Scepter Smash': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 1.5, round: true, ignoreEvasion: true }] },
+    'Fortify': { targetType: 'allAllies', effects: [{ type: 'status', status: 'def_up', value: 2, duration: 2 }] },
+    'Rallying Cry': { targetType: 'allAllies', effects: [{ type: 'cleanse', debuffs: ['burned', 'frozen', 'poisoned', 'bleeding', 'def_down'] }] },
+    'Gale Shot': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true, onHitStatus: { status: 'def_down', value: 1, duration: 1 } }] },
+    'Volley': { targetType: 'allEnemies', effects: [{ type: 'damage', multiplier: 0.5, floor: true, ignoreEvasion: true, ignoreDef: true, repeat: 3, randomTarget: true }] },
+    'Focus': { targetType: 'self', effects: [{ type: 'status', status: 'focused', value: 1, duration: 999 }] },
+    'Venom Spit': { targetType: 'enemyCard', effects: [{ type: 'status', status: 'poisoned', value: 1, duration: 3 }] },
+    'Lacerate': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true, onHitStatus: { status: 'bleeding', value: 1, duration: 2 } }] },
+    'Noxious Cloud': { targetType: 'allEnemies', effects: [{ type: 'status', status: 'poisoned', value: 1, duration: 2 }] },
 };
+
+// Derive ABILITY_TARGETS from definitions (used by initiateAbility routing)
+const ABILITY_TARGETS = Object.fromEntries(
+    Object.entries(ABILITY_DEFS).map(([name, def]) => [name, def.targetType])
+);
 
 const isUntouchable = (card, state) => {
     if (hasStatus(card, 'invulnerable') || hasStatus(card, 'invisible')) {
@@ -291,13 +339,93 @@ const isUntouchable = (card, state) => {
 
 // ── Ability execution ─────────────────────────────────────────────────────────
 
+// Resolves and applies one effect descriptor to a single (caster → target) pair.
+const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, targetPlayer, targetCardIdx, state, abilityName) => {
+    switch (effect.type) {
+        case 'damage': {
+            let dmg;
+            if (effect.useBasicAttack) {
+                const result = resolveBasicAttack(caster, target, targetPlayer, state);
+                if (!result.hit) { state.log.unshift(`${abilityName} missed!`); return; }
+                dmg = result.damage;
+            } else {
+                if (!effect.ignoreEvasion) {
+                    const roll = Math.floor(Math.random() * 10);
+                    if (roll < getEffectiveEva(target)) {
+                        pushHitEvent(state, targetPlayer.id, target.id, 0, 'miss', target.name, target.currentHealth, target.health);
+                        state.log.unshift(`${abilityName} missed!`);
+                        return;
+                    }
+                }
+                const atk = caster.attack || 5;
+                const mult = effect.multiplier ?? 1;
+                const rawAtk = mult === 1 ? atk
+                    : effect.floor ? Math.floor(atk * mult)
+                        : effect.round ? Math.round(atk * mult)
+                            : atk * mult;
+                const base = rawAtk + (effect.flatBonus ?? 0);
+                const effDef = effect.ignoreDef
+                    ? 0
+                    : Math.max(0, getEffectiveDef(target) - (effect.defPiercing ?? 0));
+                dmg = Math.max(1, base - effDef);
+            }
+            const actualDmg = applyDamageToCard(targetPlayer, targetCardIdx, dmg, state);
+            if (effect.onHitStatus && actualDmg > 0) {
+                const live = targetPlayer.inPlay[targetCardIdx];
+                if (live && !live.dying) {
+                    const { status, value, duration } = effect.onHitStatus;
+                    addStatus(live, status, value, duration);
+                    state.log.unshift(`${target.name} is afflicted with ${status}! (${value} × ${duration} turns)`);
+                }
+            }
+            if (effect.lifesteal && actualDmg > 0) {
+                caster.currentHealth = Math.min(caster.health, caster.currentHealth + actualDmg);
+                state.log.unshift(`${caster.name} drains ${actualDmg} HP!`);
+            }
+            break;
+        }
+        case 'status': {
+            const value = effect.valueFn === 'targetDef' ? (target.defense || 0) : effect.value;
+            addStatus(target, effect.status, value, effect.duration);
+            state.log.unshift(`${target.name} gains ${effect.status}!`);
+            break;
+        }
+        case 'heal': {
+            target.currentHealth = Math.min(target.health, target.currentHealth + effect.amount);
+            state.log.unshift(`${target.name} is healed for ${effect.amount} HP!`);
+            break;
+        }
+        case 'healSelf': {
+            caster.currentHealth = Math.min(caster.health, caster.currentHealth + effect.amount);
+            state.log.unshift(`${caster.name} restores ${effect.amount} HP!`);
+            break;
+        }
+        case 'cleanse': {
+            target.statusEffects = (target.statusEffects || []).filter((s) => !effect.debuffs.includes(s.type));
+            state.log.unshift(`${target.name} is cleansed!`);
+            break;
+        }
+        case 'resetCooldowns': {
+            target.actions = target.actions.map((a) => ({ ...a, usesRemaining: a.limit }));
+            state.log.unshift(`${target.name}'s abilities are fully refreshed!`);
+            break;
+        }
+        case 'selfDestruct': {
+            casterPlayer.discardPile.push({ ...caster });
+            casterPlayer.inPlay.splice(casterCardIdx, 1);
+            state.log.unshift(`${caster.name} self-destructs!`);
+            break;
+        }
+    }
+};
+
 const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, targetCardIdx, targetPlayerId = null) => {
     const casterPlayer = state.players.find((p) => p.id === casterPlayerId);
-    // For single-target enemy abilities, use provided targetPlayerId or fall back to first enemy
     const resolveEnemyPlayer = () =>
         targetPlayerId
             ? state.players.find((p) => p.id === targetPlayerId)
             : getEnemies(state, casterPlayerId)[0];
+
     const caster = casterPlayer.inPlay[casterCardIdx];
     if (!caster) return;
 
@@ -306,259 +434,334 @@ const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, target
         state.log.unshift(`${ability?.name ?? 'Ability'} has no uses left!`);
         return;
     }
+
+    const def = ABILITY_DEFS[ability.name];
+    if (!def) {
+        ability.usesRemaining -= 1;
+        caster.acted = true;
+        state.log.unshift(`${caster.name} uses ${ability.name}! (no effect defined)`);
+        return;
+    }
+
     ability.usesRemaining -= 1;
     caster.acted = true;
     state.log.unshift(`${caster.name} uses ${ability.name}!`);
 
-    switch (ability.name) {
-        case 'Crack Attack': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
+    const { targetType, effects } = def;
+
+    for (const effect of effects) {
+        if (targetType === 'self') {
+            applySingleEffect(effect, caster, casterPlayer, casterCardIdx, caster, casterPlayer, casterCardIdx, state, ability.name);
+
+        } else if (targetType === 'enemyCard') {
+            const ep = resolveEnemyPlayer();
+            if (!ep) continue;
             const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const evadeRoll = Math.floor(Math.random() * 10);
-            if (evadeRoll >= getEffectiveEva(t)) {
-                const effectiveDef = Math.max(0, getEffectiveDef(t) - 2);
-                const dmg = Math.max(1, (caster.attack || 5) - effectiveDef);
-                applyDamageToCard(ep, targetCardIdx, dmg, state);
-                state.log.unshift(`Crack Attack ignores 2 DEF! (${dmg} dmg)`);
-            } else state.log.unshift('Crack Attack missed!');
-            break;
-        }
-        case 'Smoke Break': {
-            addStatus(caster, 'invulnerable', 1, 1);
-            state.log.unshift(`${caster.name} is invulnerable for 1 turn!`);
-            break;
-        }
-        case 'Ice Slash': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
-            if (hit) { applyDamageToCard(ep, targetCardIdx, damage, state); state.log.unshift(`Ice Slash deals ${damage} damage!`); }
-            else state.log.unshift('Ice Slash missed!');
-            break;
-        }
-        case 'Freeze': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            addStatus(t, 'frozen', 1, 1);
-            state.log.unshift(`${t.name} is Frozen – cannot act next turn!`);
-            break;
-        }
-        case 'Blizzard': {
-            addStatus(caster, 'invulnerable', 1, 1);
-            state.log.unshift(`${caster.name} hides in a blizzard – invulnerable 1 turn!`);
-            break;
-        }
-        case 'Searing Lash': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
-            if (hit) {
-                applyDamageToCard(ep, targetCardIdx, damage, state);
-                if (ep.inPlay[targetCardIdx]) { addStatus(ep.inPlay[targetCardIdx], 'burned', 2, 3); state.log.unshift(`${t.name} is Burned! (2 dmg/turn × 3 turns)`); }
-            } else state.log.unshift('Searing Lash missed!');
-            break;
-        }
-        case 'Wall of Fire': {
-            addStatus(caster, 'damage_reduction', 1, 1);
-            state.log.unshift(`${caster.name} raises a Wall of Fire – damage halved for 1 turn!`);
-            break;
-        }
-        case 'Supernova': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const dmg = (caster.attack || 5) * 3;
-            applyDamageToCard(ep, targetCardIdx, dmg, state);
-            state.log.unshift(`SUPERNOVA! ${t.name} takes ${dmg} damage! ${caster.name} self-destructs!`);
-            casterPlayer.discardPile.push({ ...caster });
-            casterPlayer.inPlay.splice(casterCardIdx, 1);
-            break;
-        }
-        case 'Quick Bolt': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const dmg = Math.max(1, Math.floor((caster.attack || 5) / 2));
-            applyDamageToCard(ep, targetCardIdx, dmg, state);
-            state.log.unshift(`Quick Bolt strikes for ${dmg} (ignores evasion)!`);
-            break;
-        }
-        case 'Thunder Dash': {
-            addStatus(caster, 'eva_up', 4, 2);
-            state.log.unshift(`${caster.name} Thunder Dashes – EVA +4 for 2 turns!`);
-            break;
-        }
-        case 'Short Circuit': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            addStatus(t, 'def_down', t.defense, 1);
-            state.log.unshift(`${t.name}'s DEF reduced to 0 for 1 turn! (Short Circuit)`);
-            break;
-        }
-        case 'Quake': {
-            // AoE: hits all enemy players
-            const dmg = Math.max(1, (caster.attack || 5) - 3);
-            for (const ep of getEnemies(state, casterPlayerId)) {
-                for (let i = ep.inPlay.length - 1; i >= 0; i--) applyDamageToCard(ep, i, dmg, state);
-            }
-            state.log.unshift(`Quake shakes all enemies for ${dmg} each!`);
-            break;
-        }
-        case 'Rock Toss': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const dmg = Math.max(1, (caster.attack || 5) - getEffectiveDef(t));
-            applyDamageToCard(ep, targetCardIdx, dmg, state);
-            state.log.unshift(`Rock Toss deals ${dmg} (ignores evasion)!`);
-            break;
-        }
-        case 'Fossilize': {
-            caster.currentHealth = Math.min(caster.health, caster.currentHealth + 5);
-            addStatus(caster, 'def_up', 2, 2);
-            state.log.unshift(`${caster.name} fossilizes – +5 HP, DEF +2 for 2 turns!`);
-            break;
-        }
-        case 'Backstab': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const dmg = Math.max(1, (caster.attack || 5) * 2 - getEffectiveDef(t));
-            applyDamageToCard(ep, targetCardIdx, dmg, state);
-            state.log.unshift(`Backstab deals ${dmg} (2× ATK)!`);
-            break;
-        }
-        case 'Vanish': {
-            addStatus(caster, 'invisible', 1, 1);
-            state.log.unshift(`${caster.name} vanishes into the shadows!`);
-            break;
-        }
-        case 'Soul Reap': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
-            if (hit) {
-                applyDamageToCard(ep, targetCardIdx, damage, state);
-                caster.currentHealth = Math.min(caster.health, caster.currentHealth + damage);
-                state.log.unshift(`Soul Reap deals ${damage} and heals ${caster.name} for ${damage}!`);
-            } else state.log.unshift('Soul Reap missed!');
-            break;
-        }
-        case 'Healing Tide': {
+            if (!t || isUntouchable(t, state)) continue;
+            applySingleEffect(effect, caster, casterPlayer, casterCardIdx, t, ep, targetCardIdx, state, ability.name);
+
+        } else if (targetType === 'allyCard') {
             const t = casterPlayer.inPlay[targetCardIdx];
-            if (!t) break;
-            t.currentHealth = Math.min(t.health, t.currentHealth + 4);
-            state.log.unshift(`Healing Tide heals ${t.name} for 4 HP!`);
-            break;
-        }
-        case 'Bubble Shield': {
-            const t = casterPlayer.inPlay[targetCardIdx];
-            if (!t) break;
-            addStatus(t, 'shielded', 3, 999);
-            state.log.unshift(`${t.name} gains a 3-damage shield!`);
-            break;
-        }
-        case 'Mind Wash': {
-            const t = casterPlayer.inPlay[targetCardIdx];
-            if (!t) break;
-            t.actions = t.actions.map((a) => ({ ...a, usesRemaining: a.limit }));
-            state.log.unshift(`${t.name}'s ability cooldowns are fully reset!`);
-            break;
-        }
-        case 'Scepter Smash': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const dmg = Math.max(1, Math.round((caster.attack || 5) * 1.5) - getEffectiveDef(t));
-            applyDamageToCard(ep, targetCardIdx, dmg, state);
-            state.log.unshift(`Scepter Smash deals ${dmg} (1.5× ATK)!`);
-            break;
-        }
-        case 'Fortify': {
-            // AoE: buffs all allies
-            for (const ally of getAllies(state, casterPlayerId)) {
-                for (const c of ally.inPlay) addStatus(c, 'def_up', 2, 2);
-            }
-            state.log.unshift(`Fortify grants all allies DEF +2 for 2 turns!`);
-            break;
-        }
-        case 'Rallying Cry': {
-            // AoE: cleanses all allies
-            const debuffs = ['burned', 'frozen', 'poisoned', 'bleeding', 'def_down'];
-            for (const ally of getAllies(state, casterPlayerId)) {
-                for (const c of ally.inPlay) {
-                    c.statusEffects = (c.statusEffects || []).filter((s) => !debuffs.includes(s.type));
+            if (!t) continue;
+            applySingleEffect(effect, caster, casterPlayer, casterCardIdx, t, casterPlayer, targetCardIdx, state, ability.name);
+
+        } else if (targetType === 'allEnemies') {
+            if (effect.type === 'damage' && effect.randomTarget) {
+                const allCards = getEnemies(state, casterPlayerId).flatMap((ep) =>
+                    ep.inPlay.map((_, i) => ({ ep, i }))
+                );
+                if (allCards.length === 0) { state.log.unshift(`No targets for ${ability.name}!`); continue; }
+                const hits = effect.repeat ?? 1;
+                for (let v = 0; v < hits; v++) {
+                    const { ep, i } = allCards[Math.floor(Math.random() * allCards.length)];
+                    if (!ep.inPlay[i] || ep.inPlay[i].dying) continue;
+                    applySingleEffect(
+                        { ...effect, repeat: undefined, randomTarget: false },
+                        caster, casterPlayer, casterCardIdx, ep.inPlay[i], ep, i, state, ability.name
+                    );
                 }
+            } else if (effect.type === 'damage') {
+                for (const ep of getEnemies(state, casterPlayerId)) {
+                    for (let i = ep.inPlay.length - 1; i >= 0; i--) {
+                        if (ep.inPlay[i]?.dying) continue;
+                        applySingleEffect(effect, caster, casterPlayer, casterCardIdx, ep.inPlay[i], ep, i, state, ability.name);
+                    }
+                }
+            } else if (effect.type === 'status') {
+                for (const ep of getEnemies(state, casterPlayerId)) {
+                    for (const c of ep.inPlay) addStatus(c, effect.status, effect.value, effect.duration);
+                }
+                state.log.unshift(`${ability.name} applies ${effect.status} to all enemies!`);
             }
-            state.log.unshift(`Rallying Cry cleanses all debuffs from every ally!`);
-            break;
-        }
-        case 'Gale Shot': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
-            if (hit) {
-                applyDamageToCard(ep, targetCardIdx, damage, state);
-                if (ep.inPlay[targetCardIdx]) { addStatus(ep.inPlay[targetCardIdx], 'def_down', 1, 1); state.log.unshift(`Gale Shot knocks ${t.name} back – DEF -1 next turn!`); }
-            } else state.log.unshift('Gale Shot missed!');
-            break;
-        }
-        case 'Volley': {
-            // AoE random: fires at random enemy cards across all enemies
-            const allEnemyCards = getEnemies(state, casterPlayerId).flatMap((ep) =>
-                ep.inPlay.map((_, i) => ({ ep, i }))
-            );
-            if (allEnemyCards.length === 0) { state.log.unshift('No targets for Volley!'); break; }
-            const volleyDmg = Math.max(1, Math.floor((caster.attack || 5) / 2));
-            for (let v = 0; v < 3; v++) {
-                if (allEnemyCards.length === 0) break;
-                const { ep, i } = allEnemyCards[Math.floor(Math.random() * allEnemyCards.length)];
-                applyDamageToCard(ep, i, volleyDmg, state);
+
+        } else if (targetType === 'allAllies') {
+            if (effect.type === 'status') {
+                for (const ally of getAllies(state, casterPlayerId)) {
+                    for (const c of ally.inPlay) addStatus(c, effect.status, effect.value, effect.duration);
+                }
+                state.log.unshift(`${ability.name} grants ${effect.status} to all allies!`);
+            } else if (effect.type === 'cleanse') {
+                for (const ally of getAllies(state, casterPlayerId)) {
+                    for (const c of ally.inPlay) {
+                        c.statusEffects = (c.statusEffects || []).filter((s) => !effect.debuffs.includes(s.type));
+                    }
+                }
+                state.log.unshift(`${ability.name} cleanses all allies!`);
             }
-            state.log.unshift(`Volley fires ${volleyDmg}-dmg arrows at 3 random targets!`);
-            break;
         }
-        case 'Focus': {
-            addStatus(caster, 'focused', 1, 999);
-            state.log.unshift(`${caster.name} focuses – next attack deals 2.5× damage!`);
-            break;
-        }
-        case 'Venom Spit': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            addStatus(t, 'poisoned', 1, 3);
-            state.log.unshift(`${t.name} is Poisoned! (1 dmg/turn × 3 turns)`);
-            break;
-        }
-        case 'Lacerate': {
-            const ep = resolveEnemyPlayer(); if (!ep) break;
-            const t = ep.inPlay[targetCardIdx];
-            if (!t || isUntouchable(t, state)) break;
-            const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
-            if (hit) {
-                applyDamageToCard(ep, targetCardIdx, damage, state);
-                if (ep.inPlay[targetCardIdx]) { addStatus(ep.inPlay[targetCardIdx], 'bleeding', 1, 2); state.log.unshift(`${t.name} is Bleeding! (1 dmg/turn × 2 turns)`); }
-            } else state.log.unshift('Lacerate missed!');
-            break;
-        }
-        case 'Noxious Cloud': {
-            // AoE: poisons all enemy cards
-            for (const ep of getEnemies(state, casterPlayerId)) {
-                for (const enemy of ep.inPlay) addStatus(enemy, 'poisoned', 1, 2);
+    }
+
+    // Placeholder to preserve the old switch shape — never reached
+    if (false) {
+        switch (ability.name) {
+            case 'Crack Attack': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const evadeRoll = Math.floor(Math.random() * 10);
+                if (evadeRoll >= getEffectiveEva(t)) {
+                    const effectiveDef = Math.max(0, getEffectiveDef(t) - 2);
+                    const dmg = Math.max(1, (caster.attack || 5) - effectiveDef);
+                    applyDamageToCard(ep, targetCardIdx, dmg, state);
+                    state.log.unshift(`Crack Attack ignores 2 DEF! (${dmg} dmg)`);
+                } else state.log.unshift('Crack Attack missed!');
+                break;
             }
-            state.log.unshift(`Noxious Cloud poisons all enemies! (1 dmg/turn × 2 turns)`);
-            break;
+            case 'Smoke Break': {
+                addStatus(caster, 'invulnerable', 1, 1);
+                state.log.unshift(`${caster.name} is invulnerable for 1 turn!`);
+                break;
+            }
+            case 'Ice Slash': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
+                if (hit) { applyDamageToCard(ep, targetCardIdx, damage, state); state.log.unshift(`Ice Slash deals ${damage} damage!`); }
+                else state.log.unshift('Ice Slash missed!');
+                break;
+            }
+            case 'Freeze': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                addStatus(t, 'frozen', 1, 1);
+                state.log.unshift(`${t.name} is Frozen – cannot act next turn!`);
+                break;
+            }
+            case 'Blizzard': {
+                addStatus(caster, 'invulnerable', 1, 1);
+                state.log.unshift(`${caster.name} hides in a blizzard – invulnerable 1 turn!`);
+                break;
+            }
+            case 'Searing Lash': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
+                if (hit) {
+                    applyDamageToCard(ep, targetCardIdx, damage, state);
+                    if (ep.inPlay[targetCardIdx]) { addStatus(ep.inPlay[targetCardIdx], 'burned', 2, 3); state.log.unshift(`${t.name} is Burned! (2 dmg/turn × 3 turns)`); }
+                } else state.log.unshift('Searing Lash missed!');
+                break;
+            }
+            case 'Wall of Fire': {
+                addStatus(caster, 'damage_reduction', 1, 1);
+                state.log.unshift(`${caster.name} raises a Wall of Fire – damage halved for 1 turn!`);
+                break;
+            }
+            case 'Supernova': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const dmg = (caster.attack || 5) * 3;
+                applyDamageToCard(ep, targetCardIdx, dmg, state);
+                state.log.unshift(`SUPERNOVA! ${t.name} takes ${dmg} damage! ${caster.name} self-destructs!`);
+                casterPlayer.discardPile.push({ ...caster });
+                casterPlayer.inPlay.splice(casterCardIdx, 1);
+                break;
+            }
+            case 'Quick Bolt': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const dmg = Math.max(1, Math.floor((caster.attack || 5) / 2));
+                applyDamageToCard(ep, targetCardIdx, dmg, state);
+                state.log.unshift(`Quick Bolt strikes for ${dmg} (ignores evasion)!`);
+                break;
+            }
+            case 'Thunder Dash': {
+                addStatus(caster, 'eva_up', 4, 2);
+                state.log.unshift(`${caster.name} Thunder Dashes – EVA +4 for 2 turns!`);
+                break;
+            }
+            case 'Short Circuit': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                addStatus(t, 'def_down', t.defense, 1);
+                state.log.unshift(`${t.name}'s DEF reduced to 0 for 1 turn! (Short Circuit)`);
+                break;
+            }
+            case 'Quake': {
+                // AoE: hits all enemy players
+                const dmg = Math.max(1, (caster.attack || 5) - 3);
+                for (const ep of getEnemies(state, casterPlayerId)) {
+                    for (let i = ep.inPlay.length - 1; i >= 0; i--) applyDamageToCard(ep, i, dmg, state);
+                }
+                state.log.unshift(`Quake shakes all enemies for ${dmg} each!`);
+                break;
+            }
+            case 'Rock Toss': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const dmg = Math.max(1, (caster.attack || 5) - getEffectiveDef(t));
+                applyDamageToCard(ep, targetCardIdx, dmg, state);
+                state.log.unshift(`Rock Toss deals ${dmg} (ignores evasion)!`);
+                break;
+            }
+            case 'Fossilize': {
+                caster.currentHealth = Math.min(caster.health, caster.currentHealth + 5);
+                addStatus(caster, 'def_up', 2, 2);
+                state.log.unshift(`${caster.name} fossilizes – +5 HP, DEF +2 for 2 turns!`);
+                break;
+            }
+            case 'Backstab': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const dmg = Math.max(1, (caster.attack || 5) * 2 - getEffectiveDef(t));
+                applyDamageToCard(ep, targetCardIdx, dmg, state);
+                state.log.unshift(`Backstab deals ${dmg} (2× ATK)!`);
+                break;
+            }
+            case 'Vanish': {
+                addStatus(caster, 'invisible', 1, 1);
+                state.log.unshift(`${caster.name} vanishes into the shadows!`);
+                break;
+            }
+            case 'Soul Reap': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
+                if (hit) {
+                    applyDamageToCard(ep, targetCardIdx, damage, state);
+                    caster.currentHealth = Math.min(caster.health, caster.currentHealth + damage);
+                    state.log.unshift(`Soul Reap deals ${damage} and heals ${caster.name} for ${damage}!`);
+                } else state.log.unshift('Soul Reap missed!');
+                break;
+            }
+            case 'Healing Tide': {
+                const t = casterPlayer.inPlay[targetCardIdx];
+                if (!t) break;
+                t.currentHealth = Math.min(t.health, t.currentHealth + 4);
+                state.log.unshift(`Healing Tide heals ${t.name} for 4 HP!`);
+                break;
+            }
+            case 'Bubble Shield': {
+                const t = casterPlayer.inPlay[targetCardIdx];
+                if (!t) break;
+                addStatus(t, 'shielded', 3, 999);
+                state.log.unshift(`${t.name} gains a 3-damage shield!`);
+                break;
+            }
+            case 'Mind Wash': {
+                const t = casterPlayer.inPlay[targetCardIdx];
+                if (!t) break;
+                t.actions = t.actions.map((a) => ({ ...a, usesRemaining: a.limit }));
+                state.log.unshift(`${t.name}'s ability cooldowns are fully reset!`);
+                break;
+            }
+            case 'Scepter Smash': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const dmg = Math.max(1, Math.round((caster.attack || 5) * 1.5) - getEffectiveDef(t));
+                applyDamageToCard(ep, targetCardIdx, dmg, state);
+                state.log.unshift(`Scepter Smash deals ${dmg} (1.5× ATK)!`);
+                break;
+            }
+            case 'Fortify': {
+                // AoE: buffs all allies
+                for (const ally of getAllies(state, casterPlayerId)) {
+                    for (const c of ally.inPlay) addStatus(c, 'def_up', 2, 2);
+                }
+                state.log.unshift(`Fortify grants all allies DEF +2 for 2 turns!`);
+                break;
+            }
+            case 'Rallying Cry': {
+                // AoE: cleanses all allies
+                const debuffs = ['burned', 'frozen', 'poisoned', 'bleeding', 'def_down'];
+                for (const ally of getAllies(state, casterPlayerId)) {
+                    for (const c of ally.inPlay) {
+                        c.statusEffects = (c.statusEffects || []).filter((s) => !debuffs.includes(s.type));
+                    }
+                }
+                state.log.unshift(`Rallying Cry cleanses all debuffs from every ally!`);
+                break;
+            }
+            case 'Gale Shot': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
+                if (hit) {
+                    applyDamageToCard(ep, targetCardIdx, damage, state);
+                    if (ep.inPlay[targetCardIdx]) { addStatus(ep.inPlay[targetCardIdx], 'def_down', 1, 1); state.log.unshift(`Gale Shot knocks ${t.name} back – DEF -1 next turn!`); }
+                } else state.log.unshift('Gale Shot missed!');
+                break;
+            }
+            case 'Volley': {
+                // AoE random: fires at random enemy cards across all enemies
+                const allEnemyCards = getEnemies(state, casterPlayerId).flatMap((ep) =>
+                    ep.inPlay.map((_, i) => ({ ep, i }))
+                );
+                if (allEnemyCards.length === 0) { state.log.unshift('No targets for Volley!'); break; }
+                const volleyDmg = Math.max(1, Math.floor((caster.attack || 5) / 2));
+                for (let v = 0; v < 3; v++) {
+                    if (allEnemyCards.length === 0) break;
+                    const { ep, i } = allEnemyCards[Math.floor(Math.random() * allEnemyCards.length)];
+                    applyDamageToCard(ep, i, volleyDmg, state);
+                }
+                state.log.unshift(`Volley fires ${volleyDmg}-dmg arrows at 3 random targets!`);
+                break;
+            }
+            case 'Focus': {
+                addStatus(caster, 'focused', 1, 999);
+                state.log.unshift(`${caster.name} focuses – next attack deals 2.5× damage!`);
+                break;
+            }
+            case 'Venom Spit': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                addStatus(t, 'poisoned', 1, 3);
+                state.log.unshift(`${t.name} is Poisoned! (1 dmg/turn × 3 turns)`);
+                break;
+            }
+            case 'Lacerate': {
+                const ep = resolveEnemyPlayer(); if (!ep) break;
+                const t = ep.inPlay[targetCardIdx];
+                if (!t || isUntouchable(t, state)) break;
+                const { hit, damage } = resolveBasicAttack(caster, t, ep, state);
+                if (hit) {
+                    applyDamageToCard(ep, targetCardIdx, damage, state);
+                    if (ep.inPlay[targetCardIdx]) { addStatus(ep.inPlay[targetCardIdx], 'bleeding', 1, 2); state.log.unshift(`${t.name} is Bleeding! (1 dmg/turn × 2 turns)`); }
+                } else state.log.unshift('Lacerate missed!');
+                break;
+            }
+            case 'Noxious Cloud': {
+                // AoE: poisons all enemy cards
+                for (const ep of getEnemies(state, casterPlayerId)) {
+                    for (const enemy of ep.inPlay) addStatus(enemy, 'poisoned', 1, 2);
+                }
+                state.log.unshift(`Noxious Cloud poisons all enemies! (1 dmg/turn × 2 turns)`);
+                break;
+            }
+            default: break;
         }
-        default:
-            state.log.unshift(`${ability.name} has no mechanical effect yet.`);
     }
 };
 
