@@ -15,6 +15,11 @@ const userSchema = new mongoose.Schema(
             match: /^[a-zA-Z0-9_]+$/,
         },
         passwordHash: { type: String, required: true },
+        displayName: { type: String, trim: true, maxlength: 40, default: '' },
+        avatarUrl: { type: String, trim: true, maxlength: 500, default: '' },
+        friends: [{ type: String }],
+        friendRequests: [{ type: String }],
+        blocked: [{ type: String }],
     },
     { timestamps: true }
 );

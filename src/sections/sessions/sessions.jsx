@@ -14,6 +14,7 @@ import {
 import { logout } from '../../features/auth/authSlice';
 import LobbyChat from '../../features/chat/LobbyChat';
 import DMPanel from '../../features/chat/DMPanel';
+import Profile from '../../features/profile/Profile';
 import './sessions.css';
 
 const POLL_INTERVAL = 3000;
@@ -168,10 +169,12 @@ const Sessions = () => {
     const dispatch = useDispatch();
     const { list, activeSession, loading, error } = useSelector((s) => s.sessions);
     const { username } = useSelector((s) => s.auth);
+    const { displayName, avatarUrl, friendRequests } = useSelector((s) => s.profile);
 
     const [view, setView] = useState('list'); // 'list' | 'create' | 'join' | 'lobby'
     const [newName, setNewName] = useState('');
     const [joinCode, setJoinCode] = useState('');
+    const [showProfile, setShowProfile] = useState(false);
 
     useEffect(() => {
         dispatch(fetchSessions());
@@ -312,7 +315,18 @@ const Sessions = () => {
                 <header className="sessions-header">
                     <h1 className="sessions-title">Card Game</h1>
                     <div className="sessions-header-right">
-                        <span className="sessions-username">{username}</span>
+                        <button className="sessions-profile-btn" onClick={() => setShowProfile(true)}>
+                            <img
+                                className="sessions-profile-avatar"
+                                src={avatarUrl || `https://i.pravatar.cc/40?u=${username}`}
+                                alt="avatar"
+                                onError={(e) => { e.target.src = `https://i.pravatar.cc/40?u=${username}`; }}
+                            />
+                            <span className="sessions-username">{displayName || username}</span>
+                            {friendRequests.length > 0 && (
+                                <span className="sessions-profile-badge">{friendRequests.length}</span>
+                            )}
+                        </button>
                         <button className="sessions-logout-btn" onClick={() => dispatch(logout())}>
                             Log Out
                         </button>
@@ -372,6 +386,7 @@ const Sessions = () => {
                 </section>
             </div>
             <DMPanel />
+            {showProfile && <Profile onClose={() => setShowProfile(false)} />}
         </div>
     );
 };

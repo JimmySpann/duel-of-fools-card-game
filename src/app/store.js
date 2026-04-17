@@ -4,6 +4,7 @@ import cardGameReducer from '../sections/card-game/database/cardGameSlice';
 import authReducer from '../features/auth/authSlice';
 import sessionsReducer from '../features/sessions/sessionsSlice';
 import chatReducer from '../features/chat/chatSlice';
+import profileReducer from '../features/profile/profileSlice';
 import { getSocket } from '../features/chat/socket';
 
 // Actions that should never be forwarded to the server (local-only)
@@ -41,6 +42,7 @@ export const store = configureStore({
     auth: authReducer,
     sessions: sessionsReducer,
     chat: chatReducer,
+    profile: profileReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(onlineGameMiddleware),

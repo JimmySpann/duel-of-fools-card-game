@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { validateToken } from './features/auth/authSlice';
 import { pollSession } from './features/sessions/sessionsSlice';
 import { clearChat } from './features/chat/chatSlice';
+import { fetchProfile, resetProfile } from './features/profile/profileSlice';
 import { connectSocket, disconnectSocket } from './features/chat/socket';
 import Auth from './sections/auth/auth.jsx';
 import Sessions from './sections/sessions/sessions.jsx';
@@ -27,9 +28,11 @@ function App() {
   useEffect(() => {
     if (token) {
       connectSocket(token);
+      dispatch(fetchProfile());
     } else {
       disconnectSocket();
       dispatch(clearChat());
+      dispatch(resetProfile());
     }
   }, [token, dispatch]);
 

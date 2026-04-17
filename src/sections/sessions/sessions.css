@@ -34,9 +34,51 @@
     gap: 1rem;
 }
 
+.sessions-profile-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: transparent;
+    border: 1px solid #2e3148;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem 0.2rem 0.2rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+}
+
+.sessions-profile-btn:hover {
+    background: #252942;
+    border-color: #4a5280;
+}
+
+.sessions-profile-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #252942;
+}
+
 .sessions-username {
-    color: #8890b0;
-    font-size: 0.9rem;
+    color: #dde0f0;
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+.sessions-profile-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #e05a5a;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 99px;
+    padding: 0.05rem 0.35rem;
+    min-width: 16px;
+    text-align: center;
+    border: 2px solid #0f1117;
 }
 
 .sessions-logout-btn {
