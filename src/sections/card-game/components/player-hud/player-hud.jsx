@@ -88,7 +88,10 @@ const PlayerHUD = ({ player, isCurrentUser }) => {
                     justifyContent: 'space-between'
                 }}>
                     <div className="name">{player.name}  {isCurrentUser ? '(You)' : ''}</div>
-                    <div className="health">HP {player.health}/{player.maxHealth}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="battler-count" title="Battlers in play">⚔ {player.inPlay?.length ?? 0}</div>
+                        <div className="health">HP {player.health}/{player.maxHealth}</div>
+                    </div>
                 </div>
             </div>
         </div>

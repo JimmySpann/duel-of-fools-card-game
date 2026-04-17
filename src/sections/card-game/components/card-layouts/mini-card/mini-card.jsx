@@ -125,7 +125,8 @@ const CardHeader = ({ type, elements }) => {
 
 const Card = ({
     card,
-    isFlipped
+    isFlipped,
+    showExhausted = true,
 }) => {
 
     return (
@@ -163,7 +164,7 @@ const Card = ({
                     <StatusBadges statusEffects={card.statusEffects} />
                 </div>
 
-                {(card.acted || card.justPlayed) && (
+                {showExhausted && (card.acted || card.justPlayed) && (
                     <div className={`card-exhausted-overlay${card.justPlayed ? ' card-not-ready' : ''}`}>
                         {card.justPlayed ? 'NOT READY' : 'ACTED'}
                     </div>

@@ -80,6 +80,7 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = fa
                 onCardClick={onBattlerClick}
                 highlight={isSelectingAlly ? 'ally' : false}
                 playerId={player.id}
+                showExhausted={!disabled}
             />
             <Hand _hand={player.hand} onCardClick={onHandCardClick} locked={false} dimmed={cardPlayedThisTurn || disabled} />
             <div className="turn-controls">

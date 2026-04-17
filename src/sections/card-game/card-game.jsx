@@ -212,6 +212,7 @@ const CardGame = () => {
                         key={opp.id}
                         player={opp}
                         isTargetable={isMyTurn && phase === 'selectingTarget'}
+                        isActiveTurn={currentTurn === opp.id}
                     />
                 ))}
             </div>

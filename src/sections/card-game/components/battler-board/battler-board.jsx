@@ -6,7 +6,7 @@ import './battler-board.css'
 
 const ANIM_DURATION = 900;
 
-const CardLayout = ({ cards, onCardClick, highlight, playerId }) => {
+const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = true }) => {
     const dispatch = useDispatch();
     const lastHitEvents = useSelector((state) => state.cardGame.lastHitEvents);
     const [hoveredCardIndex, setHoveredCardIndex] = useState(null);
@@ -71,6 +71,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId }) => {
                     <MiniCard
                         card={card}
                         isFlipped={flippedCards[index]}
+                        showExhausted={showExhausted}
                     />
                 </div>
             ))}

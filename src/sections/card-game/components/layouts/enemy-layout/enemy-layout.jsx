@@ -5,7 +5,7 @@ import PlayerHUD from '../../player-hud/player-hud.jsx';
 import SelectedCard from '../../selected-card/selected-card.jsx';
 import { resolveOnEnemyCard } from '../../../database/cardGameSlice';
 
-const EnemyLayout = ({ player, isTargetable }) => {
+const EnemyLayout = ({ player, isTargetable, isActiveTurn }) => {
     const dispatch = useDispatch();
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
 
@@ -31,6 +31,7 @@ const EnemyLayout = ({ player, isTargetable }) => {
                 onCardClick={onCardClick}
                 highlight={isTargetable}
                 playerId={player.id}
+                showExhausted={isActiveTurn}
             />
             {selectedCardIndex !== null && !isTargetable && (
                 <SelectedCard
