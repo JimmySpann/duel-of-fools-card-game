@@ -15,6 +15,14 @@ const playerSlotSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const cpuSlotSchema = new mongoose.Schema(
+    {
+        slot: { type: String, enum: VALID_SLOTS, required: true },
+        name: { type: String, default: 'CPU', maxlength: 20 },
+    },
+    { _id: false }
+);
+
 const settingsSchema = new mongoose.Schema(
     {
         startingHp: { type: Number, default: 20, min: 1, max: 200 },
@@ -34,6 +42,7 @@ const sessionSchema = new mongoose.Schema(
             username: { type: String, required: true },
         },
         players: { type: [playerSlotSchema], default: [] },
+        cpuSlots: { type: [cpuSlotSchema], default: [] },
         settings: { type: settingsSchema, default: () => ({}) },
         // 'waiting' → lobby open, 'in-progress' → game running, 'finished' → game over
         status: { type: String, enum: ['waiting', 'in-progress', 'finished'], default: 'waiting' },

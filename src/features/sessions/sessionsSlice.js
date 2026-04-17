@@ -93,6 +93,33 @@ export const updateTeam = createAsyncThunk('sessions/updateTeam', async ({ sessi
     return data.session;
 });
 
+export const addCpu = createAsyncThunk('sessions/addCpu', async ({ sessionId }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/cpu`, {
+        method: 'POST',
+        headers: authHeader(token),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.session;
+});
+
+export const removeCpu = createAsyncThunk('sessions/removeCpu', async ({ sessionId, slot }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/cpu/${slot}`, {
+        method: 'DELETE',
+        headers: authHeader(token),
+    });
+    if (!res.ok) {
+        const data = await res.json();
+        return rejectWithValue(data.error);
+    }
+    // Re-fetch updated session
+    const res2 = await fetch(`${API}/${sessionId}`, { headers: authHeader(token) });
+    const data2 = await res2.json();
+    return data2.session;
+});
+
 export const leaveSessionLobby = createAsyncThunk('sessions/leaveLobby', async ({ sessionId }, { getState, rejectWithValue }) => {
     const token = getState().auth.token;
     const res = await fetch(`${API}/${sessionId}/leave`, {
@@ -193,6 +220,20 @@ const sessionsSlice = createSlice({
                 if (idx >= 0) state.list[idx] = action.payload;
             })
             .addCase(updateTeam.rejected, (state, action) => { state.error = action.payload; })
+
+            .addCase(addCpu.fulfilled, (state, action) => {
+                state.activeSession = action.payload;
+                const idx = state.list.findIndex((s) => s._id === action.payload._id);
+                if (idx >= 0) state.list[idx] = action.payload;
+            })
+            .addCase(addCpu.rejected, (state, action) => { state.error = action.payload; })
+
+            .addCase(removeCpu.fulfilled, (state, action) => {
+                state.activeSession = action.payload;
+                const idx = state.list.findIndex((s) => s._id === action.payload._id);
+                if (idx >= 0) state.list[idx] = action.payload;
+            })
+            .addCase(removeCpu.rejected, (state, action) => { state.error = action.payload; })
 
             .addCase(joinSessionById.pending, (state) => { state.loading = true; state.error = null; })
             .addCase(joinSessionById.fulfilled, (state, action) => {

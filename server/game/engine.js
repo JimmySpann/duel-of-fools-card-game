@@ -31,7 +31,7 @@ const defaultMaxBattlers = (playerCount) => {
     return 4;
 };
 
-const buildPlayer = (id, name, image, startingHp = 20, team = null, deckSize = null) => {
+const buildPlayer = (id, name, image, startingHp = 20, team = null, deckSize = null, isBot = false) => {
     let pool = shuffle(cards).map((c) => ({
         ...c,
         currentHealth: c.health,
@@ -57,6 +57,7 @@ const buildPlayer = (id, name, image, startingHp = 20, team = null, deckSize = n
         elements: {},
         statusEffects: [],
         eliminated: false,
+        isBot,
     };
 };
 
@@ -70,8 +71,8 @@ const createInitialState = (playerConfigs, settings = {}) => {
     const maxBattlers = settings.maxBattlers ?? defaultMaxBattlers(playerCount);
     const deckSize = settings.deckSize ?? null;
 
-    const players = playerConfigs.map(({ id, name, image, team }, i) =>
-        buildPlayer(id, name, image ?? AVATAR_URLS[i] ?? AVATAR_URLS[0], startingHp, teamMode === 'teams' ? (team ?? null) : null, deckSize)
+    const players = playerConfigs.map(({ id, name, image, team, isBot }, i) =>
+        buildPlayer(id, name, image ?? AVATAR_URLS[i] ?? AVATAR_URLS[0], startingHp, teamMode === 'teams' ? (team ?? null) : null, deckSize, isBot ?? false)
     );
 
     const turnOrder = players.map((p) => p.id);
@@ -1011,7 +1012,7 @@ const actions = {
 
 /**
  * Create a fresh game state.
- * @param {Array<{id,name,image?,team?}>} playerConfigs  - 2–6 players
+ * @param {Array<{id,name,image?,team?,isBot?}>} playerConfigs  - 2–6 players
  * @param {{ startingHp?, maxBattlers?, teamMode? }} settings
  */
 const createGame = (playerConfigs, settings = {}) => createInitialState(playerConfigs, settings);
@@ -1031,5 +1032,70 @@ const dispatch = (state, type, payload = {}) => {
     return { state: next, error: null };
 };
 
-module.exports = { createGame, dispatch };
+/**
+ * Compute and execute a full CPU turn, returning the resulting state.
+ * The CPU plays one card from hand (if below maxBattlers), attacks with all
+ * eligible battlers targeting random enemy cards, then ends its turn.
+ * @param {object} state - current game state (not mutated)
+ * @returns {object} new state after CPU's turn
+ */
+const computeCpuTurn = (state) => {
+    let s = deepClone(state);
+    if (s.gameOver) return s;
+
+    const cpuId = s.currentTurn;
+
+    // Play one card from hand if not already played and under maxBattlers
+    const getCpuPlayer = () => s.players.find((p) => p.id === cpuId);
+    if (!s.cardPlayedThisTurn && getCpuPlayer().hand.length > 0) {
+        const maxBattlers = s.settings?.maxBattlers ?? 8;
+        if (getCpuPlayer().inPlay.length < maxBattlers) {
+            const { state: ns } = dispatch(s, 'playCardFromHand', { cardIndex: 0 });
+            s = ns;
+        }
+    }
+
+    // Attack with each eligible card in order
+    const inPlayCount = getCpuPlayer().inPlay.length;
+    for (let i = 0; i < inPlayCount; i++) {
+        if (s.gameOver) break;
+
+        const card = s.players.find((p) => p.id === cpuId)?.inPlay[i];
+        if (!card || card.acted || card.justPlayed) continue;
+
+        const { state: afterSelect } = dispatch(s, 'selectAttacker', { cardIndex: i });
+        s = afterSelect;
+        if (s.gameOver) break;
+
+        // If selectAttacker went to selectingTarget, pick a random enemy card
+        if (s.phase === 'selectingTarget') {
+            const enemies = getEnemies(s, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
+            if (enemies.length > 0) {
+                const randEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                const validCards = randEnemy.inPlay.filter((c) => !c.dying);
+                const target = validCards[Math.floor(Math.random() * validCards.length)];
+                const targetCardIndex = randEnemy.inPlay.indexOf(target);
+                const { state: afterAttack } = dispatch(s, 'resolveOnEnemyCard', {
+                    targetCardIndex,
+                    targetPlayerId: randEnemy.id,
+                });
+                s = afterAttack;
+            } else {
+                // Fallback: cancel (shouldn't normally happen)
+                const { state: cancelled } = dispatch(s, 'cancelSelection', {});
+                s = cancelled;
+            }
+        }
+        // If phase is still 'main', selectAttacker handled the attack directly
+    }
+
+    if (!s.gameOver) {
+        const { state: afterEnd } = dispatch(s, 'endTurn', {});
+        s = afterEnd;
+    }
+
+    return s;
+};
+
+module.exports = { createGame, dispatch, computeCpuTurn };
 

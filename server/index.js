@@ -10,7 +10,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const { createGame, dispatch } = require('./game/engine');
+const { createGame, dispatch, computeCpuTurn } = require('./game/engine');
 const Game = require('./models/Game');
 const User = require('./models/User');
 const Session = require('./models/Session');
@@ -475,12 +475,21 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
         if (!session) return res.status(404).json({ error: 'Session not found' });
         if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can start the game' });
         if (session.status !== 'waiting') return res.status(409).json({ error: 'Session already started' });
-        if (session.players.length < 2) return res.status(409).json({ error: 'Need at least 2 players to start' });
+        const totalPlayers = session.players.length + (session.cpuSlots?.length || 0);
+        if (totalPlayers < 2) return res.status(409).json({ error: 'Need at least 2 players (including CPUs) to start' });
 
-        const playerConfigs = session.players.map((p, i) => ({
+        // Merge real players and CPU slots, ordered by slot name
+        const SLOT_ORDER = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
+        const combined = [
+            ...session.players.map((p) => ({ name: p.username, team: p.team, slot: p.slot, isBot: false })),
+            ...(session.cpuSlots || []).map((c) => ({ name: c.name, team: null, slot: c.slot, isBot: true })),
+        ].sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
+
+        const playerConfigs = combined.map((p, i) => ({
             id: `player${i + 1}`,
-            name: p.username,
+            name: p.name,
             team: session.settings?.teamMode === 'teams' ? (p.team || null) : null,
+            isBot: p.isBot,
         }));
 
         const settings = {
@@ -500,6 +509,12 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
         await session.save();
 
         res.json({ session, gameId, state });
+
+        // If the first player is a CPU, auto-play after a short delay
+        const firstPlayer = state.players.find((p) => p.id === state.currentTurn);
+        if (firstPlayer?.isBot) {
+            enqueueGameAction(gameId, () => executeCpuTurnsIfNeeded(gameId));
+        }
     } catch (err) {
         console.error('POST /api/sessions/:id/start error:', err);
         res.status(500).json({ error: 'Failed to start game' });
@@ -597,6 +612,62 @@ app.patch('/api/sessions/:id/players/:slot/team', requireAuth, async (req, res) 
     } catch (err) {
         console.error('PATCH /api/sessions/:id/players/:slot/team error:', err);
         res.status(500).json({ error: 'Failed to update team' });
+    }
+});
+
+// ── API routes ────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/sessions/:id/cpu
+ * Host-only; adds a CPU player to the next available slot.
+ */
+app.post('/api/sessions/:id/cpu', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can add CPUs' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot add CPU after game starts' });
+
+        const SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
+        const usedSlots = new Set([
+            ...session.players.map((p) => p.slot),
+            ...(session.cpuSlots || []).map((c) => c.slot),
+        ]);
+        const nextSlot = SLOTS.find((s) => !usedSlots.has(s));
+        if (!nextSlot) return res.status(409).json({ error: 'Session is full' });
+
+        const cpuNumber = (session.cpuSlots?.length || 0) + 1;
+        session.cpuSlots = session.cpuSlots || [];
+        session.cpuSlots.push({ slot: nextSlot, name: `CPU ${cpuNumber}` });
+        session.markModified('cpuSlots');
+        await session.save();
+
+        res.json({ session });
+    } catch (err) {
+        console.error('POST /api/sessions/:id/cpu error:', err);
+        res.status(500).json({ error: 'Failed to add CPU' });
+    }
+});
+
+/**
+ * DELETE /api/sessions/:id/cpu/:slot
+ * Host-only; removes a CPU from the given slot.
+ */
+app.delete('/api/sessions/:id/cpu/:slot', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can remove CPUs' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot remove CPU after game starts' });
+
+        session.cpuSlots = (session.cpuSlots || []).filter((c) => c.slot !== req.params.slot);
+        session.markModified('cpuSlots');
+        await session.save();
+
+        res.json({ session });
+    } catch (err) {
+        console.error('DELETE /api/sessions/:id/cpu/:slot error:', err);
+        res.status(500).json({ error: 'Failed to remove CPU' });
     }
 });
 
@@ -825,6 +896,38 @@ const enqueueGameAction = (gameId, fn) => {
     return next;
 };
 
+/**
+ * If the current turn belongs to a CPU player, compute and broadcast CPU
+ * turns until a human player's turn is reached or the game ends.
+ * Must be called from within an already-enqueued action (reads/writes DB).
+ */
+const executeCpuTurnsIfNeeded = async (gameId) => {
+    let game = await Game.findOne({ gameId });
+    if (!game) return;
+
+    while (!game.state.gameOver) {
+        const player = game.state.players.find((p) => p.id === game.state.currentTurn);
+        if (!player?.isBot) break;
+
+        // Brief pause so clients can see state transitions
+        await new Promise((r) => setTimeout(r, 1500));
+
+        const cpuState = computeCpuTurn(game.state);
+
+        // Re-fetch to avoid stale writes, then update
+        game = await Game.findOne({ gameId });
+        if (!game) return;
+        game.state = cpuState;
+        game.markModified('state');
+        await game.save();
+
+        await Session.findOneAndUpdate({ gameId }, { currentTurn: cpuState.currentTurn }).catch(() => { });
+        io.to(`game:${gameId}`).emit('game:state', cpuState);
+
+        if (cpuState.gameOver) break;
+    }
+};
+
 io.on('connection', (socket) => {
     const { username } = socket.user;
 
@@ -864,6 +967,9 @@ io.on('connection', (socket) => {
                 ).catch(() => { });
 
                 io.to(`game:${gameId}`).emit('game:state', nextState);
+
+                // Auto-play CPU turns if the next active player is a bot
+                await executeCpuTurnsIfNeeded(gameId);
             } catch (err) {
                 console.error('game:action error:', err);
                 socket.emit('game:error', { message: 'Failed to process action' });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     fetchSessions,
@@ -9,6 +9,8 @@ import {
     pollSession,
     updateSettings,
     updateTeam,
+    addCpu,
+    removeCpu,
     leaveSessionLobby,
     deleteSession,
     setActiveSession,
@@ -19,6 +21,7 @@ import { setGameState } from '../card-game/database/cardGameSlice';
 import LobbyChat from '../../features/chat/LobbyChat';
 import DMPanel from '../../features/chat/DMPanel';
 import Profile from '../../features/profile/Profile';
+import { markLobbyRead } from '../../features/chat/chatSlice';
 import './sessions.css';
 
 const POLL_INTERVAL = 3000;
@@ -42,7 +45,15 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
     const isHost = session.host.username === username;
     const settings = session.settings || {};
     const teamMode = settings.teamMode || 'ffa';
-    const playerCount = session.players.length;
+    const cpuSlots = session.cpuSlots || [];
+    const playerCount = session.players.length + cpuSlots.length;
+    const unreadLobby = useSelector((s) => s.chat.unreadLobby[session._id] || 0);
+    const [showChat, setShowChat] = useState(false);
+
+    // Clear unread count when chat is opened
+    useEffect(() => {
+        if (showChat) dispatch(markLobbyRead(session._id));
+    }, [showChat, dispatch, session._id]);
 
     const handleSettingChange = (field, value) => {
         dispatch(updateSettings({ sessionId: session._id, settings: { [field]: value } }));
@@ -124,11 +135,23 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
             <div className="lobby-slots">
                 {SLOTS.map((slot, i) => {
                     const player = session.players.find((p) => p.slot === slot);
+                    const cpu = cpuSlots.find((c) => c.slot === slot);
                     const slotNum = i + 1;
+                    const isCpu = !!cpu;
+                    const isFilled = !!player || isCpu;
                     return (
-                        <div key={slot} className={`lobby-slot ${player ? 'filled' : 'empty'}`}>
+                        <div key={slot} className={`lobby-slot ${isFilled ? (isCpu ? 'cpu' : 'filled') : 'empty'}`}>
                             <span className="lobby-slot-label">Player {slotNum}</span>
-                            <span className="lobby-slot-name">{player ? player.username : 'Open'}</span>
+                            <span className="lobby-slot-name">
+                                {isCpu ? `🤖 ${cpu.name}` : player ? player.username : 'Open'}
+                            </span>
+                            {isCpu && isHost && (
+                                <button
+                                    className="lobby-slot-remove-cpu"
+                                    onClick={() => dispatch(removeCpu({ sessionId: session._id, slot }))}
+                                    title="Remove CPU"
+                                >✕</button>
+                            )}
                             {teamMode === 'teams' && player && (
                                 isHost ? (
                                     <select
@@ -170,6 +193,14 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
             {isHost ? (
                 <div className="lobby-actions">
                     <button
+                        className="lobby-add-cpu-btn"
+                        onClick={() => dispatch(addCpu({ sessionId: session._id }))}
+                        disabled={playerCount >= 6 || loading}
+                        title="Add a CPU opponent"
+                    >
+                        🤖 Add CPU
+                    </button>
+                    <button
                         className="lobby-start-btn"
                         onClick={onStart}
                         disabled={playerCount < 2 || loading}
@@ -189,7 +220,13 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                 </div>
             )}
 
-            <LobbyChat sessionId={session._id} />
+            <button
+                className={`lobby-chat-btn${showChat ? ' lobby-chat-btn--active' : ''}${(!showChat && unreadLobby > 0) ? ' lobby-chat-btn--unread' : ''}`}
+                onClick={() => setShowChat((v) => !v)}
+            >
+                💬 Chat{!showChat && unreadLobby > 0 && <span className="lobby-chat-badge">{unreadLobby}</span>}
+            </button>
+            {showChat && <LobbyChat sessionId={session._id} isWatching={true} />}
         </div>
     );
 };
