@@ -56,6 +56,21 @@ const CardGame = () => {
             dispatch(markLobbyRead(activeSession._id));
         }
     }, [showChat, activeSession, dispatch]);
+
+    // Determine which player slot belongs to the logged-in user
+    const myPlayerId = activeSession?.players?.find((p) => p.username === username)?.slot ?? null;
+    const isOnline = !!activeGameId;
+
+    // In online mode: my board is always at the bottom regardless of turn.
+    // In local (solo) mode: keep existing behaviour — current turn player at bottom.
+    const myPlayer = isOnline
+        ? players.find((p) => p.id === myPlayerId) ?? players[0]
+        : players.find((p) => p.id === currentTurn);
+    const opponentPlayer = players.find((p) => p.id !== myPlayer?.id);
+
+    // Actions are only allowed when it is this client's turn
+    const isMyTurn = !isOnline || currentTurn === myPlayerId;
+
     const prevTurnRef = useRef(null);
     const prevOpponentHealthRef = useRef(null);
     const gameOverSoundFiredRef = useRef(false);
@@ -97,20 +112,6 @@ const CardGame = () => {
         if (winner === myPlayerId) sounds.gameWin();
         else sounds.gameLose();
     }, [gameOver]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Determine which player slot belongs to the logged-in user
-    const myPlayerId = activeSession?.players?.find((p) => p.username === username)?.slot ?? null;
-    const isOnline = !!activeGameId;
-
-    // In online mode: my board is always at the bottom regardless of turn.
-    // In local (solo) mode: keep existing behaviour — current turn player at bottom.
-    const myPlayer = isOnline
-        ? players.find((p) => p.id === myPlayerId) ?? players[0]
-        : players.find((p) => p.id === currentTurn);
-    const opponentPlayer = players.find((p) => p.id !== myPlayer?.id);
-
-    // Actions are only allowed when it is this client's turn
-    const isMyTurn = !isOnline || currentTurn === myPlayerId;
 
     // Join the game socket room and sync state from server.
     // Also re-join whenever the socket reconnects (socket.io leaves all rooms on disconnect).
