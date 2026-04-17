@@ -12,6 +12,8 @@ import {
     clearSessionError,
 } from '../../features/sessions/sessionsSlice';
 import { logout } from '../../features/auth/authSlice';
+import LobbyChat from '../../features/chat/LobbyChat';
+import DMPanel from '../../features/chat/DMPanel';
 import './sessions.css';
 
 const POLL_INTERVAL = 3000;
@@ -155,6 +157,8 @@ const Lobby = ({ session, username, onStart, onBack, loading, error, dispatch })
             ) : (
                 <p className="lobby-waiting-msg">Waiting for the host to start the game…</p>
             )}
+
+            <LobbyChat sessionId={session._id} />
         </div>
     );
 };
@@ -233,6 +237,7 @@ const Sessions = () => {
                     onStart={() => dispatch(startSession({ sessionId: activeSession._id }))}
                     dispatch={dispatch}
                 />
+                <DMPanel />
             </div>
         );
     }
@@ -263,6 +268,7 @@ const Sessions = () => {
                         </button>
                     </form>
                 </div>
+                <DMPanel />
             </div>
         );
     }
@@ -294,6 +300,7 @@ const Sessions = () => {
                         </button>
                     </form>
                 </div>
+                <DMPanel />
             </div>
         );
     }
@@ -364,6 +371,7 @@ const Sessions = () => {
                     </div>
                 </section>
             </div>
+            <DMPanel />
         </div>
     );
 };

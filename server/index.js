@@ -2,7 +2,9 @@
 
 require('dotenv').config();
 
+const http = require('http');
 const express = require('express');
+const { Server: SocketIOServer } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -12,8 +14,13 @@ const { createGame, dispatch } = require('./game/engine');
 const Game = require('./models/Game');
 const User = require('./models/User');
 const Session = require('./models/Session');
+const Message = require('./models/Message');
 
 const app = express();
+const httpServer = http.createServer(app);
+const io = new SocketIOServer(httpServer, {
+    cors: { origin: '*', methods: ['GET', 'POST'] },
+});
 const PORT = process.env.PORT || 3001;
 
 // ── Database ──────────────────────────────────────────────────────────────────
@@ -405,13 +412,203 @@ app.delete('/api/games/:id', async (req, res) => {
     }
 });
 
+// ── Chat REST endpoints ───────────────────────────────────────────────────────
+
+/**
+ * GET /api/sessions/:id/messages?before=<ISO>&limit=<n>
+ * Returns up to `limit` (default 50, max 100) lobby messages, newest-first,
+ * optionally paginated with `before` cursor (ISO timestamp).
+ */
+app.get('/api/sessions/:id/messages', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id).lean();
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        const isMember = session.players.some((p) => p.username === req.user.username);
+        if (!isMember) return res.status(403).json({ error: 'Not a member of this session' });
+
+        const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+        const filter = { sessionId: req.params.id };
+        if (req.query.before) filter.createdAt = { $lt: new Date(req.query.before) };
+
+        const messages = await Message.find(filter)
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .select('fromUsername text createdAt')
+            .lean();
+
+        res.json({ messages: messages.reverse() });
+    } catch (err) {
+        console.error('GET /api/sessions/:id/messages error:', err);
+        res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+});
+
+/**
+ * GET /api/messages/dm/:username?before=<ISO>&limit=<n>
+ * Returns DM history between the authenticated user and :username.
+ */
+app.get('/api/messages/dm/:username', requireAuth, async (req, res) => {
+    try {
+        const me = req.user.username;
+        const other = req.params.username;
+        const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+
+        const filter = {
+            $or: [
+                { fromUsername: me, toUsername: other },
+                { fromUsername: other, toUsername: me },
+            ],
+        };
+        if (req.query.before) filter.createdAt = { $lt: new Date(req.query.before) };
+
+        const messages = await Message.find(filter)
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .select('fromUsername toUsername text createdAt')
+            .lean();
+
+        res.json({ messages: messages.reverse() });
+    } catch (err) {
+        console.error('GET /api/messages/dm/:username error:', err);
+        res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+});
+
+/**
+ * GET /api/messages/dm-list
+ * Returns the list of unique users the authenticated user has DM'd,
+ * with the latest message snippet for each thread.
+ */
+app.get('/api/messages/dm-list', requireAuth, async (req, res) => {
+    try {
+        const me = req.user.username;
+        const threads = await Message.aggregate([
+            { $match: { $or: [{ fromUsername: me }, { toUsername: me }], toUsername: { $ne: null } } },
+            { $sort: { createdAt: -1 } },
+            {
+                $group: {
+                    _id: {
+                        $cond: [{ $eq: ['$fromUsername', me] }, '$toUsername', '$fromUsername'],
+                    },
+                    lastText: { $first: '$text' },
+                    lastAt: { $first: '$createdAt' },
+                },
+            },
+            { $sort: { lastAt: -1 } },
+        ]);
+        res.json({ threads });
+    } catch (err) {
+        console.error('GET /api/messages/dm-list error:', err);
+        res.status(500).json({ error: 'Failed to fetch DM list' });
+    }
+});
+
 // ── Fallback — serve React for all non-API routes ─────────────────────────────
 app.get('*', (req, res) => {
     res.sendFile(path.join(BUILD_DIR, 'index.html'));
 });
 
+// ── Socket.IO — Chat ─────────────────────────────────────────────────────────
+
+/**
+ * Authenticate socket connections via JWT in handshake auth.
+ * Client must pass: { auth: { token } }
+ */
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('Authentication required'));
+    try {
+        socket.user = jwt.verify(token, JWT_SECRET);
+        next();
+    } catch {
+        next(new Error('Invalid or expired token'));
+    }
+});
+
+/**
+ * Returns the canonical DM room name for two users (sorted alphabetically
+ * so either direction produces the same room key).
+ */
+const dmRoom = (a, b) => {
+    const [u1, u2] = [a, b].sort();
+    return `dm:${u1}:${u2}`;
+};
+
+io.on('connection', (socket) => {
+    const { username } = socket.user;
+
+    // ── Lobby chat ────────────────────────────────────────────────────────────
+
+    socket.on('lobby:join', ({ sessionId }) => {
+        if (!sessionId) return;
+        socket.join(`lobby:${sessionId}`);
+    });
+
+    socket.on('lobby:leave', ({ sessionId }) => {
+        if (!sessionId) return;
+        socket.leave(`lobby:${sessionId}`);
+    });
+
+    socket.on('lobby:message', async ({ sessionId, text }) => {
+        if (!sessionId || !text?.trim()) return;
+        try {
+            // Verify user is actually in the session
+            const session = await Session.findById(sessionId).lean();
+            if (!session) return;
+            const isMember = session.players.some((p) => p.username === username);
+            if (!isMember) return;
+
+            const msg = await Message.create({
+                fromUsername: username,
+                sessionId,
+                text: text.trim().slice(0, 1000),
+            });
+
+            const payload = {
+                _id: msg._id,
+                fromUsername: username,
+                text: msg.text,
+                createdAt: msg.createdAt,
+            };
+            io.to(`lobby:${sessionId}`).emit('lobby:message', payload);
+        } catch (err) {
+            console.error('lobby:message error:', err);
+        }
+    });
+
+    // ── DM chat ───────────────────────────────────────────────────────────────
+
+    // Join your personal notification room so you receive incoming DM events
+    socket.join(`user:${username}`);
+
+    socket.on('dm:message', async ({ toUsername, text }) => {
+        if (!toUsername || !text?.trim() || toUsername === username) return;
+        try {
+            const msg = await Message.create({
+                fromUsername: username,
+                toUsername,
+                text: text.trim().slice(0, 1000),
+            });
+
+            const payload = {
+                _id: msg._id,
+                fromUsername: username,
+                toUsername,
+                text: msg.text,
+                createdAt: msg.createdAt,
+            };
+
+            // Send to both participants' personal rooms
+            io.to(`user:${username}`).emit('dm:message', payload);
+            io.to(`user:${toUsername}`).emit('dm:message', payload);
+        } catch (err) {
+            console.error('dm:message error:', err);
+        }
+    });
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`Card Game server running on http://localhost:${PORT}`);
     console.log(`API base: http://localhost:${PORT}/api`);
 });

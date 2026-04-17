@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { validateToken } from './features/auth/authSlice';
 import { pollSession } from './features/sessions/sessionsSlice';
+import { clearChat } from './features/chat/chatSlice';
+import { connectSocket, disconnectSocket } from './features/chat/socket';
 import Auth from './sections/auth/auth.jsx';
 import Sessions from './sections/sessions/sessions.jsx';
 import CardGame from './sections/card-game/card-game.jsx';
@@ -21,6 +23,16 @@ function App() {
     }
   }, [validated, dispatch]);
 
+  // Connect / disconnect socket when token changes
+  useEffect(() => {
+    if (token) {
+      connectSocket(token);
+    } else {
+      disconnectSocket();
+      dispatch(clearChat());
+    }
+  }, [token, dispatch]);
+
   // While in lobby (no game yet), poll so non-host sees the game start
   useEffect(() => {
     if (!activeSession || activeGameId) return;
@@ -39,4 +51,5 @@ function App() {
 }
 
 export default App;
+
 
