@@ -2,11 +2,24 @@
 
 const mongoose = require('mongoose');
 
+const VALID_SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
+const VALID_TEAMS = ['A', 'B', 'C', null];
+
 const playerSlotSchema = new mongoose.Schema(
     {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         username: { type: String, required: true },
-        slot: { type: String, enum: ['player1', 'player2'], required: true },
+        slot: { type: String, enum: VALID_SLOTS, required: true },
+        team: { type: String, enum: VALID_TEAMS, default: null },
+    },
+    { _id: false }
+);
+
+const settingsSchema = new mongoose.Schema(
+    {
+        startingHp: { type: Number, default: 20, min: 1, max: 200 },
+        maxBattlers: { type: Number, default: null, min: 1, max: 20 }, // null = auto-scale
+        teamMode: { type: String, enum: ['ffa', 'teams'], default: 'ffa' },
     },
     { _id: false }
 );
@@ -19,15 +32,17 @@ const sessionSchema = new mongoose.Schema(
             userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
             username: { type: String, required: true },
         },
-        players: [playerSlotSchema],
+        players: { type: [playerSlotSchema], default: [] },
+        settings: { type: settingsSchema, default: () => ({}) },
         // 'waiting' → lobby open, 'in-progress' → game running, 'finished' → game over
         status: { type: String, enum: ['waiting', 'in-progress', 'finished'], default: 'waiting' },
-        gameId: { type: String, default: null }, // UUID, set when game starts
+        gameId: { type: String, default: null },
     },
     { timestamps: true }
 );
 
-// Auto-expire finished/waiting sessions after 24 hours
+// Auto-expire sessions after 24 hours of inactivity
 sessionSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 86400 });
 
 module.exports = mongoose.model('Session', sessionSchema);
+

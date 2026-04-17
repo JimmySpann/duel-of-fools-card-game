@@ -330,18 +330,19 @@
 
 .lobby-slots {
     display: flex;
-    gap: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
     justify-content: center;
     margin-bottom: 2rem;
 }
 
 .lobby-slot {
-    flex: 1;
-    max-width: 180px;
+    flex: 1 1 120px;
+    max-width: 150px;
     background: #1a1d27;
     border: 1px solid #2e3148;
     border-radius: 10px;
-    padding: 1rem;
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -360,14 +361,95 @@
 }
 
 .lobby-slot-name {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: #dde0f0;
+    text-align: center;
+    word-break: break-word;
 }
 
 .lobby-slot.empty .lobby-slot-name {
     color: #5a607a;
     font-style: italic;
+}
+
+.lobby-team-select {
+    width: 100%;
+    background: #262940;
+    color: #dde0f0;
+    border: 1px solid #3a4060;
+    border-radius: 6px;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.lobby-team-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* Settings panel */
+.lobby-settings {
+    background: #181b26;
+    border: 1px solid #2e3148;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    max-width: 480px;
+}
+
+.lobby-settings--readonly {
+    display: flex;
+    gap: 1.25rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    color: #8890b0;
+    font-size: 0.85rem;
+}
+
+.lobby-settings-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8890b0;
+    margin: 0 0 0.75rem;
+}
+
+.lobby-settings-grid {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.lobby-setting-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    color: #9ca3bf;
+    flex: 1;
+    min-width: 100px;
+}
+
+.lobby-setting-input {
+    background: #262940;
+    color: #dde0f0;
+    border: 1px solid #3a4060;
+    border-radius: 6px;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.lobby-setting-input:focus {
+    outline: none;
+    border-color: #c9a227;
 }
 
 .lobby-start-btn {

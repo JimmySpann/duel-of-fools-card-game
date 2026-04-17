@@ -6,6 +6,8 @@ import {
     joinSession,
     startSession,
     pollSession,
+    updateSettings,
+    updateTeam,
     setActiveSession,
     clearSessionError,
 } from '../../features/sessions/sessionsSlice';
@@ -13,6 +15,8 @@ import { logout } from '../../features/auth/authSlice';
 import './sessions.css';
 
 const POLL_INTERVAL = 3000;
+const SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
+const TEAM_COLORS = { A: '#e74c3c', B: '#3498db', C: '#2ecc71' };
 
 const statusLabel = (status) => {
     if (status === 'waiting') return 'Waiting';
@@ -20,29 +24,123 @@ const statusLabel = (status) => {
     return 'Finished';
 };
 
-// ── Lobby view (waiting room once you've joined a session) ────────────────────
-const Lobby = ({ session, username, onStart, onBack, loading, error }) => {
+const defaultMaxBattlers = (count) => {
+    if (count <= 2) return 8;
+    if (count <= 4) return 6;
+    return 4;
+};
+
+// ── Lobby view ─────────────────────────────────────────────────────────────────
+const Lobby = ({ session, username, onStart, onBack, loading, error, dispatch }) => {
     const isHost = session.host.username === username;
-    const p1 = session.players.find((p) => p.slot === 'player1');
-    const p2 = session.players.find((p) => p.slot === 'player2');
+    const settings = session.settings || {};
+    const teamMode = settings.teamMode || 'ffa';
+    const playerCount = session.players.length;
+
+    const handleSettingChange = (field, value) => {
+        dispatch(updateSettings({ sessionId: session._id, settings: { [field]: value } }));
+    };
+
+    const handleTeamChange = (slot, team) => {
+        dispatch(updateTeam({ sessionId: session._id, slot, team }));
+    };
 
     return (
         <div className="lobby-container">
             <button className="sessions-back-btn" onClick={onBack}>← Back to Sessions</button>
             <h2 className="lobby-title">{session.name}</h2>
-            <p className="lobby-code-label">Share this code with your opponent</p>
+            <p className="lobby-code-label">Invite code</p>
             <div className="lobby-code">{session.joinCode}</div>
 
+            {/* Settings — host-only */}
+            {isHost && (
+                <div className="lobby-settings">
+                    <h3 className="lobby-settings-title">Game Settings</h3>
+                    <div className="lobby-settings-grid">
+                        <label className="lobby-setting-label">
+                            Starting HP
+                            <input
+                                className="lobby-setting-input"
+                                type="number"
+                                min={1}
+                                max={999}
+                                defaultValue={settings.startingHp ?? 20}
+                                onBlur={(e) => handleSettingChange('startingHp', Number(e.target.value))}
+                            />
+                        </label>
+                        <label className="lobby-setting-label">
+                            Max Battlers
+                            <input
+                                className="lobby-setting-input"
+                                type="number"
+                                min={1}
+                                max={20}
+                                placeholder={`Auto (${defaultMaxBattlers(playerCount)})`}
+                                defaultValue={settings.maxBattlers ?? ''}
+                                onBlur={(e) => {
+                                    const v = e.target.value.trim();
+                                    handleSettingChange('maxBattlers', v === '' ? null : Number(v));
+                                }}
+                            />
+                        </label>
+                        <label className="lobby-setting-label">
+                            Mode
+                            <select
+                                className="lobby-setting-input"
+                                value={teamMode}
+                                onChange={(e) => handleSettingChange('teamMode', e.target.value)}
+                            >
+                                <option value="ffa">Free for All</option>
+                                <option value="teams">Teams</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+            )}
+
+            {/* Player slots */}
             <div className="lobby-slots">
-                <div className={`lobby-slot ${p1 ? 'filled' : 'empty'}`}>
-                    <span className="lobby-slot-label">Player 1</span>
-                    <span className="lobby-slot-name">{p1 ? p1.username : 'Waiting…'}</span>
-                </div>
-                <div className={`lobby-slot ${p2 ? 'filled' : 'empty'}`}>
-                    <span className="lobby-slot-label">Player 2</span>
-                    <span className="lobby-slot-name">{p2 ? p2.username : 'Waiting…'}</span>
-                </div>
+                {SLOTS.map((slot, i) => {
+                    const player = session.players.find((p) => p.slot === slot);
+                    const slotNum = i + 1;
+                    return (
+                        <div key={slot} className={`lobby-slot ${player ? 'filled' : 'empty'}`}>
+                            <span className="lobby-slot-label">Player {slotNum}</span>
+                            <span className="lobby-slot-name">{player ? player.username : 'Open'}</span>
+                            {teamMode === 'teams' && player && (
+                                isHost ? (
+                                    <select
+                                        className="lobby-team-select"
+                                        value={player.team || ''}
+                                        onChange={(e) => handleTeamChange(slot, e.target.value || null)}
+                                        style={{ borderColor: player.team ? TEAM_COLORS[player.team] : undefined }}
+                                    >
+                                        <option value="">No Team</option>
+                                        <option value="A">Team A</option>
+                                        <option value="B">Team B</option>
+                                        <option value="C">Team C</option>
+                                    </select>
+                                ) : (
+                                    <span
+                                        className="lobby-team-badge"
+                                        style={{ background: player.team ? TEAM_COLORS[player.team] : '#555' }}
+                                    >
+                                        {player.team ? `Team ${player.team}` : '—'}
+                                    </span>
+                                )
+                            )}
+                        </div>
+                    );
+                })}
             </div>
+
+            {!isHost && (
+                <div className="lobby-settings lobby-settings--readonly">
+                    <span>HP: {settings.startingHp ?? 20}</span>
+                    <span>Max Battlers: {settings.maxBattlers ?? `Auto (${defaultMaxBattlers(playerCount)})`}</span>
+                    <span>Mode: {teamMode === 'teams' ? 'Teams' : 'Free for All'}</span>
+                </div>
+            )}
 
             {error && <p className="sessions-error">{error}</p>}
 
@@ -50,9 +148,9 @@ const Lobby = ({ session, username, onStart, onBack, loading, error }) => {
                 <button
                     className="lobby-start-btn"
                     onClick={onStart}
-                    disabled={session.players.length < 2 || loading}
+                    disabled={playerCount < 2 || loading}
                 >
-                    {loading ? 'Starting…' : session.players.length < 2 ? 'Waiting for Player 2…' : 'Start Game'}
+                    {loading ? 'Starting…' : playerCount < 2 ? 'Need at least 2 players…' : 'Start Game'}
                 </button>
             ) : (
                 <p className="lobby-waiting-msg">Waiting for the host to start the game…</p>
@@ -75,7 +173,7 @@ const Sessions = () => {
         dispatch(fetchSessions());
     }, [dispatch]);
 
-    // Poll the active session while in lobby so both players see updates
+    // Poll active session in lobby
     useEffect(() => {
         if (view !== 'lobby' || !activeSession) return;
         const id = setInterval(() => {
@@ -122,7 +220,7 @@ const Sessions = () => {
         dispatch(fetchSessions());
     }, [dispatch]);
 
-    // ── Lobby view ───────────────────────────────────────────────────────────────
+    // ── Lobby ────────────────────────────────────────────────────────────────────
     if (view === 'lobby' && activeSession) {
         return (
             <div className="sessions-backdrop">
@@ -133,6 +231,7 @@ const Sessions = () => {
                     error={error}
                     onBack={handleBack}
                     onStart={() => dispatch(startSession({ sessionId: activeSession._id }))}
+                    dispatch={dispatch}
                 />
             </div>
         );
@@ -233,6 +332,7 @@ const Sessions = () => {
                     <div className="sessions-list">
                         {list.map((session) => {
                             const isParticipant = session.players.some((p) => p.username === username);
+                            const openSlots = 6 - session.players.length;
                             return (
                                 <div key={session._id} className={`session-card ${session.status}`}>
                                     <div className="session-card-info">
@@ -243,8 +343,8 @@ const Sessions = () => {
                                         {session.players.map((p) => (
                                             <span key={p.slot} className="session-card-player">{p.username}</span>
                                         ))}
-                                        {session.players.length < 2 && (
-                                            <span className="session-card-player empty">Open slot</span>
+                                        {openSlots > 0 && session.status === 'waiting' && (
+                                            <span className="session-card-player empty">{openSlots} open</span>
                                         )}
                                     </div>
                                     {session.status === 'waiting' && (
@@ -269,3 +369,4 @@ const Sessions = () => {
 };
 
 export default Sessions;
+

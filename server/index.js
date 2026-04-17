@@ -148,12 +148,12 @@ app.get('/api/sessions', requireAuth, async (req, res) => {
 
 /**
  * POST /api/sessions
- * Body: { name }
+ * Body: { name, settings?: { startingHp, maxBattlers, teamMode } }
  * Creates a new lobby session; the creator is automatically player1.
  */
 app.post('/api/sessions', requireAuth, async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, settings = {} } = req.body;
         if (!name || !name.trim()) return res.status(400).json({ error: 'Session name is required' });
 
         let joinCode;
@@ -167,7 +167,12 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
             name: name.trim(),
             joinCode,
             host: { userId: req.user.id, username: req.user.username },
-            players: [{ userId: req.user.id, username: req.user.username, slot: 'player1' }],
+            players: [{ userId: req.user.id, username: req.user.username, slot: 'player1', team: null }],
+            settings: {
+                startingHp: Number(settings.startingHp) || 20,
+                maxBattlers: settings.maxBattlers ? Number(settings.maxBattlers) : null,
+                teamMode: settings.teamMode === 'teams' ? 'teams' : 'ffa',
+            },
         });
         res.status(201).json({ session });
     } catch (err) {
@@ -229,12 +234,22 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
         if (!session) return res.status(404).json({ error: 'Session not found' });
         if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can start the game' });
         if (session.status !== 'waiting') return res.status(409).json({ error: 'Session already started' });
-        if (session.players.length < 2) return res.status(409).json({ error: 'Need 2 players to start' });
+        if (session.players.length < 2) return res.status(409).json({ error: 'Need at least 2 players to start' });
 
-        const p1 = session.players.find((p) => p.slot === 'player1');
-        const p2 = session.players.find((p) => p.slot === 'player2');
+        const playerConfigs = session.players.map((p, i) => ({
+            id: `player${i + 1}`,
+            name: p.username,
+            team: session.settings?.teamMode === 'teams' ? (p.team || null) : null,
+        }));
+
+        const settings = {
+            startingHp: session.settings?.startingHp ?? 20,
+            maxBattlers: session.settings?.maxBattlers ?? null,
+            teamMode: session.settings?.teamMode ?? 'ffa',
+        };
+
         const gameId = uuidv4();
-        const state = createGame(p1.username, p2.username);
+        const state = createGame(playerConfigs, settings);
 
         await Game.create({ gameId, state });
         session.gameId = gameId;
@@ -245,6 +260,60 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('POST /api/sessions/:id/start error:', err);
         res.status(500).json({ error: 'Failed to start game' });
+    }
+});
+
+/**
+ * PATCH /api/sessions/:id/settings
+ * Body: { startingHp?, maxBattlers?, teamMode? }
+ * Host-only; updates lobby settings before game starts.
+ */
+app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can update settings' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change settings after game starts' });
+
+        const { startingHp, maxBattlers, teamMode } = req.body;
+        if (startingHp !== undefined) session.settings.startingHp = Number(startingHp);
+        if (maxBattlers !== undefined) session.settings.maxBattlers = maxBattlers === null ? null : Number(maxBattlers);
+        if (teamMode !== undefined) session.settings.teamMode = teamMode === 'teams' ? 'teams' : 'ffa';
+        session.markModified('settings');
+        await session.save();
+
+        res.json({ session });
+    } catch (err) {
+        console.error('PATCH /api/sessions/:id/settings error:', err);
+        res.status(500).json({ error: 'Failed to update settings' });
+    }
+});
+
+/**
+ * PATCH /api/sessions/:id/players/:slot/team
+ * Body: { team: 'A'|'B'|'C'|null }
+ * Host-only; assigns a team to a player slot.
+ */
+app.patch('/api/sessions/:id/players/:slot/team', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can assign teams' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change teams after game starts' });
+
+        const player = session.players.find((p) => p.slot === req.params.slot);
+        if (!player) return res.status(404).json({ error: 'Player slot not found' });
+
+        const { team } = req.body;
+        if (team !== null && !['A', 'B', 'C'].includes(team)) return res.status(400).json({ error: 'Team must be A, B, C, or null' });
+        player.team = team;
+        session.markModified('players');
+        await session.save();
+
+        res.json({ session });
+    } catch (err) {
+        console.error('PATCH /api/sessions/:id/players/:slot/team error:', err);
+        res.status(500).json({ error: 'Failed to update team' });
     }
 });
 

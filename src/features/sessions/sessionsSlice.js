@@ -58,6 +58,30 @@ export const pollSession = createAsyncThunk('sessions/poll', async ({ sessionId 
     return data.session;
 });
 
+export const updateSettings = createAsyncThunk('sessions/updateSettings', async ({ sessionId, settings }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/settings`, {
+        method: 'PATCH',
+        headers: authHeader(token),
+        body: JSON.stringify(settings),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.session;
+});
+
+export const updateTeam = createAsyncThunk('sessions/updateTeam', async ({ sessionId, slot, team }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/players/${slot}/team`, {
+        method: 'PATCH',
+        headers: authHeader(token),
+        body: JSON.stringify({ team }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.session;
+});
+
 const sessionsSlice = createSlice({
     name: 'sessions',
     initialState: {
@@ -117,7 +141,21 @@ const sessionsSlice = createSlice({
                 if (action.payload.gameId) state.activeGameId = action.payload.gameId;
                 const idx = state.list.findIndex((s) => s._id === action.payload._id);
                 if (idx >= 0) state.list[idx] = action.payload;
-            });
+            })
+
+            .addCase(updateSettings.fulfilled, (state, action) => {
+                state.activeSession = action.payload;
+                const idx = state.list.findIndex((s) => s._id === action.payload._id);
+                if (idx >= 0) state.list[idx] = action.payload;
+            })
+            .addCase(updateSettings.rejected, (state, action) => { state.error = action.payload; })
+
+            .addCase(updateTeam.fulfilled, (state, action) => {
+                state.activeSession = action.payload;
+                const idx = state.list.findIndex((s) => s._id === action.payload._id);
+                if (idx >= 0) state.list[idx] = action.payload;
+            })
+            .addCase(updateTeam.rejected, (state, action) => { state.error = action.payload; });
     },
 });
 
