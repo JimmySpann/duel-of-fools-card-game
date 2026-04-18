@@ -942,6 +942,38 @@ const actions = {
     applyAbilityWithMicroevent(state, { microeventResult }) {
         if (state.phase !== 'microevent' || !state.pendingAction?.isAbility) return;
         const { casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId } = state.pendingAction;
+
+        // ── Microgame result log entry ────────────────────────────────────────
+        const casterPlayer = state.players.find((p) => p.id === state.currentTurn);
+        const ability = casterPlayer?.inPlay[casterCardIndex]?.actions[abilityIndex];
+        if (ability?.microevent) {
+            const { success, score } = microeventResult;
+            const { outcome, type } = ability.microevent;
+            const typeLabel = { qte: 'QTE', pattern: 'Pattern Match', quiz: 'Quiz', rhythm: 'Rhythm' }[type] ?? type;
+            const casterName = casterPlayer?.inPlay[casterCardIndex]?.name ?? 'Unknown';
+
+            if (outcome === 'binary') {
+                if (success) {
+                    state.log.unshift(`[${typeLabel}] ${casterName} succeeded! Full effect!`);
+                } else {
+                    state.log.unshift(`[${typeLabel}] ${casterName} failed! Ability power reduced.`);
+                }
+            } else {
+                // scaled
+                const pct = Math.round(score * 100);
+                if (pct >= 90) {
+                    state.log.unshift(`[${typeLabel}] ${casterName} nailed it! ${pct}% power!`);
+                } else if (pct >= 50) {
+                    state.log.unshift(`[${typeLabel}] ${casterName} partial success — ${pct}% power.`);
+                } else if (pct > 0) {
+                    state.log.unshift(`[${typeLabel}] ${casterName} barely made it — ${pct}% power.`);
+                } else {
+                    state.log.unshift(`[${typeLabel}] ${casterName} failed! No effect.`);
+                }
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         state.lastHitEvents = [];
         executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId, microeventResult);
         checkWinCondition(state);
