@@ -57,85 +57,112 @@
     text-transform: uppercase;
 }
 
-/* ── QTE ─────────────────────────────────────────────────────────────────── */
+/* ── QTE — Stop the Needle ───────────────────────────────────────────────── */
 
 .me-qte-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 24px;
+    gap: 28px;
 }
 
-.me-qte-ring {
+.me-qte-track-wrap {
     position: relative;
-    width: 180px;
-    height: 180px;
+    width: 340px;
+    height: 60px;
+    display: flex;
+    align-items: center;
 }
 
-.me-qte-ring svg {
+.me-qte-track-line {
     position: absolute;
     inset: 0;
-    transform: rotate(-90deg);
+    top: 50%;
+    transform: translateY(-50%);
+    height: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    pointer-events: none;
 }
 
-.me-qte-ring-track {
-    fill: none;
-    stroke: rgba(255, 255, 255, 0.12);
-    stroke-width: 8;
-}
-
-.me-qte-ring-progress {
-    fill: none;
-    stroke: #f5a623;
-    stroke-width: 8;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 0.05s linear;
-}
-
-.me-qte-ring-progress.danger {
-    stroke: #e74c3c;
-}
-
-.me-qte-btn {
+.me-qte-zone {
     position: absolute;
-    inset: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 44px;
+    border-radius: 10px;
+    background: rgba(245, 166, 35, 0.22);
+    border: 2px solid #f5a623;
+    pointer-events: none;
+    box-shadow: 0 0 18px rgba(245, 166, 35, 0.45);
+}
+
+.me-qte-projectile {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #fff, #e67e22);
+    box-shadow: 0 0 16px #e67e22, 0 0 40px rgba(230, 126, 34, 0.6);
+    transition: box-shadow 0.1s;
+    pointer-events: none;
+}
+
+.me-qte-projectile.hit {
+    background: radial-gradient(circle at 40% 35%, #fff, #2ecc71);
+    box-shadow: 0 0 24px #2ecc71, 0 0 60px rgba(46, 204, 113, 0.7);
+}
+
+.me-qte-projectile.miss {
+    background: radial-gradient(circle at 40% 35%, #fff, #e74c3c);
+    box-shadow: 0 0 24px #e74c3c;
+}
+
+.me-qte-projectile.flash {
+    box-shadow: 0 0 40px #fff, 0 0 60px #e67e22;
+}
+
+.me-qte-fire-btn {
+    width: 180px;
+    height: 52px;
+    border-radius: 26px;
     border: none;
-    cursor: pointer;
+    background: linear-gradient(135deg, #e67e22, #c0392b);
+    color: #fff;
     font-size: 1rem;
     font-weight: 700;
-    color: #fff;
-    background: radial-gradient(circle at 40% 35%, #f5a623, #c0392b);
-    box-shadow: 0 0 30px rgba(245, 166, 35, 0.5);
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    box-shadow: 0 4px 20px rgba(230, 126, 34, 0.5);
     transition: transform 0.08s, box-shadow 0.08s;
     animation: qte-pulse 0.9s ease-in-out infinite alternate;
 }
 
-.me-qte-btn:hover:not(:disabled) {
-    transform: scale(1.06);
-    box-shadow: 0 0 50px rgba(245, 166, 35, 0.8);
+.me-qte-fire-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 6px 30px rgba(230, 126, 34, 0.8);
 }
 
-.me-qte-btn:disabled {
+.me-qte-fire-btn:disabled,
+.me-qte-fire-btn.done {
     cursor: default;
     animation: none;
-    filter: grayscale(0.6);
+    filter: grayscale(0.5);
 }
 
 @keyframes qte-pulse {
-    from {
-        box-shadow: 0 0 20px rgba(245, 166, 35, 0.4);
-    }
-
-    to {
-        box-shadow: 0 0 45px rgba(245, 166, 35, 0.9);
-    }
+    from { box-shadow: 0 4px 20px rgba(230, 126, 34, 0.4); }
+    to   { box-shadow: 0 4px 40px rgba(230, 126, 34, 0.9); }
 }
 
 .me-qte-prompt {
     color: #ddd;
     font-size: 0.9rem;
     letter-spacing: 0.05em;
+    min-height: 1.2em;
+    text-align: center;
 }
 
 /* ── Pattern Match ───────────────────────────────────────────────────────── */
@@ -421,4 +448,136 @@
 
 .me-rhythm-feedback.miss {
     color: #e74c3c;
+}
+
+/* Rhythm countdown overlay inside the lane */
+.me-rhythm-countdown {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+    animation: countdown-pop 0.35s ease;
+    z-index: 2;
+}
+
+.me-rhythm-countdown.go {
+    color: #f5a623;
+    text-shadow: 0 0 30px rgba(245, 166, 35, 0.9);
+    font-size: 2.4rem;
+}
+
+@keyframes countdown-pop {
+    0%   { transform: scale(1.5); opacity: 0.3; }
+    60%  { transform: scale(0.92); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Hit zone pulsing on GO! */
+.me-rhythm-hit-zone.pulse {
+    animation: hit-zone-pulse 0.4s ease;
+}
+
+@keyframes hit-zone-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.8); }
+    70%  { box-shadow: 0 0 0 12px rgba(245, 166, 35, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); }
+}
+
+.me-pattern-speed-hint {
+    color: #f5a623;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+}
+
+/* ── Mash ────────────────────────────────────────────────────────────────── */
+
+.me-mash-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.me-mash-timer {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #f5a623;
+    min-width: 2.5ch;
+    text-align: center;
+    transition: color 0.3s;
+}
+
+.me-mash-timer.urgent {
+    color: #e74c3c;
+    animation: qte-pulse 0.4s ease infinite alternate;
+}
+
+.me-mash-meter-wrap {
+    position: relative;
+    width: 280px;
+    height: 36px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+}
+
+.me-mash-meter-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    transition: width 0.08s ease-out;
+}
+
+.me-mash-meter-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.me-mash-btn {
+    width: 180px;
+    height: 68px;
+    border-radius: 34px;
+    border: none;
+    background: linear-gradient(135deg, #3498db, #8e44ad);
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    box-shadow: 0 4px 24px rgba(52, 152, 219, 0.55);
+    transition: transform 0.05s, box-shadow 0.05s;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.me-mash-btn:active:not(:disabled) {
+    transform: scale(0.92);
+    box-shadow: 0 2px 10px rgba(52, 152, 219, 0.3);
+}
+
+.me-mash-btn:disabled,
+.me-mash-btn.done {
+    cursor: default;
+    filter: grayscale(0.5);
+}
+
+.me-mash-prompt {
+    color: #bbb;
+    font-size: 0.85rem;
+    text-align: center;
+    min-height: 1.2em;
 }

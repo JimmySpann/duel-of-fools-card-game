@@ -2,22 +2,28 @@ import { useEffect, useRef, useState } from 'react';
 
 const COLORS = ['red', 'blue', 'green', 'yellow'];
 const LABELS = ['🔴', '🔵', '🟢', '🟡'];
-const SEQ_LEN = 3;
-
-const SHOW_MS = 600;  // how long each button is lit during show phase
-const GAP_MS = 300;  // gap between flashes
 
 /**
- * Pattern Match (Simon Says) — watch the 3-step sequence, then repeat it.
- * Scaled: score = correctSteps / SEQ_LEN.
+ * Pattern Match (Simon Says) — watch the sequence, then repeat it.
+ * Scaled: score = correctSteps / seqLen.
+ *
+ * context.seed       — server-provided colour sequence array
+ * context.seqLen     — length of sequence (3–5, scales with difficulty)
+ * context.difficulty — 0-4, controls flash speed
  */
 const PatternMatchEvent = ({ context, isSpectator, liveInputs, onComplete, onInput }) => {
-    const sequence = context.seed ?? [0, 1, 2]; // server-provided seed
+    const difficulty = context?.difficulty ?? 0;
+    const seqLen = context?.seqLen ?? 3;
+    const sequence = (context?.seed ?? [0, 1, 2]).slice(0, seqLen);
 
-    const [phase, setPhase] = useState('countdown'); // countdown | showing | input | done
-    const [litIndex, setLitIndex] = useState(null);        // button index currently lit
-    const [inputStep, setInputStep] = useState(0);         // how many inputs received
-    const [feedbacks, setFeedbacks] = useState([]);        // 'correct'|'wrong' per input
+    // Speed scales with difficulty: faster show and smaller gaps at higher levels
+    const SHOW_MS = [500, 420, 340, 260, 190][difficulty];
+    const GAP_MS  = [250, 200, 150, 110,  70][difficulty];
+
+    const [phase, setPhase] = useState('countdown');
+    const [litIndex, setLitIndex] = useState(null);
+    const [inputStep, setInputStep] = useState(0);
+    const [feedbacks, setFeedbacks] = useState([]);
     const [statusMsg, setStatusMsg] = useState('Watch carefully…');
     const prevSpectatorInputRef = useRef(0);
 
@@ -37,16 +43,16 @@ const PatternMatchEvent = ({ context, isSpectator, liveInputs, onComplete, onInp
     useEffect(() => {
         let cancelled = false;
         const runShow = async () => {
-            await delay(800); // lead-in
+            await delay(700); // lead-in
             if (cancelled) return;
             setPhase('showing');
-            for (let i = 0; i < SEQ_LEN; i++) {
+            for (let i = 0; i < seqLen; i++) {
                 if (cancelled) return;
                 setLitIndex(sequence[i]);
                 await delay(SHOW_MS);
                 if (cancelled) return;
                 setLitIndex(null);
-                if (i < SEQ_LEN - 1) await delay(GAP_MS);
+                if (i < seqLen - 1) await delay(GAP_MS);
             }
             if (cancelled) return;
             setPhase('input');
@@ -69,7 +75,7 @@ const PatternMatchEvent = ({ context, isSpectator, liveInputs, onComplete, onInp
         if (!correct) {
             setPhase('done');
             setStatusMsg('Wrong! ✗');
-            const score = inputStep / SEQ_LEN;
+            const score = inputStep / seqLen;
             setTimeout(() => onComplete({ success: score > 0, score }), 600);
             return;
         }
@@ -77,12 +83,12 @@ const PatternMatchEvent = ({ context, isSpectator, liveInputs, onComplete, onInp
         const nextStep = inputStep + 1;
         setInputStep(nextStep);
 
-        if (nextStep >= SEQ_LEN) {
+        if (nextStep >= seqLen) {
             setPhase('done');
             setStatusMsg('Perfect! ✓');
             setTimeout(() => onComplete({ success: true, score: 1 }), 600);
         } else {
-            setStatusMsg(`${nextStep}/${SEQ_LEN} correct…`);
+            setStatusMsg(`${nextStep}/${seqLen} correct…`);
         }
     };
 
@@ -93,7 +99,7 @@ const PatternMatchEvent = ({ context, isSpectator, liveInputs, onComplete, onInp
             <div className="me-pattern-buttons">
                 {COLORS.map((color, i) => {
                     const isLit = litIndex === i;
-                    const fb = feedbacks[inputStep - 1]; // last feedback
+                    const fb = feedbacks[inputStep - 1];
                     const justPressed = litIndex === i && phase === 'input';
                     return (
                         <button
@@ -111,7 +117,8 @@ const PatternMatchEvent = ({ context, isSpectator, liveInputs, onComplete, onInp
             </div>
 
             <div className="me-pattern-score">
-                {phase === 'input' && !isSpectator && `Step ${inputStep + 1} of ${SEQ_LEN}`}
+                {phase === 'input' && !isSpectator && `Step ${inputStep + 1} of ${seqLen}`}
+                {phase === 'showing' && <span className="me-pattern-speed-hint">Speed: {['Normal', 'Normal', 'Fast', 'Faster', 'Blazing'][difficulty]}</span>}
             </div>
         </div>
     );

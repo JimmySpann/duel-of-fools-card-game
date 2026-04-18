@@ -969,11 +969,64 @@ const fetchTrivia = (params = {}) => new Promise((resolve, reject) => {
     }).on('error', reject);
 });
 
+// ── Math problem generator ────────────────────────────────────────────────────
+const generateMathProblem = (difficulty) => {
+    let question, answer;
+    const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    if (difficulty <= 1) {
+        // Simple addition / subtraction with small numbers
+        const a = r(1, 20), b = r(1, 20);
+        if (Math.random() < 0.5) { question = `${a} + ${b} = ?`; answer = a + b; }
+        else { const big = Math.max(a, b), small = Math.min(a, b); question = `${big} - ${small} = ?`; answer = big - small; }
+    } else if (difficulty === 2) {
+        // Multiplication / division
+        const a = r(2, 12), b = r(2, 12);
+        if (Math.random() < 0.5) { question = `${a} × ${b} = ?`; answer = a * b; }
+        else { const prod = a * b; question = `${prod} ÷ ${a} = ?`; answer = b; }
+    } else if (difficulty === 3) {
+        // Multi-step or negative numbers
+        const a = r(5, 30), b = r(2, 15), c = r(1, 10);
+        const ops = [
+            () => { question = `${a} + ${b} - ${c} = ?`; answer = a + b - c; },
+            () => { question = `${a} - ${b} + ${c} = ?`; answer = a - b + c; },
+            () => { question = `${a} × ${b} + ${c} = ?`; answer = a * b + c; },
+        ];
+        ops[r(0, ops.length - 1)]();
+    } else {
+        // Percentages or harder multi-step
+        const pcts = [10, 20, 25, 50];
+        const pct = pcts[r(0, pcts.length - 1)];
+        const base = r(2, 20) * (100 / pct); // ensures whole number result
+        const ops = [
+            () => { question = `${pct}% of ${base} = ?`; answer = (pct / 100) * base; },
+            () => { const a = r(3, 12), b = r(3, 12); question = `(${a} + ${b}) × ${r(2, 5)} = ?`; answer = (a + b) * r(2, 5); /* recalc below */ },
+        ];
+        // Simpler: always percentage at high diff
+        question = `${pct}% of ${base} = ?`;
+        answer = Math.round((pct / 100) * base);
+    }
+
+    // Generate 3 wrong answers in the same ballpark
+    const spread = Math.max(3, Math.abs(answer) * 0.3);
+    const wrongs = new Set();
+    while (wrongs.size < 3) {
+        const candidate = answer + (Math.random() < 0.5 ? 1 : -1) * Math.floor(Math.random() * spread + 1);
+        if (candidate !== answer) wrongs.add(candidate);
+    }
+    const choices = [String(answer), ...[...wrongs].map(String)];
+    for (let i = choices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [choices[i], choices[j]] = [choices[j], choices[i]];
+    }
+    return { question, choices, correctIndex: choices.indexOf(String(answer)) };
+};
+
 // ── Pending microevents ───────────────────────────────────────────────────────
 // gameId → { timeoutHandle }
 const pendingMicroevents = new Map();
 
-const MICROEVENT_TIMEOUT_MS = { qte: 4000, pattern: 18000, quiz: 25000, rhythm: 15000 };
+const MICROEVENT_TIMEOUT_MS = { qte: 4000, pattern: 22000, quiz: 28000, rhythm: 35000, mash: 6000 };
 
 const TRACK_BPMS = [120, 80, 135, 95, 128]; // matches TRACKS order in musicManager.js
 
@@ -996,53 +1049,76 @@ const triggerMicroevent = async (gameId, game, context, ability, socket) => {
     // Build start payload
     const casterPlayer = heldState.players.find((p) => p.id === heldState.currentTurn);
     const casterCard = casterPlayer?.inPlay[casterCardIndex];
+
+    // ── Effective difficulty ──────────────────────────────────────────────────
+    const timesUsed = (ability.limit ?? 0) - (ability.usesRemaining ?? 0);
+    const globalDiff = heldState.settings?.microgameDifficulty ?? 1;
+    const effectiveDifficulty = Math.min(4, (globalDiff - 1) + Math.floor(timesUsed / 2));
+    // ─────────────────────────────────────────────────────────────────────────
+
     const startPayload = {
         type: me.type, outcome: me.outcome,
         abilityName: ability.name,
         casterName: casterCard?.name ?? '?',
         casterPlayerId: heldState.currentTurn,
         casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId,
+        difficulty: effectiveDifficulty,
     };
 
     if (me.type === 'quiz') {
-        try {
-            const data = await fetchTrivia({
-                difficulty: me.difficulty,
-                category: me.category,
-                questionType: me.questionType,
-            });
-            if (data.response_code === 0 && data.results?.[0]) {
-                const q = data.results[0];
-                const decode = (s) => decodeURIComponent(s);
-                const correct = decode(q.correct_answer);
-                const choices = [correct, ...(q.incorrect_answers || []).map(decode)];
-                for (let i = choices.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [choices[i], choices[j]] = [choices[j], choices[i]];
+        if (me.mathProblem) {
+            const { question, choices, correctIndex } = generateMathProblem(effectiveDifficulty);
+            startPayload.question = question;
+            startPayload.choices = choices;
+            startPayload.correctIndex = correctIndex;
+        } else {
+            try {
+                const data = await fetchTrivia({
+                    difficulty: me.difficulty,
+                    category: me.category,
+                    questionType: me.questionType,
+                });
+                if (data.response_code === 0 && data.results?.[0]) {
+                    const q = data.results[0];
+                    const decode = (s) => decodeURIComponent(s);
+                    const correct = decode(q.correct_answer);
+                    const choices = [correct, ...(q.incorrect_answers || []).map(decode)];
+                    for (let i = choices.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [choices[i], choices[j]] = [choices[j], choices[i]];
+                    }
+                    startPayload.question = decode(q.question);
+                    startPayload.choices = choices;
+                    startPayload.correctIndex = choices.indexOf(correct);
                 }
-                startPayload.question = decode(q.question);
-                startPayload.choices = choices;
-                startPayload.correctIndex = choices.indexOf(correct);
+            } catch (err) {
+                console.error('[Microevent] OpenTDB fetch failed:', err.message);
+                // Fall through — client handles missing question gracefully
             }
-        } catch (err) {
-            console.error('[Microevent] OpenTDB fetch failed:', err.message);
-            // Fall through — client handles missing question gracefully
         }
     }
 
     if (me.type === 'rhythm') {
         const currentTrackIndex = heldState._currentTrackIndex ?? 0;
-        startPayload.bpm = TRACK_BPMS[currentTrackIndex] ?? 120;
-        startPayload.beats = me.beats ?? 4;
-        startPayload.beatStartTime = Date.now() + 2000; // 2s countdown
+        const baseBpm = TRACK_BPMS[currentTrackIndex] ?? 120;
+        const baseBeats = me.beats ?? 4;
+        const scaledBeats = baseBeats + [0, 0, 2, 3, 4][effectiveDifficulty];
+        const beatIntervalMs = (60 / baseBpm) * 1000;
+        const leadIn = 3000; // countdown window
+        startPayload.bpm = baseBpm;
+        startPayload.beats = scaledBeats;
+        startPayload.beatStartTime = Date.now() + leadIn;
+        startPayload.timeoutMs = leadIn + scaledBeats * beatIntervalMs + 2000;
     }
 
     if (me.type === 'pattern') {
-        startPayload.seed = Array.from({ length: 3 }, () => Math.floor(Math.random() * 4));
+        const seqLen = effectiveDifficulty <= 1 ? 3 : effectiveDifficulty <= 3 ? 4 : 5;
+        startPayload.seed = Array.from({ length: seqLen }, () => Math.floor(Math.random() * 4));
+        startPayload.seqLen = seqLen;
     }
 
     // Timeout: auto-resolve failure if active player disconnects or stalls
-    const timeoutMs = MICROEVENT_TIMEOUT_MS[me.type] ?? 10000;
+    const timeoutMs = startPayload.timeoutMs ?? MICROEVENT_TIMEOUT_MS[me.type] ?? 10000;
     const timeoutHandle = setTimeout(() => {
         pendingMicroevents.delete(gameId);
         enqueueGameAction(gameId, async () => {

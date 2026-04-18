@@ -12,7 +12,7 @@ const cards = [
             { name: 'Pain Immunity', effect: 'Defense +3 next turn if hit', description: 'Adrenaline masks the pain.' }
         ],
         actions: [
-            { name: 'Crack Attack', actionInfo: 'High Priority Melee', description: 'Makes a bee line for enemys jugula.', limit: 10, usesRemaining: 10 },
+            { name: 'Crack Attack', actionInfo: 'High Priority Melee', description: 'Makes a bee line for enemys jugula.', limit: 10, usesRemaining: 10, microevent: { type: 'mash', outcome: 'scaled' } },
             { name: 'Smoke Break', actionInfo: 'Invulnerable for 1 turn', description: 'Becomes unattackable for 1 turn', limit: 5, usesRemaining: 5 }
         ],
         defense: 5, evasion: 6, health: 9, attack: 5, agility: 5,
@@ -47,7 +47,7 @@ const cards = [
             { name: 'Inner Heat', effect: 'Immunity: Freeze', description: 'The fire within never goes out.', type: 'fire' }
         ],
         actions: [
-            { name: 'Searing Lash', actionInfo: 'Normal Attack', description: 'Attacks and applies burn', limit: 10, usesRemaining: 10, type: 'fire' },
+            { name: 'Searing Lash', actionInfo: 'Normal Attack', description: 'Attacks and applies burn', limit: 10, usesRemaining: 10, type: 'fire', microevent: { type: 'mash', outcome: 'scaled' } },
             { name: 'Wall of Fire', actionInfo: 'Damage Reduction 50%', description: 'Reduces incoming damage by 50% for 1 turn', limit: 10, usesRemaining: 10, type: 'fire' },
             { name: 'Supernova', actionInfo: 'Massive DMG / Self-Destruct', description: 'Deals massive damage but kills user', limit: 1, usesRemaining: 1, type: 'fire', microevent: { type: 'qte', outcome: 'binary' } }
         ],
@@ -138,7 +138,7 @@ const cards = [
         ],
         actions: [
             { name: 'Scepter Smash', actionInfo: 'Heavy Physical', description: 'A heavy physical blow', limit: 12, usesRemaining: 12, microevent: { type: 'qte', outcome: 'binary' } },
-            { name: 'Fortify', actionInfo: 'Allies DEF +2', description: 'Increases the defense of all allies', limit: 5, usesRemaining: 5, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'medium', questionType: 'multiple' } },
+            { name: 'Fortify', actionInfo: 'Allies DEF +2', description: 'Increases the defense of all allies', limit: 5, usesRemaining: 5, microevent: { type: 'quiz', outcome: 'binary', mathProblem: true } },
             { name: 'Rallying Cry', actionInfo: 'Cleanse Debuffs', description: 'Removes all debuffs from the team', limit: 3, usesRemaining: 3 }
         ],
         defense: 8, agility: 4, attack: 7, evasion: 3, health: 11,

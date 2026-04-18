@@ -78,7 +78,7 @@ const createInitialState = (playerConfigs, settings = {}) => {
     const turnOrder = players.map((p) => p.id);
     return {
         players,
-        settings: { startingHp, maxBattlers, deckSize, teamMode },
+        settings: { startingHp, maxBattlers, deckSize, teamMode, microgameDifficulty: settings.microgameDifficulty ?? 1 },
         turnOrder,
         turnIndex: 0,
         currentTurn: turnOrder[0],
@@ -418,6 +418,17 @@ const applyMicroeventModifications = (abilityName, effects, microeventResult) =>
                     : e
             );
         }
+
+        // ── Mash scaled ────────────────────────────────────────────────────────
+        case 'Searing Lash': {
+            const bonus = Math.round((score - 0.5) * 6); // -3 at 0, 0 at 0.5, +3 at 1
+            return clone.map((e) => e.type === 'damage' ? { ...e, flatBonus: (e.flatBonus ?? 0) + bonus } : e);
+        }
+        case 'Crack Attack': {
+            const bonus = Math.round((score - 0.5) * 6);
+            return clone.map((e) => e.type === 'damage' ? { ...e, flatBonus: (e.flatBonus ?? 0) + bonus } : e);
+        }
+
         default: break;
     }
     return clone;

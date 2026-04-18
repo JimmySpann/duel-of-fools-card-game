@@ -141,6 +141,20 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                                 <option value={86400}>24 Hours</option>
                             </select>
                         </label>
+                        <label className="lobby-setting-label">
+                            Minigame Difficulty
+                            <select
+                                className="lobby-setting-input"
+                                value={settings.microgameDifficulty ?? 1}
+                                onChange={(e) => handleSettingChange('microgameDifficulty', Number(e.target.value))}
+                            >
+                                <option value={1}>Easy</option>
+                                <option value={2}>Normal</option>
+                                <option value={3}>Hard</option>
+                                <option value={4}>Expert</option>
+                                <option value={5}>Brutal</option>
+                            </select>
+                        </label>
                     </div>
                 </div>
             )}
@@ -200,6 +214,7 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                     <span>Deck: {settings.deckSize ?? 'All'}</span>
                     <span>Mode: {teamMode === 'teams' ? 'Teams' : 'Free for All'}</span>
                     <span>Turn Limit: {settings.turnTimeLimit ? (() => { const h = Math.floor(settings.turnTimeLimit / 3600); const m = Math.floor((settings.turnTimeLimit % 3600) / 60); return h > 0 ? `${h}h` : `${m}m`; })() : 'None'}</span>
+                    <span>Minigames: {['Easy', 'Normal', 'Hard', 'Expert', 'Brutal'][(settings.microgameDifficulty ?? 1) - 1]}</span>
                 </div>
             )}
 

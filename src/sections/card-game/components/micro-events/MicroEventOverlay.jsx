@@ -2,6 +2,7 @@ import QTEEvent from './QTEEvent';
 import PatternMatchEvent from './PatternMatchEvent';
 import QuizEvent from './QuizEvent';
 import RhythmEvent from './RhythmEvent';
+import MashEvent from './MashEvent';
 import './micro-events.css';
 
 /**
@@ -31,6 +32,7 @@ const MicroEventOverlay = ({ context, liveInputs, isSpectator, onComplete, onInp
             {context.type === 'pattern' && <PatternMatchEvent  {...eventProps} />}
             {context.type === 'quiz' && <QuizEvent          {...eventProps} />}
             {context.type === 'rhythm' && <RhythmEvent        {...eventProps} />}
+            {context.type === 'mash' && <MashEvent           {...eventProps} />}
         </div>
     );
 };
