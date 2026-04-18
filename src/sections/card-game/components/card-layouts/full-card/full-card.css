@@ -251,3 +251,103 @@
 .rotateY-0 {
     transform: rotateY(0deg);
 }
+
+/* ── Microgame badge on actions ─────────────────────────────────────────── */
+.ability-microevent-badge {
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+    letter-spacing: 0.04em;
+    align-self: center;
+    border: 1px solid;
+    white-space: nowrap;
+}
+
+.ability-microevent-badge--qte {
+    background: #2a0060;
+    color: #d09aff;
+    border-color: #6b22b8;
+}
+
+.ability-microevent-badge--mash {
+    background: #002060;
+    color: #70b8ff;
+    border-color: #1a5ab8;
+}
+
+.ability-microevent-badge--pattern {
+    background: #003020;
+    color: #60e890;
+    border-color: #1a8050;
+}
+
+.ability-microevent-badge--rhythm {
+    background: #400020;
+    color: #ff80b0;
+    border-color: #a01050;
+}
+
+.ability-microevent-badge--quiz {
+    background: #3a2800;
+    color: #ffd060;
+    border-color: #906000;
+}
+
+/* ── Status effects ─────────────────────────────────────────────────────── */
+.card-status-effects {
+    margin-top: 4px;
+}
+
+.card-status-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.card-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border-radius: 9px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    border: 1px solid;
+}
+
+.card-status-pill.buff {
+    background: rgba(46, 160, 90, 0.18);
+    color: #5fc98e;
+    border-color: #2e7a50;
+}
+
+.card-status-pill.debuff {
+    background: rgba(200, 60, 60, 0.18);
+    color: #e07070;
+    border-color: #8a2020;
+}
+
+.card-status-name {
+    text-transform: capitalize;
+}
+
+.card-status-value {
+    font-weight: 900;
+    font-size: 0.75rem;
+}
+
+.card-status-pill.buff .card-status-value {
+    color: #88ffb8;
+}
+
+.card-status-pill.debuff .card-status-value {
+    color: #ffaaaa;
+}
+
+.card-status-duration {
+    opacity: 0.7;
+    font-size: 0.62rem;
+    font-weight: 400;
+}

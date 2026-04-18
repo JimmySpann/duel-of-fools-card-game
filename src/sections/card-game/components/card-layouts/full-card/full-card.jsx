@@ -10,6 +10,31 @@ import waterIcon from '../../../../../assets/elements/water-icon.png';
 import deathIcon from '../../../../../assets/elements/death-icon.png';
 
 import './full-card.css';
+
+const MICROEVENT_LABELS = {
+    qte: 'QTE', mash: 'Mash', pattern: 'Pattern', rhythm: 'Rhythm', quiz: 'Quiz',
+};
+
+const STATUS_INFO = {
+    burned: { label: 'Burned', buff: false },
+    bleeding: { label: 'Bleeding', buff: false },
+    poisoned: { label: 'Poisoned', buff: false },
+    frozen: { label: 'Frozen', buff: false },
+    stunned: { label: 'Stunned', buff: false },
+    weakened: { label: 'Weakened', buff: false },
+    invulnerable: { label: 'Invulnerable', buff: true },
+    invisible: { label: 'Invisible', buff: true },
+    shielded: { label: 'Shield', buff: true },
+    damage_reduction: { label: 'Dmg Reduction', buff: true },
+    eva_up: { label: 'EVA', buff: true },
+    def_up: { label: 'DEF', buff: true },
+    atk_up: { label: 'ATK', buff: true },
+    agi_up: { label: 'AGI', buff: true },
+    eva_down: { label: 'EVA', buff: false },
+    def_down: { label: 'DEF', buff: false },
+    atk_down: { label: 'ATK', buff: false },
+};
+
 const getElementIcon = (element) => {
     switch (element) {
         case 'fire':
@@ -132,6 +157,11 @@ const Card = ({
                                     <div className="ability-first-row">
                                         <div className="ability-name">{action.name}</div>
                                         <div className="ability-effect">{action.actionInfo}</div>
+                                        {action.microevent && (
+                                            <div className={`ability-microevent-badge ability-microevent-badge--${action.microevent.type}`}>
+                                                {MICROEVENT_LABELS[action.microevent.type] || action.microevent.type}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="ability-description">{action.description}</div>
                                 </div>
@@ -144,6 +174,30 @@ const Card = ({
                             </div>
                         ))}
                     </div>}
+
+                    {card.statusEffects && card.statusEffects.length > 0 && (
+                        <div className="card-status-effects">
+                            <div className="card-info-title">Status</div>
+                            <div className="card-status-list">
+                                {card.statusEffects.map((s, i) => {
+                                    const info = STATUS_INFO[s.type] || { label: s.type, buff: true };
+                                    return (
+                                        <div key={i} className={`card-status-pill${info.buff ? ' buff' : ' debuff'}`}>
+                                            <span className="card-status-name">{info.label}</span>
+                                            {s.value != null && s.value !== 1 && (
+                                                <span className="card-status-value">
+                                                    {info.buff ? '+' : '-'}{Math.abs(s.value)}
+                                                </span>
+                                            )}
+                                            {s.duration != null && s.duration < 999 && (
+                                                <span className="card-status-duration">{s.duration}t</span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="card-footer">
