@@ -15,6 +15,8 @@ import UserLayout from './components/layouts/user-layout/user-layout.jsx';
 import TurnRecap from './components/turn-recap/turn-recap.jsx';
 import sounds from '../../features/sound/soundManager';
 import MicroEventOverlay from './components/micro-events/MicroEventOverlay';
+import RulesView from '../shared/rules/RulesView';
+import RulesModal from '../shared/rules/RulesModal';
 import './card-game.css';
 
 const CardGame = () => {
@@ -46,6 +48,7 @@ const CardGame = () => {
     const [showProfile, setShowProfile] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
     const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
+    const [showRulesModal, setShowRulesModal] = useState(false);
 
     // Per-game notification override (defaults to global setting)
     const [notifyThisGame, setNotifyThisGame] = useState(notifyTurnGlobal);
@@ -426,16 +429,14 @@ const CardGame = () => {
                                 </div>
 
                                 <div className="game-panel-section">
-                                    <h4 className="game-panel-section-title">How to Play</h4>
-                                    <ul className="game-panel-rules">
-                                        <li>Play a card from your hand to put a battler into play.</li>
-                                        <li>Only one card can be played per turn.</li>
-                                        <li>Select a battler to <strong>Attack</strong> or use an <strong>Ability</strong>.</li>
-                                        <li>Battlers that just entered play are <em>Not Ready</em> — they can't act this turn.</li>
-                                        <li>Battlers that have already acted this turn are marked <em>Acted</em>.</li>
-                                        <li>Defeat all enemy battlers to win, or reduce the opponent's HP to 0.</li>
-                                        <li>Press <strong>End Turn</strong> to pass play to your opponent.</li>
-                                    </ul>
+                                    <h4 className="game-panel-section-title">Rules Summary</h4>
+                                    <RulesView
+                                        mode="brief"
+                                        sectionIds={['objective', 'turnFlow', 'actions', 'combat', 'status', 'directAttack', 'limits']}
+                                    />
+                                    <button className="rules-open-full-btn" onClick={() => setShowRulesModal(true)}>
+                                        Open Full Rules Deep Dive
+                                    </button>
                                 </div>
                             </>
                         )}
@@ -488,6 +489,13 @@ const CardGame = () => {
 
             {/* ── Profile modal ────────────────────────────────────────── */}
             {showProfile && <Profile onClose={() => setShowProfile(false)} initialTab="Options" />}
+
+            {showRulesModal && (
+                <RulesModal
+                    onClose={() => setShowRulesModal(false)}
+                    title="Game Rules Deep Dive"
+                />
+            )}
 
             {/* ── Messages (DM Panel) ──────────────────────────────────── */}
             <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />

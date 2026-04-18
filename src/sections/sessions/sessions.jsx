@@ -25,6 +25,7 @@ import Profile from '../../features/profile/Profile';
 import GalleryModal from './GalleryModal';
 import DeckBuilderModal from './DeckBuilderModal';
 import CustomCardModal from './CustomCardModal';
+import RulesModal from '../shared/rules/RulesModal';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import './sessions.css';
 
@@ -417,6 +418,7 @@ const Sessions = () => {
     const [showGallery, setShowGallery] = useState(false);
     const [showDeckBuilder, setShowDeckBuilder] = useState(false);
     const [showCustomCards, setShowCustomCards] = useState(false);
+    const [showRules, setShowRules] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
 
@@ -699,6 +701,9 @@ const Sessions = () => {
                     </button>
                 </div>
                 <div className="sessions-secondary-actions">
+                    <button className="sessions-action-btn" onClick={() => setShowRules(true)}>
+                        📜 Rules
+                    </button>
                     <button className="sessions-action-btn" onClick={() => setShowGallery(true)}>
                         📖 Gallery
                     </button>
@@ -747,6 +752,7 @@ const Sessions = () => {
                 </section>
             </div>
             {showProfile && <Profile onClose={() => setShowProfile(false)} />}
+            {showRules && <RulesModal onClose={() => setShowRules(false)} title="Rules Deep Dive" />}
             {showGallery && <GalleryModal onClose={() => setShowGallery(false)} />}
             {showDeckBuilder && (
                 <DeckBuilderModal

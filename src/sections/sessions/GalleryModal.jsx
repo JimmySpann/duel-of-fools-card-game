@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import cards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
+import RulesView from '../shared/rules/RulesView';
+import RulesModal from '../shared/rules/RulesModal';
 
 const ELEMENT_COLORS = {
     fire: { bg: '#7c1a00', color: '#ff7a40', border: '#b04000' },
@@ -113,43 +115,6 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
     );
 };
 
-const RULES_HOW_TO_PLAY = [
-    'Play a card from your hand to put a battler into play.',
-    'Only one card can be played per turn.',
-    'Select a battler to Attack or use an Ability.',
-    'Battlers that just entered play are Not Ready — they can\'t act this turn.',
-    'Battlers that have already acted this turn are marked Acted.',
-    'Defeat all enemy battlers to win, or reduce the opponent\'s HP to 0.',
-    'Press End Turn to pass play to your opponent.',
-];
-
-const RULES_TURN_STEPS = [
-    {
-        step: 'Draw a Card',
-        desc: 'At the start of your turn you automatically draw one card from your deck into your hand.',
-    },
-    {
-        step: 'Play a Battler (optional)',
-        desc: 'Play one card from your hand to deploy a battler to the field. You may only play one card per turn. Newly deployed battlers are Not Ready and cannot act this turn.',
-    },
-    {
-        step: 'Act with Your Battlers',
-        desc: 'Select any of your ready battlers and choose Attack or an Ability. Each battler can act once per turn. Battlers marked Acted have already used their action.',
-    },
-    {
-        step: 'Resolve Combat',
-        desc: 'Attacks are resolved using ATK vs the target\'s DEF. Agility (AGI) and Evasion (EVA) can cause attacks to miss. Elemental strengths and weaknesses modify damage further.',
-    },
-    {
-        step: 'End Your Turn',
-        desc: 'Press End Turn when you\'re done. All your battlers\' actions reset and play passes to your opponent. Battlers that were Not Ready become ready at the start of their controller\'s next turn.',
-    },
-    {
-        step: 'Win Condition',
-        desc: 'Defeat all enemy battlers in play, or reduce your opponent\'s HP to 0 to win the game.',
-    },
-];
-
 const ALL_ELEMENTS = ['fire', 'ice', 'electric', 'earth', 'death', 'water', 'air', 'normal'];
 
 const GalleryModal = ({ onClose }) => {
@@ -162,6 +127,7 @@ const GalleryModal = ({ onClose }) => {
     const [abilitySearch, setAbilitySearch] = useState('');
     const [abilityTypeFilter, setAbilityTypeFilter] = useState('all');
     const [abilityExamples, setAbilityExamples] = useState([]);
+    const [showRulesModal, setShowRulesModal] = useState(false);
 
     const filtered = useMemo(() => {
         return cards.filter((c) => {
@@ -317,40 +283,20 @@ const GalleryModal = ({ onClose }) => {
 
                 {tab === 'rules' && (
                     <div className="gallery-rules-panel">
-                        <section className="gallery-rules-section">
-                            <h3 className="gallery-rules-heading">How to Play</h3>
-                            <ul className="gallery-rules-list">
-                                {RULES_HOW_TO_PLAY.map((rule, i) => (
-                                    <li key={i}>{rule}</li>
-                                ))}
-                            </ul>
-                        </section>
-
-                        <section className="gallery-rules-section">
-                            <h3 className="gallery-rules-heading">Turn Order</h3>
-                            <ol className="gallery-turn-steps">
-                                {RULES_TURN_STEPS.map((item, i) => (
-                                    <li key={i}>
-                                        <strong>{item.step}</strong>
-                                        <p>{item.desc}</p>
-                                    </li>
-                                ))}
-                            </ol>
-                        </section>
-
-                        <section className="gallery-rules-section">
-                            <h3 className="gallery-rules-heading">Microgames</h3>
-                            <ul className="gallery-rules-list">
-                                <li><strong>QTE (Stop the Needle):</strong> A projectile bounces back and forth — press when it's inside the target zone. Score = how centered your hit was.</li>
-                                <li><strong>Mash:</strong> Press as fast as you can to fill the power meter before time runs out. Higher score = stronger effect.</li>
-                                <li><strong>Pattern Match:</strong> Watch a sequence of symbols flash, then reproduce it. Correct steps score higher.</li>
-                                <li><strong>Rhythm:</strong> Hit the notes as they pass through the hit zone. Accuracy determines the outcome.</li>
-                                <li><strong>Quiz:</strong> Answer a trivia or math question correctly. Binary result — right or wrong.</li>
-                            </ul>
-                        </section>
+                        <RulesView mode="brief" sectionIds={['objective', 'turnFlow', 'actions', 'combat', 'microevents']} />
+                        <button className="rules-open-full-btn" onClick={() => setShowRulesModal(true)}>
+                            Open Full Rules Deep Dive
+                        </button>
                     </div>
                 )}
             </div>
+
+            {showRulesModal && (
+                <RulesModal
+                    onClose={() => setShowRulesModal(false)}
+                    title="Rules Deep Dive"
+                />
+            )}
 
             {previewCard && (
                 <div className="fc-preview-overlay" onClick={() => setPreviewCard(null)}>
