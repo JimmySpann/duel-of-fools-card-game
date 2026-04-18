@@ -11,7 +11,9 @@ const DANCE_PEAK_BOOST = 1.95;
 const DANCE_MAX_X_TRAVEL = 34;
 const DANCE_MAX_LIFT = 18;
 const DANCE_MAX_ROTATION = 22;
-const DANCE_MAX_X_ROTATION = 300;
+const DANCE_Y_SPIN_INTERVAL = 32;  // beats between pirouette windows (~every 8 bars)
+const DANCE_Y_SPIN_DURATION = 3.2; // beats for a full 360 Y-spin (slow pirouette)
+const DANCE_Y_SPIN_THRESHOLD = 0.72; // min energy required to trigger
 
 const TWO_PI = Math.PI * 2;
 const DANCE_CHOREOGRAPHIES = [
@@ -483,13 +485,14 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const spinDirection = ((Math.floor(trackBeats) + index) % 2 === 0 ? 1 : -1);
                             const spinDeg = spinPulse * profile.spinDeg * 0.56 * spinDirection * (0.56 + barline * 0.44 + patternMotion.spinBoost) * intensity;
 
-                            const twistThreshold = profile.xTwistThreshold ?? Math.max(0.5, profile.spinEnergyThreshold + 0.1);
-                            const twistGate = effectiveEnergy >= twistThreshold && (namedPhase.pattern === 'spinCombo' || bassPulse > 1.05);
-                            const xTwistPulse = twistGate
-                                ? beatEnvelope(trackBeats * (profile.xTwistFreq ?? 0.5) + phase / TWO_PI + 0.08, profile.xTwistWidth ?? 0.19)
+                            // Slow Y-axis pirouette: fires at rare high-energy moments, ~once every 8 bars
+                            const ySpinBeat = trackBeats + phase / TWO_PI;
+                            const ySpinSlot = Math.floor(ySpinBeat / DANCE_Y_SPIN_INTERVAL);
+                            const ySpinOffset = ySpinBeat - ySpinSlot * DANCE_Y_SPIN_INTERVAL;
+                            const ySpinDirection = (ySpinSlot + index) % 2 === 0 ? 1 : -1;
+                            const rotateYDeg = (effectiveEnergy >= DANCE_Y_SPIN_THRESHOLD && ySpinOffset < DANCE_Y_SPIN_DURATION)
+                                ? (ySpinOffset / DANCE_Y_SPIN_DURATION) * 360 * ySpinDirection
                                 : 0;
-                            const xTwistDirection = ((Math.floor(trackBeats * 0.5) + index) % 2 === 0 ? 1 : -1);
-                            const rotateXDeg = xTwistPulse * (profile.xTwistDeg ?? 360) * xTwistDirection * (0.42 + Math.min(1.35, bassPulse) * 0.78) * intensity;
 
                             const baseRotateDeg =
                                 ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick) + (stepShape * profile.leanDeg) + (patternMotion.extraRot * 0.72)) *
@@ -505,10 +508,10 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const safeX = clamp(slideX, -DANCE_MAX_X_TRAVEL * intensity, DANCE_MAX_X_TRAVEL * intensity);
                             const safeLift = clamp(liftPx, 0, DANCE_MAX_LIFT * intensity);
                             const safeRotate = clamp(rotateDeg, -DANCE_MAX_ROTATION, DANCE_MAX_ROTATION);
-                            const safeRotateX = clamp(rotateXDeg, -DANCE_MAX_X_ROTATION, DANCE_MAX_X_ROTATION);
+                            // rotateYDeg is a full 360 — intentionally not clamped so the pirouette completes smoothly
 
                             return {
-                                transform: `perspective(760px) translateX(${safeX.toFixed(2)}px) translateY(${-safeLift.toFixed(2)}px) rotateX(${safeRotateX.toFixed(2)}deg) rotate(${safeRotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
+                                transform: `perspective(760px) translateX(${safeX.toFixed(2)}px) translateY(${-safeLift.toFixed(2)}px) rotateY(${rotateYDeg.toFixed(2)}deg) rotate(${safeRotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
                             };
                         })()}
                     >
