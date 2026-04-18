@@ -44,6 +44,11 @@ const saveCookie = (key, val) => {
 // ── Internal state ────────────────────────────────────────────────────────────
 
 let _audio = null;
+let _audioContext = null;
+let _mediaSource = null;
+let _analyser = null;
+let _frequencyData = null;
+let _reactiveLevel = 0;
 let _state = {
     playing: false,
     currentIndex: load('cg_musicIndex', 0),
@@ -54,6 +59,41 @@ let _state = {
 const _subscribers = new Set();
 
 const notify = () => _subscribers.forEach((fn) => fn({ ..._state }));
+
+// ── Audio analysis (Web Audio) ───────────────────────────────────────────────
+
+const ensureAnalyser = () => {
+    const audio = getAudio();
+    if (!audio || typeof window === 'undefined') return null;
+    if (_analyser && _frequencyData) return _analyser;
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+
+    try {
+        if (!_audioContext) {
+            _audioContext = new AudioCtx();
+        }
+
+        if (!_mediaSource) {
+            _mediaSource = _audioContext.createMediaElementSource(audio);
+        }
+
+        if (!_analyser) {
+            _analyser = _audioContext.createAnalyser();
+            _analyser.fftSize = 256;
+            _analyser.smoothingTimeConstant = 0.75;
+            _frequencyData = new Uint8Array(_analyser.frequencyBinCount);
+
+            _mediaSource.connect(_analyser);
+            _analyser.connect(_audioContext.destination);
+        }
+    } catch {
+        return null;
+    }
+
+    return _analyser;
+};
 
 // ── Audio element ─────────────────────────────────────────────────────────────
 
@@ -95,6 +135,10 @@ const musicManager = {
         }
         a.play()
             .then(() => {
+                ensureAnalyser();
+                if (_audioContext?.state === 'suspended') {
+                    _audioContext.resume().catch(() => { });
+                }
                 _state.playing = true;
                 _state.enabled = true;
                 saveCookie('cg_musicEnabled', true);
@@ -150,6 +194,34 @@ const musicManager = {
     /** Returns the BPM of the currently playing track. */
     getCurrentBPM() {
         return TRACKS[_state.currentIndex].bpm;
+    },
+
+    /**
+     * Returns a smoothed 0..1 reactive value based on low-mid frequency energy.
+     * Safe fallback: returns 0 when analysis is unavailable or music is paused.
+     */
+    getReactiveLevel() {
+        if (!_state.playing || _state.volume <= 0) {
+            _reactiveLevel *= 0.9;
+            return _reactiveLevel;
+        }
+
+        const analyser = ensureAnalyser();
+        if (!analyser || !_frequencyData) return 0;
+
+        analyser.getByteFrequencyData(_frequencyData);
+        // Focus on low-mid bins for punch without noisy treble jitter.
+        const start = 2;
+        const end = Math.min(28, _frequencyData.length - 1);
+        let sum = 0;
+        for (let i = start; i <= end; i += 1) sum += _frequencyData[i];
+        const avg = sum / (end - start + 1);
+        const normalized = Math.max(0, Math.min(1, avg / 160));
+
+        // Attack fast, release slowly for natural motion.
+        const alpha = normalized > _reactiveLevel ? 0.35 : 0.14;
+        _reactiveLevel += (normalized - _reactiveLevel) * alpha;
+        return _reactiveLevel;
     },
 
     /**

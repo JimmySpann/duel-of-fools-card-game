@@ -12,6 +12,8 @@ import {
     setNotifyDM,
     setNotifyLobby,
     setSoundVolume,
+    setCardDanceEnabled,
+    setCardDanceIntensity,
 } from './profileSlice';
 import sounds from '../sound/soundManager';
 import useMusicPlayer from '../sound/useMusicPlayer';
@@ -22,7 +24,7 @@ const TABS = ['Profile', 'Friends', 'Blocked', 'Options'];
 
 const Profile = ({ onClose, initialTab = 'Profile' }) => {
     const dispatch = useDispatch();
-    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM, notifyLobby, soundVolume } = useSelector((s) => s.profile);
+    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM, notifyLobby, soundVolume, cardDanceEnabled, cardDanceIntensity } = useSelector((s) => s.profile);
     const username = useSelector((s) => s.auth.username);
     const { permission, request } = useNotifications();
 
@@ -407,6 +409,40 @@ const Profile = ({ onClose, initialTab = 'Profile' }) => {
                                 >
                                     <span className="profile-toggle-knob" />
                                 </button>
+                            </div>
+
+                            <div className="profile-toggle-row">
+                                <span className="profile-toggle-label">
+                                    Card dance
+                                    <span className="profile-toggle-hint">In-game board cards react to music</span>
+                                </span>
+                                <button
+                                    type="button"
+                                    className={`profile-toggle ${cardDanceEnabled ? 'on' : 'off'}`}
+                                    onClick={() => dispatch(setCardDanceEnabled(!cardDanceEnabled))}
+                                    aria-label="Toggle card dance"
+                                >
+                                    <span className="profile-toggle-knob" />
+                                </button>
+                            </div>
+
+                            <div className="profile-volume-row">
+                                <span className="profile-volume-label">Card dance intensity</span>
+                                <div className="profile-volume-slider-wrap">
+                                    <span className="profile-volume-icon">🕺</span>
+                                    <input
+                                        className="profile-volume-slider"
+                                        type="range"
+                                        min="0.1"
+                                        max="1.5"
+                                        step="0.05"
+                                        value={cardDanceIntensity}
+                                        disabled={!cardDanceEnabled}
+                                        onChange={(e) => dispatch(setCardDanceIntensity(parseFloat(e.target.value)))}
+                                    />
+                                    <span className="profile-volume-icon">🔥</span>
+                                </div>
+                                <span className="profile-volume-pct">{Math.round(cardDanceIntensity * 100)}%</span>
                             </div>
 
                             {/* Music volume slider */}

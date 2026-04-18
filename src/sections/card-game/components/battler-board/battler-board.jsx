@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import MiniCard from '../card-layouts/mini-card/mini-card.jsx';
 import { commitDefeats } from '../../database/cardGameSlice.js';
+import musicManager from '../../../../features/sound/musicManager';
 import './battler-board.css'
 
 const ANIM_DURATION = 900;
@@ -9,10 +10,16 @@ const ANIM_DURATION = 900;
 const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = true }) => {
     const dispatch = useDispatch();
     const lastHitEvents = useSelector((state) => state.cardGame.lastHitEvents);
+    const cardDanceEnabled = useSelector((state) => state.profile.cardDanceEnabled !== false);
+    const cardDanceIntensity = useSelector((state) => state.profile.cardDanceIntensity ?? 0.8);
     const [hoveredCardIndex, setHoveredCardIndex] = useState(null);
     const [flippedCards, setFlippedCards] = useState({});
     // { [cardId]: { type, damage } }
     const [animations, setAnimations] = useState({});
+    const [danceEnergy, setDanceEnergy] = useState(0);
+    const [danceClock, setDanceClock] = useState(0);
+    const danceSmoothRef = useRef(0);
+    const rafRef = useRef(null);
 
     useEffect(() => {
         if (!lastHitEvents?.length) return;
@@ -35,6 +42,34 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
         return () => clearTimeout(timer);
     }, [lastHitEvents]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    useEffect(() => {
+        if (!cardDanceEnabled || cards.length === 0) {
+            danceSmoothRef.current = 0;
+            setDanceEnergy(0);
+            setDanceClock(0);
+            return;
+        }
+
+        let lastCommit = 0;
+        const tick = (t) => {
+            const target = musicManager.getReactiveLevel();
+            // Extra local smoothing to keep board motion calm.
+            danceSmoothRef.current += (target - danceSmoothRef.current) * 0.2;
+
+            if (t - lastCommit > 45) {
+                lastCommit = t;
+                setDanceEnergy(danceSmoothRef.current);
+                setDanceClock(t);
+            }
+            rafRef.current = requestAnimationFrame(tick);
+        };
+
+        rafRef.current = requestAnimationFrame(tick);
+        return () => {
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
+    }, [cardDanceEnabled, cards.length]);
+
     const animClass = (card) => {
         const a = animations[card.id];
         if (!a) return '';
@@ -50,6 +85,13 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
         if (a.type === 'miss') return 'MISS';
         if (a.type === 'blocked') return 'BLOCK';
         return `-${a.damage}`;
+    };
+
+    const phaseFrom = (cardId, index) => {
+        const seed = `${playerId ?? ''}:${cardId ?? index}`;
+        let hash = 0;
+        for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 100000;
+        return (hash / 100000) * Math.PI * 2;
     };
 
     return (
@@ -68,11 +110,29 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             {damageLabel(card)}
                         </div>
                     )}
-                    <MiniCard
-                        card={card}
-                        isFlipped={flippedCards[index]}
-                        showExhausted={showExhausted}
-                    />
+                    <div
+                        className={`card-dance-layer${cardDanceEnabled ? ' card-dance-enabled' : ''}`}
+                        style={(() => {
+                            if (!cardDanceEnabled || danceEnergy <= 0.001) return undefined;
+                            const phase = phaseFrom(card.id, index);
+                            const wobble = Math.sin(danceClock * 0.008 + phase);
+                            const pulse = Math.sin(danceClock * 0.013 + phase * 0.7);
+                            const intensity = cardDanceIntensity;
+                            const rotateDeg = wobble * 1.8 * danceEnergy * intensity;
+                            const liftPx = Math.max(0, pulse) * 7 * danceEnergy * intensity;
+                            const scale = 1 + Math.max(0, pulse) * 0.035 * danceEnergy * intensity;
+                            return {
+                                transform: `translateY(${-liftPx.toFixed(2)}px) rotate(${rotateDeg.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
+                                filter: `saturate(${(1 + danceEnergy * 0.18 * intensity).toFixed(3)}) brightness(${(1 + danceEnergy * 0.1 * intensity).toFixed(3)})`,
+                            };
+                        })()}
+                    >
+                        <MiniCard
+                            card={card}
+                            isFlipped={flippedCards[index]}
+                            showExhausted={showExhausted}
+                        />
+                    </div>
                 </div>
             ))}
             {cards.length === 0 && (

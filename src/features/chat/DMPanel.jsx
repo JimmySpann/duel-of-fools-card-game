@@ -36,6 +36,7 @@ const DMPanel = ({ anchor, open: controlledOpen, onOpenChange, hideToggle = fals
     const bottomRef = useRef(null);
 
     const open = controlledOpen ?? internalOpen;
+    const isModal = hideToggle && !!onOpenChange;
     const setOpen = (nextValue) => {
         const next = typeof nextValue === 'function' ? nextValue(open) : nextValue;
         if (controlledOpen === undefined) setInternalOpen(next);
@@ -97,7 +98,7 @@ const DMPanel = ({ anchor, open: controlledOpen, onOpenChange, hideToggle = fals
     };
 
     return (
-        <div className={`dm-container${anchor === 'header' ? ' dm-container--header' : ''}`}>
+        <div className={`dm-container${anchor === 'header' ? ' dm-container--header' : ''}${isModal ? ' dm-container--modal' : ''}`}>
             {/* Toggle button */}
             {!hideToggle && (
                 <button
@@ -109,7 +110,9 @@ const DMPanel = ({ anchor, open: controlledOpen, onOpenChange, hideToggle = fals
             )}
 
             {open && (
-                <div className="dm-panel">
+                <>
+                    {isModal && <div className="dm-modal-overlay" onClick={() => setOpen(false)} />}
+                    <div className={`dm-panel${isModal ? ' dm-panel--modal' : ''}`}>
                     {activeDm ? (
                         /* ── Active conversation ── */
                         <div className="dm-conversation">
@@ -194,7 +197,8 @@ const DMPanel = ({ anchor, open: controlledOpen, onOpenChange, hideToggle = fals
                             </div>
                         </div>
                     )}
-                </div>
+                    </div>
+                </>
             )}
         </div>
     );

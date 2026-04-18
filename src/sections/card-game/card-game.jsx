@@ -217,7 +217,7 @@ const CardGame = () => {
                 onSignOut={() => dispatch(logout())}
                 onBriefToggle={() => { setShowBrief((v) => !v); setShowChat(false); }}
                 onChatToggle={() => { setShowChat((v) => !v); setShowBrief(false); }}
-                onMessagesToggle={() => setShowMessages((v) => !v)}
+                onMessagesToggle={() => { setShowMessages(true); setShowBrief(false); setShowChat(false); }}
                 showBrief={showBrief}
                 showChat={showChat}
                 showMessages={showMessages}
@@ -453,7 +453,7 @@ const CardGame = () => {
             {showProfile && <Profile onClose={() => setShowProfile(false)} initialTab="Options" />}
 
             {/* ── Messages (DM Panel) ──────────────────────────────────── */}
-            {showMessages && <DMPanel anchor="header" />}
+            <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
         </div>
     );
 };

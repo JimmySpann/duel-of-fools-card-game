@@ -92,9 +92,11 @@ const loadNotifPrefs = () => {
             notifyDM: localStorage.getItem('cg_notifyDM') !== 'false',
             notifyLobby: localStorage.getItem('cg_notifyLobby') !== 'false',
             soundVolume: parseFloat(localStorage.getItem('cg_soundVolume') ?? '0.7'),
+            cardDanceEnabled: localStorage.getItem('cg_cardDanceEnabled') !== 'false',
+            cardDanceIntensity: Math.max(0.1, Math.min(1.5, parseFloat(localStorage.getItem('cg_cardDanceIntensity') ?? '0.8'))),
         };
     } catch {
-        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7 };
+        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7, cardDanceEnabled: true, cardDanceIntensity: 0.8 };
     }
 };
 
@@ -127,6 +129,14 @@ const profileSlice = createSlice({
         setSoundVolume(state, action) {
             state.soundVolume = Math.max(0, Math.min(1, action.payload));
             try { localStorage.setItem('cg_soundVolume', state.soundVolume); } catch { }
+        },
+        setCardDanceEnabled(state, action) {
+            state.cardDanceEnabled = !!action.payload;
+            try { localStorage.setItem('cg_cardDanceEnabled', state.cardDanceEnabled); } catch { }
+        },
+        setCardDanceIntensity(state, action) {
+            state.cardDanceIntensity = Math.max(0.1, Math.min(1.5, Number(action.payload) || 0.8));
+            try { localStorage.setItem('cg_cardDanceIntensity', state.cardDanceIntensity); } catch { }
         },
         resetProfile(state) {
             state.displayName = '';
@@ -203,5 +213,5 @@ const profileSlice = createSlice({
     },
 });
 
-export const { clearProfileError, resetProfile, setNotifyTurn, setNotifyDM, setNotifyLobby, setSoundVolume } = profileSlice.actions;
+export const { clearProfileError, resetProfile, setNotifyTurn, setNotifyDM, setNotifyLobby, setSoundVolume, setCardDanceEnabled, setCardDanceIntensity } = profileSlice.actions;
 export default profileSlice.reducer;

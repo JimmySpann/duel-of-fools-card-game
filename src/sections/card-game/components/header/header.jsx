@@ -26,7 +26,6 @@ const Header = ({
     onMessagesToggle,
     showBrief,
     showChat,
-    showMessages,
     hasUnreadChat = false,
     hasUnreadMessages = false,
     displayName,
@@ -87,7 +86,7 @@ const Header = ({
                             </button>
                             <button
                                 className="header-profile-dropdown-item"
-                                onClick={() => { setShowProfileMenu(false); onMessagesToggle?.(); }}
+                                onClick={() => { setShowProfileMenu(false); onMessagesToggle?.(true); }}
                             >
                                 💬 Messages{hasUnreadMessages ? <span className="header-dropdown-badge" /> : null}
                             </button>
