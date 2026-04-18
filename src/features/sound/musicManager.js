@@ -5,11 +5,11 @@
  */
 
 export const TRACKS = [
-    { name: 'Court Jams', src: '/audio/Court%20Jams.mp3' },
-    { name: 'Court Jams (1)', src: '/audio/Court%20Jams%20(1).mp3' },
-    { name: 'Court Jams (2)', src: '/audio/Court%20Jams%20(2).mp3' },
-    { name: 'Court of Broken Crowns', src: '/audio/Court%20of%20Broken%20Crowns.mp3' },
-    { name: 'Court of Broken Crowns (1)', src: '/audio/Court%20of%20Broken%20Crowns%20(1).mp3' },
+    { name: 'Court Jam', src: '/audio/Court%20Jam.mp3' },
+    { name: 'Free Diver', src: '/audio/Free%20Diver.mp3' },
+    { name: 'Jester on the Prowl', src: '/audio/Jester%20on%20the%20Prowl.mp3' },
+    { name: 'Steppin n Jestin', src: '/audio/Steppin%20n%20Jestin.mp3' },
+    { name: 'Zesty Lester', src: '/audio/Zesty%20Lester.mp3' },
 ];
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
