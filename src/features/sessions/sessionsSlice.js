@@ -15,6 +15,14 @@ export const fetchSessions = createAsyncThunk('sessions/fetch', async (_, { getS
     return data.sessions;
 });
 
+export const fetchSessionById = createAsyncThunk('sessions/fetchById', async (sessionId, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}`, { headers: authHeader(token) });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.session;
+});
+
 export const createSession = createAsyncThunk('sessions/create', async ({ name }, { getState, rejectWithValue }) => {
     const token = getState().auth.token;
     const res = await fetch(API, {
@@ -171,6 +179,16 @@ const sessionsSlice = createSlice({
             .addCase(fetchSessions.pending, (state) => { state.loading = true; state.error = null; })
             .addCase(fetchSessions.fulfilled, (state, action) => { state.loading = false; state.list = action.payload; })
             .addCase(fetchSessions.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+
+            .addCase(fetchSessionById.fulfilled, (state, action) => {
+                const session = action.payload;
+                state.activeSession = session;
+                if (session.gameId) state.activeGameId = session.gameId;
+                const idx = state.list.findIndex((s) => s._id === session._id);
+                if (idx >= 0) state.list[idx] = session;
+                else state.list.unshift(session);
+            })
+            .addCase(fetchSessionById.rejected, (state, action) => { state.error = action.payload; })
 
             .addCase(createSession.pending, (state) => { state.loading = true; state.error = null; })
             .addCase(createSession.fulfilled, (state, action) => {

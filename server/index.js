@@ -10,6 +10,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const webpush = require('web-push');
 const { createGame, dispatch, computeCpuTurn } = require('./game/engine');
 const Game = require('./models/Game');
 const User = require('./models/User');
@@ -35,6 +36,23 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
     console.error('ERROR: JWT_SECRET is not set. Add it to server/.env');
     process.exit(1);
+}
+
+// ── Push notifications (VAPID) ────────────────────────────────────────────────
+const VAPID_PUSH_ENABLED = !!(
+    process.env.VAPID_PUBLIC_KEY &&
+    process.env.VAPID_PRIVATE_KEY &&
+    process.env.VAPID_SUBJECT
+);
+if (VAPID_PUSH_ENABLED) {
+    webpush.setVapidDetails(
+        process.env.VAPID_SUBJECT,
+        process.env.VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY,
+    );
+    console.log('Push notifications: enabled');
+} else {
+    console.warn('Push notifications: disabled (VAPID keys not set in .env)');
 }
 
 mongoose
@@ -856,6 +874,50 @@ app.get('/api/messages/dm-list', requireAuth, async (req, res) => {
     }
 });
 
+// ── Push notification API ─────────────────────────────────────────────────────
+
+app.get('/api/push/vapid-public-key', (req, res) => {
+    if (!VAPID_PUSH_ENABLED) return res.status(503).json({ error: 'Push not configured' });
+    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/push/subscribe', requireAuth, async (req, res) => {
+    const { subscription } = req.body;
+    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+        return res.status(400).json({ error: 'Invalid subscription object' });
+    }
+    try {
+        // Upsert: remove any existing entry with same endpoint, then push new one
+        await User.updateOne(
+            { username: req.user.username },
+            { $pull: { pushSubscriptions: { endpoint: subscription.endpoint } } }
+        );
+        await User.updateOne(
+            { username: req.user.username },
+            { $push: { pushSubscriptions: subscription } }
+        );
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('/api/push/subscribe error:', err);
+        res.status(500).json({ error: 'Failed to save subscription' });
+    }
+});
+
+app.delete('/api/push/subscribe', requireAuth, async (req, res) => {
+    const { endpoint } = req.body;
+    if (!endpoint) return res.status(400).json({ error: 'endpoint required' });
+    try {
+        await User.updateOne(
+            { username: req.user.username },
+            { $pull: { pushSubscriptions: { endpoint } } }
+        );
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('/api/push/unsubscribe error:', err);
+        res.status(500).json({ error: 'Failed to remove subscription' });
+    }
+});
+
 // ── Fallback — serve React for all non-API routes ─────────────────────────────
 app.get('*', (req, res) => {
     res.sendFile(path.join(BUILD_DIR, 'index.html'));
@@ -902,9 +964,86 @@ const enqueueGameAction = (gameId, fn) => {
     return next;
 };
 
+// ── Push helpers ──────────────────────────────────────────────────────────────
+
+/** True if the given username has an active socket in the game room. */
+const isUserActiveInGame = (gameId, username) => {
+    const room = io.sockets.adapter.rooms.get(`game:${gameId}`);
+    if (!room) return false;
+    for (const socketId of room) {
+        const s = io.sockets.sockets.get(socketId);
+        if (s?.user?.username === username) return true;
+    }
+    return false;
+};
+
+/** Send a push to all stored subscriptions for a user; auto-removes stale ones. */
+const sendPushToUser = async (username, payload) => {
+    if (!VAPID_PUSH_ENABLED) return;
+    const user = await User.findOne({ username }).select('pushSubscriptions').lean();
+    if (!user?.pushSubscriptions?.length) return;
+    const message = JSON.stringify(payload);
+    const stale = [];
+    await Promise.all(user.pushSubscriptions.map(async (sub) => {
+        try {
+            await webpush.sendNotification(sub, message);
+        } catch (err) {
+            if (err.statusCode === 410 || err.statusCode === 404) stale.push(sub.endpoint);
+            else console.warn('[Push] send error:', err.statusCode, String(err.body ?? '').slice(0, 80));
+        }
+    }));
+    if (stale.length) {
+        await User.updateOne(
+            { username },
+            { $pull: { pushSubscriptions: { endpoint: { $in: stale } } } }
+        ).catch(() => { });
+    }
+};
+
+/** Send "your turn" push if the player is not actively watching the game. */
+const sendTurnPush = async (gameId, turnPlayerId) => {
+    try {
+        const session = await Session.findOne({ gameId }).lean();
+        if (!session) return;
+        const slot = session.players.find((p) => p.slot === turnPlayerId);
+        if (!slot) return;
+        const { username } = slot;
+        if (isUserActiveInGame(gameId, username)) return;
+        await sendPushToUser(username, {
+            title: '⚔️ Your Turn!',
+            body: `It's your move in ${session.name}`,
+            tag: `turn-${gameId}`,
+            url: `/?session=${session._id}&game=${gameId}`,
+        });
+    } catch (err) {
+        console.error('[Push] sendTurnPush error:', err);
+    }
+};
+
+/** Send a 5-minute time warning push if the player is not watching the game. */
+const sendWarnPush = async (gameId, turnPlayerId) => {
+    try {
+        const session = await Session.findOne({ gameId }).lean();
+        if (!session) return;
+        const slot = session.players.find((p) => p.slot === turnPlayerId);
+        if (!slot) return;
+        const { username } = slot;
+        if (isUserActiveInGame(gameId, username)) return;
+        await sendPushToUser(username, {
+            title: '⏱ Time Running Out!',
+            body: `~5 minutes left in ${session.name}`,
+            tag: `timer-warn-${gameId}`,
+            url: `/?session=${session._id}&game=${gameId}`,
+        });
+    } catch (err) {
+        console.error('[Push] sendWarnPush error:', err);
+    }
+};
+
 // ── Turn timeout enforcement ──────────────────────────────────────────────────
 
 const gameTimers = new Map(); // gameId → timeoutId
+const warnTimers = new Map(); // gameId → timeoutId (5-min warning)
 
 /**
  * Schedule (or reschedule) a turn-expiry timer for the current player.
@@ -916,6 +1055,10 @@ const scheduleTimer = (gameId, state) => {
         clearTimeout(gameTimers.get(gameId));
         gameTimers.delete(gameId);
     }
+    if (warnTimers.has(gameId)) {
+        clearTimeout(warnTimers.get(gameId));
+        warnTimers.delete(gameId);
+    }
 
     if (state.gameOver) return;
     const limitSec = state.settings?.turnTimeLimit;
@@ -926,6 +1069,17 @@ const scheduleTimer = (gameId, state) => {
 
     const elapsed = Date.now() - (state.turnStartedAt ?? Date.now());
     const remaining = Math.max(0, limitSec * 1000 - elapsed);
+
+    // 5-minute warning push (only if there's at least 6 minutes left so it fires before expiry)
+    const WARN_MS = 5 * 60 * 1000;
+    if (remaining > WARN_MS + 60_000) {
+        const warnDelay = remaining - WARN_MS;
+        const warnTimerId = setTimeout(() => {
+            warnTimers.delete(gameId);
+            sendWarnPush(gameId, state.currentTurn).catch(() => { });
+        }, warnDelay);
+        warnTimers.set(gameId, warnTimerId);
+    }
 
     const timerId = setTimeout(() => {
         gameTimers.delete(gameId);
@@ -991,6 +1145,16 @@ const executeCpuTurnsIfNeeded = async (gameId) => {
 
         if (cpuState.gameOver) break;
     }
+
+    // After the CPU chain, if it's now a human player's turn, push them
+    if (!game.state.gameOver) {
+        const humanPlayer = game.state.players.find(
+            (p) => p.id === game.state.currentTurn && !p.isBot
+        );
+        if (humanPlayer) {
+            sendTurnPush(gameId, game.state.currentTurn).catch(() => { });
+        }
+    }
 };
 
 io.on('connection', (socket) => {
@@ -1018,6 +1182,7 @@ io.on('connection', (socket) => {
                 const game = await Game.findOne({ gameId });
                 if (!game) return socket.emit('game:error', { message: 'Game not found' });
 
+                const prevTurn = game.state.currentTurn;
                 const { state: nextState, error } = dispatch(game.state, type, payload);
                 if (error) return socket.emit('game:error', { message: error });
 
@@ -1035,6 +1200,14 @@ io.on('connection', (socket) => {
 
                 // Reschedule turn timer on every action (handles endTurn advancing the turn)
                 scheduleTimer(gameId, nextState);
+
+                // Push notification when the turn changes to a human player
+                if (!nextState.gameOver && nextState.currentTurn !== prevTurn) {
+                    const nextPlayer = nextState.players.find((p) => p.id === nextState.currentTurn);
+                    if (nextPlayer && !nextPlayer.isBot) {
+                        sendTurnPush(gameId, nextState.currentTurn).catch(() => { });
+                    }
+                }
 
                 // Auto-play CPU turns if the next active player is a bot
                 await executeCpuTurnsIfNeeded(gameId);

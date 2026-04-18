@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { validateToken } from './features/auth/authSlice';
-import { pollSession } from './features/sessions/sessionsSlice';
+import { pollSession, fetchSessionById } from './features/sessions/sessionsSlice';
 import { clearChat } from './features/chat/chatSlice';
 import { fetchProfile, resetProfile } from './features/profile/profileSlice';
 import { connectSocket, disconnectSocket } from './features/chat/socket';
@@ -23,6 +23,32 @@ function App() {
       dispatch(validateToken());
     }
   }, [validated, dispatch]);
+
+  // Deep-link: notification click passes ?session=X&game=Y in the URL
+  useEffect(() => {
+    if (!validated || !token) return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionParam = params.get('session');
+    if (sessionParam) {
+      dispatch(fetchSessionById(sessionParam));
+      // Clean up URL without reload
+      const clean = window.location.pathname;
+      window.history.replaceState(null, '', clean);
+    }
+  }, [validated, token, dispatch]);
+
+  // Service-worker postMessage: handle NAVIGATE_TO_GAME when app is already open
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event) => {
+      if (event.data?.type !== 'NAVIGATE_TO_GAME') return;
+      const url = new URL(event.data.url, window.location.origin);
+      const sessionId = url.searchParams.get('session');
+      if (sessionId) dispatch(fetchSessionById(sessionId));
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, [dispatch]);
 
   // Connect / disconnect socket when token changes
   useEffect(() => {

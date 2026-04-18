@@ -20,6 +20,14 @@ const userSchema = new mongoose.Schema(
         friends: [{ type: String }],
         friendRequests: [{ type: String }],
         blocked: [{ type: String }],
+        pushSubscriptions: [{
+            endpoint: { type: String, required: true },
+            expirationTime: { type: mongoose.Schema.Types.Mixed, default: null },
+            keys: {
+                p256dh: { type: String, required: true },
+                auth: { type: String, required: true },
+            },
+        }],
     },
     { timestamps: true }
 );

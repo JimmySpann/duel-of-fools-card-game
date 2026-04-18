@@ -596,26 +596,6 @@ body {
     list-style: none;
 }
 
-margin: 0;
-padding-left: 1.2rem;
-color: #8890b0;
-font-size: 0.86rem;
-line-height: 1.7;
-}
-
-.game-panel-rules li {
-    margin-bottom: 0.2rem;
-}
-
-.game-panel-rules strong {
-    color: #dde0f0;
-}
-
-.game-panel-rules em {
-    color: #e2c97e;
-    font-style: normal;
-}
-
 /* ── In-game Chat panel (slide-in from right) ────────────────────────────── */
 .game-chat-panel {
     position: fixed;

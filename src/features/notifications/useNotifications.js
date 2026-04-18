@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { ensurePushSubscription } from './pushManager';
 
 const supported = typeof window !== 'undefined' && 'Notification' in window;
 
@@ -34,9 +35,14 @@ const playBeep = (type = 'turn') => {
 };
 
 const useNotifications = () => {
-    const [permission, setPermission] = useState(
-        supported ? Notification.permission : 'denied'
-    );
+    const [permission, setPermission] = useState(() => {
+        if (!supported) return 'denied';
+        if (Notification.permission === 'granted') {
+            // Ensure push subscription is active on load (non-blocking)
+            ensurePushSubscription();
+        }
+        return Notification.permission;
+    });
     // Track whether we've already auto-requested so we don't spam the prompt
     const askedRef = useRef(false);
 
@@ -47,6 +53,9 @@ const useNotifications = () => {
         askedRef.current = true;
         const result = await Notification.requestPermission();
         setPermission(result);
+        if (result === 'granted') {
+            ensurePushSubscription();
+        }
         return result;
     }, []);
 
