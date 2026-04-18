@@ -233,6 +233,36 @@
     vertical-align: middle;
 }
 
+.session-card-countdown {
+    display: inline-block;
+    background: rgba(80, 160, 80, 0.2);
+    color: #7ec87e;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 10px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+.session-card-countdown--urgent {
+    background: rgba(200, 60, 60, 0.25);
+    color: #ff7070;
+    animation: countdown-pulse 1s ease-in-out infinite;
+}
+
+@keyframes countdown-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
 /* ── Unread lobby chat badge ─────────────────────────────────────────────── */
 .session-card-chat-badge {
     display: inline-block;

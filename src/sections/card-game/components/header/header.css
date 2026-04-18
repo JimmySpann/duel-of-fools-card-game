@@ -15,6 +15,31 @@
 
 }
 
+.turn-countdown {
+    font-size: 12px;
+    color: #aaa;
+    margin: 2px 0 0;
+    letter-spacing: 0.04em;
+}
+
+.turn-countdown--urgent {
+    color: #ff5555;
+    font-weight: 700;
+    animation: countdown-pulse 1s ease-in-out infinite;
+}
+
+@keyframes countdown-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
 .header-title {
     color: rgb(187, 16, 187) !important;
     margin-left: 10px;

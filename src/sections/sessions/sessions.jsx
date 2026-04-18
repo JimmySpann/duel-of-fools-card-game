@@ -128,6 +128,20 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                                 <option value="teams">Teams</option>
                             </select>
                         </label>
+                        <label className="lobby-setting-label">
+                            Turn Time Limit
+                            <select
+                                className="lobby-setting-input"
+                                value={settings.turnTimeLimit ?? 86400}
+                                onChange={(e) => handleSettingChange('turnTimeLimit', e.target.value === 'null' ? null : Number(e.target.value))}
+                            >
+                                <option value="null">No Limit</option>
+                                <option value={3600}>1 Hour</option>
+                                <option value={21600}>6 Hours</option>
+                                <option value={43200}>12 Hours</option>
+                                <option value={86400}>24 Hours</option>
+                            </select>
+                        </label>
                     </div>
                 </div>
             )}
@@ -186,6 +200,7 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                     <span>Max In Play: {settings.maxBattlers ?? `Auto (${defaultMaxBattlers(playerCount)})`}</span>
                     <span>Deck: {settings.deckSize ?? 'All'}</span>
                     <span>Mode: {teamMode === 'teams' ? 'Teams' : 'Free for All'}</span>
+                    <span>Turn Limit: {settings.turnTimeLimit ? (() => { const h = Math.floor(settings.turnTimeLimit / 3600); const m = Math.floor((settings.turnTimeLimit % 3600) / 60); return h > 0 ? `${h}h` : `${m}m`; })() : 'None'}</span>
                 </div>
             )}
 
@@ -228,6 +243,81 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                 💬 Chat{!showChat && unreadLobby > 0 && <span className="lobby-chat-badge">{unreadLobby}</span>}
             </button>
             {showChat && <LobbyChat sessionId={session._id} isWatching={true} />}
+        </div>
+    );
+};
+
+// ── Turn countdown helper ──────────────────────────────────────────────────────
+const useTurnCountdown = (turnStartedAt, turnTimeLimit) => {
+    const [timeLeft, setTimeLeft] = useState(null);
+    useEffect(() => {
+        if (!turnTimeLimit || !turnStartedAt) { setTimeLeft(null); return; }
+        const calc = () => turnTimeLimit * 1000 - (Date.now() - new Date(turnStartedAt).getTime());
+        setTimeLeft(calc());
+        const id = setInterval(() => { const r = calc(); setTimeLeft(r); if (r <= 0) clearInterval(id); }, 1000);
+        return () => clearInterval(id);
+    }, [turnTimeLimit, turnStartedAt]);
+    return timeLeft;
+};
+
+const fmtCountdown = (ms) => {
+    if (ms === null || ms <= 0) return null;
+    const totalSec = Math.ceil(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
+    if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
+    return `${s}s`;
+};
+
+const SessionCard = ({ session, isParticipant, openSlots, isMyTurn, currentTurnName, sessionUnread, onEnter, onPreview, dispatch }) => {
+    const timeLeft = useTurnCountdown(session.turnStartedAt, session.settings?.turnTimeLimit);
+    const countdown = fmtCountdown(timeLeft);
+    const urgent = timeLeft !== null && timeLeft > 0 && timeLeft <= 300000; // last 5 min
+    return (
+        <div className={`session-card ${session.status}${sessionUnread > 0 ? ' session-card--unread-chat' : ''}`}>
+            <div className="session-card-info">
+                <span className="session-card-name">{session.name}</span>
+                <span className={`session-card-status ${session.status}`}>{statusLabel(session.status)}</span>
+                {isMyTurn && <span className="session-card-your-turn">⚔ Your Turn!</span>}
+                {!isMyTurn && currentTurnName && (
+                    <span className="session-card-their-turn">🎲 {currentTurnName}'s Turn</span>
+                )}
+                {countdown && (
+                    <span className={`session-card-countdown${urgent ? ' session-card-countdown--urgent' : ''}`}>
+                        ⏱ {countdown}
+                    </span>
+                )}
+                {sessionUnread > 0 && (
+                    <span className="session-card-chat-badge">💬 {sessionUnread}</span>
+                )}
+            </div>
+            <div className="session-card-players">
+                {session.players.map((p) => (
+                    <span key={p.slot} className="session-card-player">{p.username}</span>
+                ))}
+                {openSlots > 0 && session.status === 'waiting' && (
+                    <span className="session-card-player empty">{openSlots} open</span>
+                )}
+            </div>
+            {session.status === 'waiting' && (
+                <div className="session-card-code">Code: <strong>{session.joinCode}</strong></div>
+            )}
+            <button
+                className="session-card-btn"
+                onClick={() => {
+                    if (isParticipant || session.status !== 'waiting') {
+                        onEnter(session);
+                    } else {
+                        onPreview(session);
+                    }
+                }}
+            >
+                {isParticipant
+                    ? session.status === 'in-progress' ? 'Rejoin' : 'Open Lobby'
+                    : session.status === 'waiting' ? 'Join' : 'View'}
+            </button>
         </div>
     );
 };
@@ -327,6 +417,7 @@ const Sessions = () => {
                         <span>Max In Play: {psSettings.maxBattlers ?? `Auto (${defaultMaxBattlers(psPlayerCount)})`}</span>
                         <span>Deck: {psSettings.deckSize ?? 'All'}</span>
                         <span>Mode: {(psSettings.teamMode === 'teams') ? 'Teams' : 'FFA'}</span>
+                        <span>Turn Limit: {psSettings.turnTimeLimit ? (() => { const h = Math.floor(psSettings.turnTimeLimit / 3600); const m = Math.floor((psSettings.turnTimeLimit % 3600) / 60); return h > 0 ? `${h}h` : `${m}m`; })() : 'None'}</span>
                     </div>
                     <div className="lobby-slots" style={{ marginTop: '1.5rem' }}>
                         {SLOTS.map((slot, i) => {
@@ -510,47 +601,18 @@ const Sessions = () => {
                                 : null;
                             const sessionUnread = unreadLobby[session._id] || 0;
                             return (
-                                <div key={session._id} className={`session-card ${session.status}${sessionUnread > 0 ? ' session-card--unread-chat' : ''}`}>
-                                    <div className="session-card-info">
-                                        <span className="session-card-name">{session.name}</span>
-                                        <span className={`session-card-status ${session.status}`}>{statusLabel(session.status)}</span>
-                                        {isMyTurn && <span className="session-card-your-turn">⚔ Your Turn!</span>}
-                                        {!isMyTurn && currentTurnName && (
-                                            <span className="session-card-their-turn">🎲 {currentTurnName}'s Turn</span>
-                                        )}
-                                        {sessionUnread > 0 && (
-                                            <span className="session-card-chat-badge">💬 {sessionUnread}</span>
-                                        )}
-                                    </div>
-                                    <div className="session-card-players">
-                                        {session.players.map((p) => (
-                                            <span key={p.slot} className="session-card-player">{p.username}</span>
-                                        ))}
-                                        {openSlots > 0 && session.status === 'waiting' && (
-                                            <span className="session-card-player empty">{openSlots} open</span>
-                                        )}
-                                    </div>
-                                    {session.status === 'waiting' && (
-                                        <div className="session-card-code">Code: <strong>{session.joinCode}</strong></div>
-                                    )}
-                                    <button
-                                        className="session-card-btn"
-                                        onClick={() => {
-                                            if (isParticipant || session.status !== 'waiting') {
-                                                handleEnterSession(session);
-                                            } else {
-                                                dispatch(clearSessionError());
-                                                setPreviewSession(session);
-                                                setView('preview');
-                                            }
-                                        }}
-                                        disabled={loading}
-                                    >
-                                        {isParticipant
-                                            ? session.status === 'in-progress' ? 'Rejoin' : 'Open Lobby'
-                                            : session.status === 'waiting' ? 'Join' : 'View'}
-                                    </button>
-                                </div>
+                                <SessionCard
+                                    key={session._id}
+                                    session={session}
+                                    isParticipant={isParticipant}
+                                    openSlots={openSlots}
+                                    isMyTurn={isMyTurn}
+                                    currentTurnName={currentTurnName}
+                                    sessionUnread={sessionUnread}
+                                    onEnter={handleEnterSession}
+                                    onPreview={(s) => { dispatch(clearSessionError()); setPreviewSession(s); setView('preview'); }}
+                                    dispatch={dispatch}
+                                />
                             );
                         })}
                     </div>

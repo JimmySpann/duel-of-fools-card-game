@@ -91,6 +91,7 @@ const createInitialState = (playerConfigs, settings = {}) => {
         recapEvents: [],
         turnSummary: [],
         cardPlayedThisTurn: false,
+        turnStartedAt: Date.now(),
     };
 };
 
@@ -964,6 +965,36 @@ const actions = {
         state.turnSummary = [];
     },
 
+    forfeitCurrentPlayer(state) {
+        if (state.gameOver) return;
+        const player = state.players.find((p) => p.id === state.currentTurn);
+        if (!player || player.eliminated) return;
+        player.health = 0;
+        player.eliminated = true;
+        state.log.unshift(`${player.name} ran out of time and forfeited!`);
+        if (checkWinCondition(state)) return;
+        // Advance to next player's turn
+        const total = state.turnOrder.length;
+        let nextIndex = (state.turnIndex + 1) % total;
+        for (let i = 0; i < total; i++) {
+            const candidate = state.players.find((p) => p.id === state.turnOrder[nextIndex]);
+            if (candidate && !candidate.eliminated && candidate.health > 0) break;
+            nextIndex = (nextIndex + 1) % total;
+        }
+        state.turnIndex = nextIndex;
+        const nextPlayer = state.players.find((p) => p.id === state.turnOrder[nextIndex]);
+        for (const c of nextPlayer.inPlay) { c.acted = false; c.justPlayed = false; }
+        state.currentTurn = nextPlayer.id;
+        state.phase = 'main';
+        state.pendingAction = null;
+        state.cardPlayedThisTurn = false;
+        state.lastHitEvents = [];
+        state.turnSummary = [...state.recapEvents];
+        state.recapEvents = [];
+        state.log.unshift(`--- ${nextPlayer.name}'s turn ---`);
+        state.turnStartedAt = Date.now();
+    },
+
     endTurn(state) {
         if (state.gameOver) return;
         cleanupDefeated(state);
@@ -1005,6 +1036,7 @@ const actions = {
             state.log.unshift(`${nextPlayer.name} drew a card.`);
         }
         state.log.unshift(`--- ${nextPlayer.name}'s turn ---`);
+        state.turnStartedAt = Date.now();
     },
 };
 

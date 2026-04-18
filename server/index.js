@@ -497,6 +497,7 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
             maxBattlers: session.settings?.maxBattlers ?? null,
             deckSize: session.settings?.deckSize ?? null,
             teamMode: session.settings?.teamMode ?? 'ffa',
+            turnTimeLimit: session.settings?.turnTimeLimit ?? 86400,
         };
 
         const gameId = uuidv4();
@@ -506,9 +507,13 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
         session.gameId = gameId;
         session.status = 'in-progress';
         session.currentTurn = state.currentTurn;
+        session.turnStartedAt = state.turnStartedAt ? new Date(state.turnStartedAt) : null;
         await session.save();
 
         res.json({ session, gameId, state });
+
+        // Schedule turn timer if configured
+        scheduleTimer(gameId, state);
 
         // If the first player is a CPU, auto-play after a short delay
         const firstPlayer = state.players.find((p) => p.id === state.currentTurn);
@@ -572,11 +577,12 @@ app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
         if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can update settings' });
         if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change settings after game starts' });
 
-        const { startingHp, maxBattlers, deckSize, teamMode } = req.body;
+        const { startingHp, maxBattlers, deckSize, teamMode, turnTimeLimit } = req.body;
         if (startingHp !== undefined) session.settings.startingHp = Number(startingHp);
         if (maxBattlers !== undefined) session.settings.maxBattlers = maxBattlers === null ? null : Number(maxBattlers);
         if (deckSize !== undefined) session.settings.deckSize = deckSize === null ? null : Number(deckSize);
         if (teamMode !== undefined) session.settings.teamMode = teamMode === 'teams' ? 'teams' : 'ffa';
+        if (turnTimeLimit !== undefined) session.settings.turnTimeLimit = turnTimeLimit === null ? null : Math.max(60, Number(turnTimeLimit));
         session.markModified('settings');
         await session.save();
 
@@ -896,6 +902,63 @@ const enqueueGameAction = (gameId, fn) => {
     return next;
 };
 
+// ── Turn timeout enforcement ──────────────────────────────────────────────────
+
+const gameTimers = new Map(); // gameId → timeoutId
+
+/**
+ * Schedule (or reschedule) a turn-expiry timer for the current player.
+ * If the game has no turnTimeLimit, or the current player is a bot, no timer is set.
+ */
+const scheduleTimer = (gameId, state) => {
+    // Clear any existing timer for this game
+    if (gameTimers.has(gameId)) {
+        clearTimeout(gameTimers.get(gameId));
+        gameTimers.delete(gameId);
+    }
+
+    if (state.gameOver) return;
+    const limitSec = state.settings?.turnTimeLimit;
+    if (!limitSec) return;
+
+    const player = state.players.find((p) => p.id === state.currentTurn);
+    if (!player || player.isBot) return;
+
+    const elapsed = Date.now() - (state.turnStartedAt ?? Date.now());
+    const remaining = Math.max(0, limitSec * 1000 - elapsed);
+
+    const timerId = setTimeout(() => {
+        gameTimers.delete(gameId);
+        enqueueGameAction(gameId, async () => {
+            try {
+                const game = await Game.findOne({ gameId });
+                if (!game || game.state.gameOver) return;
+                // Guard: only forfeit if it's still the same player's turn
+                if (game.state.currentTurn !== state.currentTurn) return;
+
+                const { state: nextState } = dispatch(game.state, 'forfeitCurrentPlayer', {});
+                game.state = nextState;
+                game.markModified('state');
+                await game.save();
+
+                await Session.findOneAndUpdate(
+                    { gameId },
+                    { currentTurn: nextState.currentTurn, turnStartedAt: nextState.turnStartedAt ? new Date(nextState.turnStartedAt) : null, ...(nextState.gameOver ? { status: 'finished' } : {}) }
+                ).catch(() => { });
+
+                io.to(`game:${gameId}`).emit('game:state', nextState);
+
+                scheduleTimer(gameId, nextState);
+                if (!nextState.gameOver) await executeCpuTurnsIfNeeded(gameId);
+            } catch (err) {
+                console.error('turn timeout error:', err);
+            }
+        });
+    }, remaining);
+
+    gameTimers.set(gameId, timerId);
+};
+
 /**
  * If the current turn belongs to a CPU player, compute and broadcast CPU
  * turns until a human player's turn is reached or the game ends.
@@ -921,8 +984,10 @@ const executeCpuTurnsIfNeeded = async (gameId) => {
         game.markModified('state');
         await game.save();
 
-        await Session.findOneAndUpdate({ gameId }, { currentTurn: cpuState.currentTurn }).catch(() => { });
+        await Session.findOneAndUpdate({ gameId }, { currentTurn: cpuState.currentTurn, turnStartedAt: cpuState.turnStartedAt ? new Date(cpuState.turnStartedAt) : null }).catch(() => { });
         io.to(`game:${gameId}`).emit('game:state', cpuState);
+
+        scheduleTimer(gameId, cpuState);
 
         if (cpuState.gameOver) break;
     }
@@ -963,10 +1028,13 @@ io.on('connection', (socket) => {
                 // Keep session's currentTurn in sync so the lobby list can show "Your Turn"
                 await Session.findOneAndUpdate(
                     { gameId },
-                    { currentTurn: nextState.currentTurn }
+                    { currentTurn: nextState.currentTurn, turnStartedAt: nextState.turnStartedAt ? new Date(nextState.turnStartedAt) : null }
                 ).catch(() => { });
 
                 io.to(`game:${gameId}`).emit('game:state', nextState);
+
+                // Reschedule turn timer on every action (handles endTurn advancing the turn)
+                scheduleTimer(gameId, nextState);
 
                 // Auto-play CPU turns if the next active player is a bot
                 await executeCpuTurnsIfNeeded(gameId);

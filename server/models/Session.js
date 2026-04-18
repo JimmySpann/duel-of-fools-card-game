@@ -29,6 +29,7 @@ const settingsSchema = new mongoose.Schema(
         maxBattlers: { type: Number, default: null, min: 1, max: 20 }, // null = auto-scale
         deckSize: { type: Number, default: null, min: 4, max: 50 },   // null = all cards
         teamMode: { type: String, enum: ['ffa', 'teams'], default: 'ffa' },
+        turnTimeLimit: { type: Number, default: 86400, min: 60 },     // seconds; null = no limit
     },
     { _id: false }
 );
@@ -48,6 +49,7 @@ const sessionSchema = new mongoose.Schema(
         status: { type: String, enum: ['waiting', 'in-progress', 'finished'], default: 'waiting' },
         gameId: { type: String, default: null },
         currentTurn: { type: String, default: null },
+        turnStartedAt: { type: Date, default: null },
     },
     { timestamps: true }
 );

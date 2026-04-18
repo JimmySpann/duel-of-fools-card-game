@@ -18,6 +18,8 @@ import './card-game.css';
 const CardGame = () => {
     const dispatch = useDispatch();
     const { players, currentTurn, phase, gameOver, winner, log, lastHitEvents } = useSelector((state) => state.cardGame);
+    const turnStartedAt = useSelector((state) => state.cardGame.turnStartedAt);
+    const gameSettings = useSelector((state) => state.cardGame.settings);
     const activeGameId = useSelector((s) => s.sessions.activeGameId);
     const activeSession = useSelector((s) => s.sessions.activeSession);
     const username = useSelector((s) => s.auth.username);
@@ -193,6 +195,8 @@ const CardGame = () => {
                 displayName={displayName}
                 avatarUrl={avatarUrl}
                 username={username}
+                turnTimeLimit={gameSettings?.turnTimeLimit ?? null}
+                turnStartedAt={turnStartedAt ?? null}
             />
             {isOnline && (
                 <button

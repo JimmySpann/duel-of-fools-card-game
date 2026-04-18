@@ -1,10 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './header.css'
 
 const phaseMessage = (phase) => {
     if (phase === 'selectingTarget') return 'Select an enemy card to target';
     if (phase === 'selectingAllyTarget') return 'Select one of your cards as the target';
     return null;
+};
+
+const formatCountdown = (ms) => {
+    if (ms <= 0) return '0:00';
+    const totalSec = Math.ceil(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${m}:${String(s).padStart(2, '0')}`;
 };
 
 const Header = ({
@@ -21,9 +31,27 @@ const Header = ({
     username,
     onSignOut,
     onProfileOpen,
+    turnTimeLimit = null,
+    turnStartedAt = null,
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(null);
     const msg = phaseMessage(phase);
+
+    useEffect(() => {
+        if (!turnTimeLimit || !turnStartedAt) {
+            setTimeLeft(null);
+            return;
+        }
+        const calc = () => turnTimeLimit * 1000 - (Date.now() - turnStartedAt);
+        setTimeLeft(calc());
+        const id = setInterval(() => {
+            const remaining = calc();
+            setTimeLeft(remaining);
+            if (remaining <= 0) clearInterval(id);
+        }, 1000);
+        return () => clearInterval(id);
+    }, [turnTimeLimit, turnStartedAt]);
 
     return (
         <div className="header-container">
@@ -90,6 +118,11 @@ const Header = ({
                         <h2 className="player-name-title">
                             {currentPlayerName}'s Turn
                         </h2>
+                        {timeLeft !== null && (
+                            <p className={`turn-countdown${timeLeft <= 60000 ? ' turn-countdown--urgent' : ''}`}>
+                                ⏱ {formatCountdown(timeLeft)}
+                            </p>
+                        )}
                         {msg && (
                             <p className={`phase-subtitle${phase === 'selectingAllyTarget' ? ' phase-subtitle-ally' : ''}`}>
                                 {msg}
