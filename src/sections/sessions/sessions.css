@@ -1504,3 +1504,135 @@
     opacity: 0.4;
     cursor: not-allowed;
 }
+
+/* ── Full card preview overlay (used in Gallery + Deck Builder) ─────────── */
+.fc-preview-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+}
+
+.fc-preview-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.fc-preview-close-btn {
+    padding: 8px 26px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #1e2030;
+    color: #ccc;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.fc-preview-close-btn:hover {
+    background: #2a2d40;
+    color: #fff;
+}
+
+/* Deck Builder preview overlay actions */
+.fc-preview-deck-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.fc-preview-deck-btn {
+    padding: 8px 22px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.fc-preview-deck-btn:active {
+    transform: scale(0.97);
+}
+
+.fc-preview-deck-btn.add {
+    background: rgba(46, 160, 90, 0.2);
+    border-color: #2e7a50;
+    color: #5fc98e;
+}
+
+.fc-preview-deck-btn.add:hover:not(:disabled) {
+    background: rgba(46, 160, 90, 0.35);
+}
+
+.fc-preview-deck-btn.remove {
+    background: rgba(200, 60, 60, 0.2);
+    border-color: #8a2020;
+    color: #e07070;
+}
+
+.fc-preview-deck-btn.remove:hover {
+    background: rgba(200, 60, 60, 0.35);
+}
+
+.fc-preview-deck-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Gallery: Full View button in card header ───────────────────────────── */
+.gallery-card-header-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.gallery-view-full-btn {
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid #4a3a80;
+    background: rgba(120, 60, 220, 0.15);
+    color: #b98bff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.gallery-view-full-btn:hover {
+    background: rgba(120, 60, 220, 0.35);
+    color: #d8b4ff;
+}
+
+/* ── Deck Builder: card wrap + Full View button ─────────────────────────── */
+.db-card-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.db-card-view-btn {
+    padding: 3px 0;
+    border-radius: 5px;
+    border: 1px solid #3a3060;
+    background: rgba(100, 60, 180, 0.12);
+    color: #9a78e8;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.db-card-view-btn:hover {
+    background: rgba(100, 60, 180, 0.3);
+    color: #c4aaff;
+}

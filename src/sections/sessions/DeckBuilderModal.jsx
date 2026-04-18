@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import cards from '../card-game/database/cards';
+import Card from '../card-game/components/card-layouts/full-card/full-card';
 
 const ELEMENT_COLORS = {
     fire: { bg: '#7c1a00', color: '#ff7a40', border: '#b04000' },
@@ -43,6 +44,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
     const [loadValue, setLoadValue] = useState('');
     const [saveNameInput, setSaveNameInput] = useState('');
     const [showSaveInput, setShowSaveInput] = useState(false);
+    const [previewCard, setPreviewCard] = useState(null);
 
     const toggle = (id) => {
         setSelected((prev) => {
@@ -126,31 +128,39 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                         const primaryElement = Object.entries(card.elements || {})[0];
                         const elStyle = primaryElement ? (ELEMENT_COLORS[primaryElement[0]] || ELEMENT_COLORS.normal) : ELEMENT_COLORS.normal;
                         return (
-                            <button
-                                key={card.id}
-                                className={`db-card${isSelected ? ' selected' : ''}`}
-                                onClick={() => toggle(card.id)}
-                                style={isSelected ? { borderColor: elStyle.border, background: elStyle.bg } : undefined}
-                            >
-                                {isSelected && <span className="db-card-check">✓</span>}
-                                <img src={card.image} alt={card.name} className="db-card-img" />
-                                <div className="db-card-name">{card.name}</div>
-                                <div className="db-card-elements">
-                                    {Object.entries(card.elements || {}).map(([el, val]) => {
-                                        const s = ELEMENT_COLORS[el] || ELEMENT_COLORS.normal;
-                                        return (
-                                            <span key={el} className="db-element-chip" style={{ background: s.bg, color: s.color, borderColor: s.border }}>
-                                                {el}
-                                            </span>
-                                        );
-                                    })}
-                                </div>
-                                <div className="db-card-stats">
-                                    <span>HP {card.health}</span>
-                                    <span>DEF {card.defense}</span>
-                                    <span>EVA {card.evasion}</span>
-                                </div>
-                            </button>
+                            <div key={card.id} className={`db-card-wrap${isSelected ? ' selected' : ''}`}>
+                                <button
+                                    className={`db-card${isSelected ? ' selected' : ''}`}
+                                    onClick={() => toggle(card.id)}
+                                    style={isSelected ? { borderColor: elStyle.border, background: elStyle.bg } : undefined}
+                                >
+                                    {isSelected && <span className="db-card-check">✓</span>}
+                                    <img src={card.image} alt={card.name} className="db-card-img" />
+                                    <div className="db-card-name">{card.name}</div>
+                                    <div className="db-card-elements">
+                                        {Object.entries(card.elements || {}).map(([el, val]) => {
+                                            const s = ELEMENT_COLORS[el] || ELEMENT_COLORS.normal;
+                                            return (
+                                                <span key={el} className="db-element-chip" style={{ background: s.bg, color: s.color, borderColor: s.border }}>
+                                                    {el}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="db-card-stats">
+                                        <span>HP {card.health}</span>
+                                        <span>DEF {card.defense}</span>
+                                        <span>EVA {card.evasion}</span>
+                                    </div>
+                                </button>
+                                <button
+                                    className="db-card-view-btn"
+                                    onClick={(e) => { e.stopPropagation(); setPreviewCard(card); }}
+                                    title="View full card"
+                                >
+                                    Full View
+                                </button>
+                            </div>
                         );
                     })}
                 </div>
@@ -169,6 +179,28 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                     </button>
                 </div>
             </div>
+
+            {previewCard && (() => {
+                const isInDeck = selected.has(previewCard.id);
+                return (
+                    <div className="fc-preview-overlay" onClick={() => setPreviewCard(null)}>
+                        <div className="fc-preview-content" onClick={(e) => e.stopPropagation()}>
+                            <Card card={previewCard} isFlipped={false} onActionClick={null} />
+                            <div className="fc-preview-deck-actions">
+                                <button
+                                    className={`fc-preview-deck-btn${isInDeck ? ' remove' : ' add'}`}
+                                    onClick={() => { toggle(previewCard.id); }}
+                                    disabled={!isInDeck && selected.size >= 10}
+                                    title={!isInDeck && selected.size >= 10 ? 'Deck full (max 10)' : ''}
+                                >
+                                    {isInDeck ? '− Remove from Deck' : '+ Add to Deck'}
+                                </button>
+                                <button className="fc-preview-close-btn" onClick={() => setPreviewCard(null)}>Close</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 };

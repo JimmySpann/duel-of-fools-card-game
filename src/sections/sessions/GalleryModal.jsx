@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import cards from '../card-game/database/cards';
+import Card from '../card-game/components/card-layouts/full-card/full-card';
 
 const ELEMENT_COLORS = {
     fire: { bg: '#7c1a00', color: '#ff7a40', border: '#b04000' },
@@ -29,7 +30,7 @@ const ElementChip = ({ element, value }) => {
     );
 };
 
-const CardEntry = ({ card }) => {
+const CardEntry = ({ card, onPreview }) => {
     const [expanded, setExpanded] = useState(false);
     const hasActions = card.actions && card.actions.length > 0;
     const hasPassives = card.passives && card.passives.length > 0;
@@ -55,7 +56,12 @@ const CardEntry = ({ card }) => {
                         {card.agility != null && <span className="gallery-stat"><span className="gallery-stat-label">AGI</span>{card.agility}</span>}
                     </div>
                 </div>
-                <span className="gallery-card-chevron">{expanded ? '▲' : '▼'}</span>
+                <div className="gallery-card-header-btns" onClick={(e) => e.stopPropagation()}>
+                    <button className="gallery-view-full-btn" onClick={() => onPreview(card)} title="View full card">
+                        Full View
+                    </button>
+                    <span className="gallery-card-chevron">{expanded ? '▲' : '▼'}</span>
+                </div>
             </div>
 
             {expanded && (
@@ -144,6 +150,7 @@ const GalleryModal = ({ onClose }) => {
     const [tab, setTab] = useState('cards');
     const [search, setSearch] = useState('');
     const [elementFilter, setElementFilter] = useState(null);
+    const [previewCard, setPreviewCard] = useState(null);
 
     const filtered = useMemo(() => {
         return cards.filter((c) => {
@@ -209,7 +216,7 @@ const GalleryModal = ({ onClose }) => {
                                 <p className="gallery-empty">No cards match your search.</p>
                             )}
                             {filtered.map((card) => (
-                                <CardEntry key={card.id} card={card} />
+                                <CardEntry key={card.id} card={card} onPreview={setPreviewCard} />
                             ))}
                         </div>
                     </div>
@@ -251,6 +258,15 @@ const GalleryModal = ({ onClose }) => {
                     </div>
                 )}
             </div>
+
+            {previewCard && (
+                <div className="fc-preview-overlay" onClick={() => setPreviewCard(null)}>
+                    <div className="fc-preview-content" onClick={(e) => e.stopPropagation()}>
+                        <Card card={previewCard} isFlipped={false} onActionClick={null} />
+                        <button className="fc-preview-close-btn" onClick={() => setPreviewCard(null)}>Close</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
