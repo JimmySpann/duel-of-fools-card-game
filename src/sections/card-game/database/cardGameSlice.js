@@ -612,6 +612,22 @@ export const cardGameSlice = createSlice({
       state.log.unshift(`--- ${nextPlayer.name}'s turn ---`);
     },
 
+    forfeitCurrentPlayer: (state) => {
+      if (state.gameOver) return;
+      const forfeitingPlayer = state.players.find((p) => p.id === state.currentTurn);
+      if (!forfeitingPlayer) return;
+
+      forfeitingPlayer.health = 0;
+      forfeitingPlayer.eliminated = true;
+      state.gameOver = true;
+
+      const winner = state.players.find((p) => p.id !== forfeitingPlayer.id && !p.eliminated && p.health > 0)
+        ?? state.players.find((p) => p.id !== forfeitingPlayer.id);
+      state.winner = winner?.id ?? null;
+      state.log.unshift(`${forfeitingPlayer.name} forfeited the game.`);
+      if (winner) state.log.unshift(`${winner.name} wins!`);
+    },
+
     resetGame: () => createInitialState(),
 
     // Replace entire state with server-driven state (online multiplayer)
@@ -630,6 +646,7 @@ export const {
   commitDefeats,
   dismissRecap,
   endTurn,
+  forfeitCurrentPlayer,
   resetGame,
   setGameState,
 } = cardGameSlice.actions;

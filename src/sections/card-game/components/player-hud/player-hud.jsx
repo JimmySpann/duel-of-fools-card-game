@@ -12,6 +12,7 @@ import deathIcon from '../../../../assets/elements/death-icon.png';
 
 const PlayerHUD = ({ player, isCurrentUser }) => {
     const [health, setHealth] = useState(player.health);
+    const fallbackAvatar = `https://i.pravatar.cc/64?u=${encodeURIComponent(player?.name || 'player')}`;
 
     const getBarStyles = () => {
         const percent = (player.health / player.maxHealth) * 100
@@ -81,7 +82,12 @@ const PlayerHUD = ({ player, isCurrentUser }) => {
             </div>
             <div className="hud-card barInner">
                 <div className="state" style={getBarStyles(health)}></div>
-                <img className="profile-image" src={player.image} />
+                <img
+                    className="profile-image"
+                    src={player.image || fallbackAvatar}
+                    alt={`${player.name} avatar`}
+                    onError={(e) => { e.currentTarget.src = fallbackAvatar; }}
+                />
                 <div style={{
                     width: '100%',
                     display: 'flex',

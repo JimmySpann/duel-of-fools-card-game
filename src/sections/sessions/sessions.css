@@ -1469,6 +1469,42 @@
     cursor: not-allowed;
 }
 
+.db-select-all-btn,
+.db-clear-all-btn {
+    border-radius: 6px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.db-select-all-btn {
+    background: #1d2b1f;
+    border: 1px solid #3d6b44;
+    color: #7ce09a;
+}
+
+.db-select-all-btn:hover:not(:disabled) {
+    background: #25422b;
+}
+
+.db-clear-all-btn {
+    background: #2d1c1c;
+    border: 1px solid #6e3c3c;
+    color: #f0a0a0;
+}
+
+.db-clear-all-btn:hover:not(:disabled) {
+    background: #3b2323;
+}
+
+.db-select-all-btn:disabled,
+.db-clear-all-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 .db-save-row {
     display: flex;
     align-items: center;

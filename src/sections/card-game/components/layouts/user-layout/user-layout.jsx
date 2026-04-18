@@ -7,7 +7,7 @@ import SelectedCard from '../../selected-card/selected-card.jsx';
 import { selectAttacker, initiateAbility, resolveOnAllyCard, playCardFromHand } from '../../../database/cardGameSlice';
 import sounds from '../../../../../features/sound/soundManager';
 
-const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = false }) => {
+const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, onForfeit, disabled = false }) => {
     const dispatch = useDispatch();
     const cardPlayedThisTurn = useSelector((s) => s.cardGame.cardPlayedThisTurn);
     const [selectedBattlerIndex, setSelectedBattlerIndex] = useState(null);
@@ -93,9 +93,14 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, disabled = fa
                         Cancel
                     </button>
                 ) : (
-                    <button className="turn-btn end-turn-btn" onClick={onEndTurn}>
-                        End Turn
-                    </button>
+                    <>
+                        <button className="turn-btn end-turn-btn" onClick={onEndTurn}>
+                            End Turn
+                        </button>
+                        <button className="turn-btn forfeit-btn" onClick={onForfeit}>
+                            Forfeit
+                        </button>
+                    </>
                 )}
             </div>
 

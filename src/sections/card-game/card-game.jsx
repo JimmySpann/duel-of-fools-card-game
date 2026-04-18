@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { endTurn, resetGame, cancelSelection, setGameState } from './database/cardGameSlice';
+import { endTurn, resetGame, cancelSelection, setGameState, forfeitCurrentPlayer } from './database/cardGameSlice';
 import { getSocket } from '../../features/chat/socket';
 import { leaveSession } from '../../features/sessions/sessionsSlice';
 import { logout } from '../../features/auth/authSlice';
@@ -45,6 +45,7 @@ const CardGame = () => {
     const [showChat, setShowChat] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
+    const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
 
     // Per-game notification override (defaults to global setting)
     const [notifyThisGame, setNotifyThisGame] = useState(notifyTurnGlobal);
@@ -73,14 +74,18 @@ const CardGame = () => {
     // Determine which player slot belongs to the logged-in user
     const myPlayerId = activeSession?.players?.find((p) => p.username === username)?.slot ?? null;
     const isOnline = !!activeGameId;
+    const gamePlayers = useMemo(() => {
+        if (!myPlayerId || !avatarUrl) return players;
+        return players.map((p) => (p.id === myPlayerId ? { ...p, image: avatarUrl } : p));
+    }, [players, myPlayerId, avatarUrl]);
 
     // In online mode: my board is always at the bottom regardless of turn.
     // In local (solo) mode: keep existing behaviour — current turn player at bottom.
     const myPlayer = isOnline
-        ? players.find((p) => p.id === myPlayerId) ?? players[0]
-        : players.find((p) => p.id === currentTurn);
+        ? gamePlayers.find((p) => p.id === myPlayerId) ?? gamePlayers[0]
+        : gamePlayers.find((p) => p.id === currentTurn);
     // All players other than me, excluding eliminated players
-    const opponents = players.filter((p) => p.id !== myPlayer?.id && !p.eliminated);
+    const opponents = gamePlayers.filter((p) => p.id !== myPlayer?.id && !p.eliminated);
 
     // Actions are only allowed when it is this client's turn
     const isMyTurn = !isOnline || currentTurn === myPlayerId;
@@ -190,7 +195,7 @@ const CardGame = () => {
 
     if (gameOver) {
         // winner is a player id in FFA, or a team letter in team mode
-        const winnerPlayer = players.find((p) => p.id === winner);
+        const winnerPlayer = gamePlayers.find((p) => p.id === winner);
         const winnerLabel = winnerPlayer
             ? winnerPlayer.id === myPlayerId ? 'You Win!' : `${winnerPlayer.name} Wins!`
             : `Team ${winner} Wins!`;
@@ -209,7 +214,7 @@ const CardGame = () => {
     return (
         <div className="card-game-container">
             <Header
-                currentPlayerName={players.find((p) => p.id === currentTurn)?.name}
+                currentPlayerName={gamePlayers.find((p) => p.id === currentTurn)?.name}
                 phase={phase}
                 isMyTurn={isMyTurn}
                 onLobbies={() => dispatch(leaveSession())}
@@ -256,6 +261,7 @@ const CardGame = () => {
                 phase={isMyTurn ? phase : 'waiting'}
                 onEndTurn={() => { sounds.endTurn(); dispatch(endTurn()); }}
                 onCancelSelection={() => dispatch(cancelSelection())}
+                onForfeit={() => setShowForfeitConfirm(true)}
                 disabled={!isMyTurn}
             />
             <div className="battle-log">
@@ -266,7 +272,32 @@ const CardGame = () => {
                     ))}
                 </div>
             </div>
-            <TurnRecap currentPlayer={myPlayer} players={players} />
+            <TurnRecap currentPlayer={myPlayer} players={gamePlayers} />
+
+            {showForfeitConfirm && (
+                <div className="game-panel-overlay" onClick={() => setShowForfeitConfirm(false)}>
+                    <div className="game-forfeit-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="game-forfeit-title">Forfeit Match?</h3>
+                        <p className="game-forfeit-message">
+                            This will immediately end the game and count as a loss.
+                        </p>
+                        <div className="game-forfeit-actions">
+                            <button className="game-forfeit-cancel" onClick={() => setShowForfeitConfirm(false)}>
+                                Cancel
+                            </button>
+                            <button
+                                className="game-forfeit-confirm"
+                                onClick={() => {
+                                    setShowForfeitConfirm(false);
+                                    dispatch(forfeitCurrentPlayer());
+                                }}
+                            >
+                                Forfeit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── Microevent overlay ──────────────────────────────────────── */}
             {microeventContext && (
@@ -356,7 +387,7 @@ const CardGame = () => {
                                 <div className="game-panel-section">
                                     <h4 className="game-panel-section-title">Players</h4>
                                     <div className="game-panel-players">
-                                        {players.map((p) => {
+                                        {gamePlayers.map((p) => {
                                             const pct = Math.max(0, Math.round((p.health / p.maxHealth) * 100));
                                             const isCurrent = p.id === currentTurn;
                                             return (

@@ -106,6 +106,15 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
     const deckNames = Object.keys(savedDecks);
     const canConfirm = selected.size >= 3 && !loading;
     const selectedCount = selected.size;
+    const allCardIds = useMemo(() => cards.map((card) => card.id), [cards]);
+
+    const handleSelectAll = () => {
+        setSelected(new Set(allCardIds));
+    };
+
+    const handleClearAll = () => {
+        setSelected(new Set());
+    };
 
     return (
         <div className="db-overlay" onClick={onClose}>
@@ -120,6 +129,20 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                         {selectedCount} / 10 selected · min 3
                     </span>
                     <div className="db-toolbar-right">
+                        <button
+                            className="db-select-all-btn"
+                            onClick={handleSelectAll}
+                            disabled={allCardIds.length === 0 || selectedCount === allCardIds.length}
+                        >
+                            Select All
+                        </button>
+                        <button
+                            className="db-clear-all-btn"
+                            onClick={handleClearAll}
+                            disabled={selectedCount === 0}
+                        >
+                            Clear
+                        </button>
                         {deckNames.length > 0 && (
                             <div className="db-saved-decks-list">
                                 {deckNames.map((n) => (

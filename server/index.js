@@ -902,6 +902,9 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
             ? await Card.find({ id: { $in: selectedIds } }).lean()
             : [];
         const cardById = new Map(selectedDeckCards.map((c) => [c.id, cloneCardForGame(c)]));
+        const playerUserIds = session.players.map((p) => p.userId).filter(Boolean);
+        const playerUsers = await User.find({ _id: { $in: playerUserIds } }).select('_id avatarUrl').lean();
+        const avatarByUserId = new Map(playerUsers.map((u) => [String(u._id), u.avatarUrl || '']));
 
         // Merge real players and CPU slots, ordered by slot name
         const SLOT_ORDER = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
@@ -911,6 +914,7 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
                 team: p.team,
                 slot: p.slot,
                 isBot: false,
+                image: avatarByUserId.get(String(p.userId)) || '',
                 selectedDeck: (p.selectedDeck || []).map((id) => cardById.get(id)).filter(Boolean),
             })),
             ...(session.cpuSlots || []).map((c) => ({ name: c.name, team: null, slot: c.slot, isBot: true, selectedDeck: [] })),
@@ -919,6 +923,7 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
         const playerConfigs = combined.map((p, i) => ({
             id: `player${i + 1}`,
             name: p.name,
+            image: p.image,
             team: session.settings?.teamMode === 'teams' ? (p.team || null) : null,
             isBot: p.isBot,
             selectedDeck: p.selectedDeck,
