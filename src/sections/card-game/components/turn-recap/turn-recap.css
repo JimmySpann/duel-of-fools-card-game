@@ -230,3 +230,88 @@
 .recap-continue-btn:active {
     transform: scale(0.97);
 }
+
+/* ── Tabs ──────────────────────────────────────────────────── */
+.recap-tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 16px;
+}
+
+.recap-tab {
+    flex: 1;
+    padding: 8px 0;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    color: #8899aa;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.recap-tab:hover {
+    color: #ccd6e0;
+}
+
+.recap-tab--active {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+/* ── Search ────────────────────────────────────────────────── */
+.recap-search-row {
+    position: relative;
+    margin-bottom: 14px;
+}
+
+.recap-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 36px 9px 14px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #dce4ef;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.recap-search-input::placeholder {
+    color: #556677;
+}
+
+.recap-search-input:focus {
+    border-color: rgba(52, 152, 219, 0.6);
+}
+
+.recap-search-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #778899;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 2px 4px;
+    line-height: 1;
+}
+
+.recap-search-clear:hover {
+    color: #ccd6e0;
+}
+
+.recap-no-results {
+    text-align: center;
+    color: #556677;
+    font-size: 0.9rem;
+    padding: 20px 0;
+    margin: 0;
+}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { dismissRecap } from '../../database/cardGameSlice';
 import './turn-recap.css';
@@ -80,6 +81,8 @@ const RecapEvent = ({ event, index, playerNames, currentPlayerId }) => {
 const TurnRecap = ({ currentPlayer, players }) => {
     const dispatch = useDispatch();
     const turnSummary = useSelector((s) => s.cardGame.turnSummary);
+    const [activeTab, setActiveTab] = useState('brief');
+    const [search, setSearch] = useState('');
 
     if (!turnSummary?.length) return null;
 
@@ -90,35 +93,83 @@ const TurnRecap = ({ currentPlayer, players }) => {
     const damageTaken = myEvents.reduce((sum, e) => sum + (e.damage || 0), 0);
     const cardsLost = myEvents.filter((e) => e.type === 'defeat' || e.type === 'dotDefeat').length;
 
+    const filteredEvents = activeTab === 'full'
+        ? turnSummary.filter((e) => {
+            if (!search.trim()) return true;
+            const q = search.toLowerCase();
+            const name = playerNames?.[e.targetPlayerId] ?? '';
+            return (
+                (e.cardName ?? '').toLowerCase().includes(q) ||
+                name.toLowerCase().includes(q) ||
+                (e.type ?? '').toLowerCase().includes(q) ||
+                (e.dotType ?? '').toLowerCase().includes(q)
+            );
+        })
+        : myEvents;
+
     return (
         <div className="recap-overlay" onClick={() => dispatch(dismissRecap())}>
             <div className="recap-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="recap-header">
                     <h2 className="recap-title">⚔️ Turn Recap</h2>
-                    <p className="recap-subtitle">
-                        Here's everything that happened while you were away
-                    </p>
                 </div>
 
-                <div className="recap-summary-row">
-                    <div className="recap-stat">
-                        <span className="recap-stat-value recap-stat-damage">{damageTaken}</span>
-                        <span className="recap-stat-label">Damage Taken</span>
-                    </div>
-                    <div className="recap-stat">
-                        <span className="recap-stat-value recap-stat-defeats">{cardsLost}</span>
-                        <span className="recap-stat-label">Cards Lost</span>
-                    </div>
-                    <div className="recap-stat">
-                        <span className="recap-stat-value">{currentPlayer.health}/{currentPlayer.maxHealth}</span>
-                        <span className="recap-stat-label">Your HP</span>
-                    </div>
+                <div className="recap-tabs">
+                    <button
+                        className={`recap-tab${activeTab === 'brief' ? ' recap-tab--active' : ''}`}
+                        onClick={() => setActiveTab('brief')}
+                    >
+                        Brief
+                    </button>
+                    <button
+                        className={`recap-tab${activeTab === 'full' ? ' recap-tab--active' : ''}`}
+                        onClick={() => setActiveTab('full')}
+                    >
+                        Full Brief
+                    </button>
                 </div>
+
+                {activeTab === 'brief' && (
+                    <div className="recap-summary-row">
+                        <div className="recap-stat">
+                            <span className="recap-stat-value recap-stat-damage">{damageTaken}</span>
+                            <span className="recap-stat-label">Damage Taken</span>
+                        </div>
+                        <div className="recap-stat">
+                            <span className="recap-stat-value recap-stat-defeats">{cardsLost}</span>
+                            <span className="recap-stat-label">Cards Lost</span>
+                        </div>
+                        <div className="recap-stat">
+                            <span className="recap-stat-value">{currentPlayer.health}/{currentPlayer.maxHealth}</span>
+                            <span className="recap-stat-label">Your HP</span>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'full' && (
+                    <div className="recap-search-row">
+                        <input
+                            className="recap-search-input"
+                            type="text"
+                            placeholder="Search by card, player, or effect…"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            autoFocus
+                        />
+                        {search && (
+                            <button className="recap-search-clear" onClick={() => setSearch('')}>✕</button>
+                        )}
+                    </div>
+                )}
 
                 <div className="recap-events">
-                    {turnSummary.map((e, i) => (
-                        <RecapEvent key={i} event={e} index={i} playerNames={playerNames} currentPlayerId={currentPlayer.id} />
-                    ))}
+                    {filteredEvents.length === 0 ? (
+                        <p className="recap-no-results">No events match "{search}"</p>
+                    ) : (
+                        filteredEvents.map((e, i) => (
+                            <RecapEvent key={i} event={e} index={i} playerNames={playerNames} currentPlayerId={currentPlayer.id} />
+                        ))
+                    )}
                 </div>
 
                 <button className="recap-continue-btn" onClick={() => dispatch(dismissRecap())}>
