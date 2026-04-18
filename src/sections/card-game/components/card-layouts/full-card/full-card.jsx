@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 
 import cardBack from '../../../../../assets/card-back.jpg';
 import fireIcon from '../../../../../assets/elements/fire-icon.png';
@@ -105,6 +106,8 @@ const Card = ({
     isFlipped,
     onActionClick,
 }) => {
+    const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
+    const isCensored = !!card?.adultOnly && censorAdultCards;
 
     return (
         <div
@@ -116,7 +119,7 @@ const Card = ({
                 <div className="card-image-container">
                     <img
                         className="card-image"
-                        src={card.image}
+                        src={isCensored ? cardBack : card.image}
                         alt="Card Visual"
                     />
                     {card.statusEffects && card.statusEffects.length > 0 && (
@@ -141,11 +144,11 @@ const Card = ({
                             </div>
                         </div>
                     )}
-                    <div className="card-name">{card.name}</div>
+                    <div className="card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
                 </div>
 
                 <div className="card-info-container">
-                    <div className="card-description">{card.description}</div>
+                    <div className="card-description">{isCensored ? 'Description hidden by content settings.' : card.description}</div>
                     {card.passives.length > 1 && <div className="card-passives-container">
                         <div className="card-info-title">Passives</div>
                         {card.passives.map((passive, index) => (
@@ -155,10 +158,10 @@ const Card = ({
                             >
                                 <div>
                                     <div className="ability-first-row">
-                                        <div className="ability-name">{passive.name}</div>
-                                        <div className="ability-effect">{passive.effect}</div>
+                                        <div className="ability-name">{isCensored ? 'Hidden Passive' : passive.name}</div>
+                                        <div className="ability-effect">{isCensored ? 'Hidden' : passive.effect}</div>
                                     </div>
-                                    <div className="ability-description">{passive.description}</div>
+                                    <div className="ability-description">{isCensored ? 'Text hidden by content settings.' : passive.description}</div>
                                 </div>
                                 <div className="ability-card-right-side">
                                     {passive.type && <div className="card-elements-icon" style={{ textAlign: 'right' }}>
@@ -184,15 +187,15 @@ const Card = ({
                             >
                                 <div>
                                     <div className="ability-first-row">
-                                        <div className="ability-name">{action.name}</div>
-                                        <div className="ability-effect">{action.actionInfo}</div>
+                                        <div className="ability-name">{isCensored ? 'Hidden Action' : action.name}</div>
+                                        <div className="ability-effect">{isCensored ? 'Hidden' : action.actionInfo}</div>
                                         {action.microevent && (
                                             <div className={`ability-microevent-badge ability-microevent-badge--${action.microevent.type}`}>
                                                 {MICROEVENT_LABELS[action.microevent.type] || action.microevent.type}
                                             </div>
                                         )}
                                     </div>
-                                    <div className="ability-description">{action.description}</div>
+                                    <div className="ability-description">{isCensored ? 'Text hidden by content settings.' : action.description}</div>
                                 </div>
                                 <div className="ability-card-right-side">
                                     {action.type && <div className="card-elements-icon" style={{ textAlign: 'right' }}>

@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema(
         passwordHash: { type: String, required: true },
         displayName: { type: String, trim: true, maxlength: 40, default: '' },
         avatarUrl: { type: String, trim: true, maxlength: 500, default: '' },
+        censorAdultCards: { type: Boolean, default: true },
         friends: [{ type: String }],
         friendRequests: [{ type: String }],
         blocked: [{ type: String }],

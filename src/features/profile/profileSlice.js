@@ -94,9 +94,10 @@ const loadNotifPrefs = () => {
             soundVolume: parseFloat(localStorage.getItem('cg_soundVolume') ?? '0.7'),
             cardDanceEnabled: localStorage.getItem('cg_cardDanceEnabled') !== 'false',
             cardDanceIntensity: Math.max(0.1, Math.min(1.5, parseFloat(localStorage.getItem('cg_cardDanceIntensity') ?? '0.8'))),
+            censorAdultCards: localStorage.getItem('cg_censorAdultCards') !== 'false',
         };
     } catch {
-        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7, cardDanceEnabled: true, cardDanceIntensity: 0.8 };
+        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7, cardDanceEnabled: true, cardDanceIntensity: 0.8, censorAdultCards: true };
     }
 };
 
@@ -138,6 +139,10 @@ const profileSlice = createSlice({
             state.cardDanceIntensity = Math.max(0.1, Math.min(1.5, Number(action.payload) || 0.8));
             try { localStorage.setItem('cg_cardDanceIntensity', state.cardDanceIntensity); } catch { }
         },
+        setCensorAdultCards(state, action) {
+            state.censorAdultCards = !!action.payload;
+            try { localStorage.setItem('cg_censorAdultCards', state.censorAdultCards); } catch { }
+        },
         resetProfile(state) {
             state.displayName = '';
             state.avatarUrl = '';
@@ -157,6 +162,10 @@ const profileSlice = createSlice({
             .addCase(fetchProfile.fulfilled, (state, action) => {
                 state.loading = false;
                 Object.assign(state, action.payload);
+                if (action.payload.censorAdultCards !== undefined) {
+                    state.censorAdultCards = !!action.payload.censorAdultCards;
+                    try { localStorage.setItem('cg_censorAdultCards', state.censorAdultCards); } catch { }
+                }
             })
             .addCase(fetchProfile.rejected, rejected)
 
@@ -165,6 +174,10 @@ const profileSlice = createSlice({
                 state.loading = false;
                 if (action.payload.displayName !== undefined) state.displayName = action.payload.displayName;
                 if (action.payload.avatarUrl !== undefined) state.avatarUrl = action.payload.avatarUrl;
+                if (action.payload.censorAdultCards !== undefined) {
+                    state.censorAdultCards = !!action.payload.censorAdultCards;
+                    try { localStorage.setItem('cg_censorAdultCards', state.censorAdultCards); } catch { }
+                }
             })
             .addCase(updateProfile.rejected, rejected)
 
@@ -213,5 +226,5 @@ const profileSlice = createSlice({
     },
 });
 
-export const { clearProfileError, resetProfile, setNotifyTurn, setNotifyDM, setNotifyLobby, setSoundVolume, setCardDanceEnabled, setCardDanceIntensity } = profileSlice.actions;
+export const { clearProfileError, resetProfile, setNotifyTurn, setNotifyDM, setNotifyLobby, setSoundVolume, setCardDanceEnabled, setCardDanceIntensity, setCensorAdultCards } = profileSlice.actions;
 export default profileSlice.reducer;

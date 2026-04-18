@@ -24,6 +24,7 @@ import DMPanel from '../../features/chat/DMPanel';
 import Profile from '../../features/profile/Profile';
 import GalleryModal from './GalleryModal';
 import DeckBuilderModal from './DeckBuilderModal';
+import CustomCardModal from './CustomCardModal';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import './sessions.css';
 
@@ -53,6 +54,7 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
     const unreadLobby = useSelector((s) => s.chat.unreadLobby[session._id] || 0);
     const [showChat, setShowChat] = useState(false);
     const [showDeckBuilder, setShowDeckBuilder] = useState(false);
+    const [showCustomCards, setShowCustomCards] = useState(false);
 
     // My player entry (null for observers)
     const myPlayer = session.players.find((p) => p.username === username);
@@ -172,6 +174,17 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                                 <option value={5}>Brutal</option>
                             </select>
                         </label>
+                        <label className="lobby-setting-label">
+                            Custom Cards
+                            <select
+                                className="lobby-setting-input"
+                                value={settings.allowCustomCards === false ? 'off' : 'on'}
+                                onChange={(e) => handleSettingChange('allowCustomCards', e.target.value === 'on')}
+                            >
+                                <option value="on">Enabled</option>
+                                <option value="off">Disabled</option>
+                            </select>
+                        </label>
                     </div>
                 </div>
             )}
@@ -249,6 +262,7 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                     <span>Mode: {teamMode === 'teams' ? 'Teams' : 'Free for All'}</span>
                     <span>Turn Limit: {settings.turnTimeLimit ? (() => { const h = Math.floor(settings.turnTimeLimit / 3600); const m = Math.floor((settings.turnTimeLimit % 3600) / 60); return h > 0 ? `${h}h` : `${m}m`; })() : 'None'}</span>
                     <span>Minigames: {['Easy', 'Normal', 'Hard', 'Expert', 'Brutal'][(settings.microgameDifficulty ?? 1) - 1]}</span>
+                    <span>Custom Cards: {settings.allowCustomCards === false ? 'Off' : 'On'}</span>
                 </div>
             )}
 
@@ -297,6 +311,10 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
             </button>
             {showChat && <LobbyChat sessionId={session._id} isWatching={true} />}
 
+            <button className="lobby-custom-cards-btn" onClick={() => setShowCustomCards(true)}>
+                🧪 Create Custom Card
+            </button>
+
             {/* Deck builder modal */}
             {showDeckBuilder && (
                 <DeckBuilderModal
@@ -307,6 +325,8 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                     error={error}
                 />
             )}
+
+            {showCustomCards && <CustomCardModal onClose={() => setShowCustomCards(false)} />}
         </div>
     );
 };

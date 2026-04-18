@@ -17,6 +17,8 @@ const Game = require('./models/Game');
 const User = require('./models/User');
 const Session = require('./models/Session');
 const Message = require('./models/Message');
+const Card = require('./models/Card');
+const officialCards = require('./game/cards');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -58,7 +60,10 @@ if (VAPID_PUSH_ENABLED) {
 
 mongoose
     .connect(MONGO_URI)
-    .then(() => console.log('Connected to MongoDB'))
+    .then(async () => {
+        console.log('Connected to MongoDB');
+        await seedOfficialCards();
+    })
     .catch((err) => { console.error('MongoDB connection error:', err); process.exit(1); });
 
 // ── Middleware ────────────────────────────────────────────────────────────────
@@ -94,6 +99,152 @@ const generateJoinCode = () =>
 const signToken = (user) =>
     jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
 
+const CARD_ID_PREFIX = 'cc_';
+const MAX_CARD_POINTS = 48;
+
+const cloneCardForGame = (card) => ({
+    id: card.id,
+    name: card.name,
+    elements: card.elements || {},
+    type: card.type || 'Battler',
+    image: card.image,
+    description: card.description || '',
+    passives: (card.passives || []).map((p) => ({ ...p })),
+    actions: (card.actions || []).map((a) => ({ ...a })),
+    defense: Number(card.defense) || 0,
+    evasion: Number(card.evasion) || 0,
+    health: Number(card.health) || 1,
+    attack: Number(card.attack) || 0,
+    agility: Number(card.agility) || 0,
+});
+
+const serializeCardForClient = (card) => ({
+    ...cloneCardForGame(card),
+    official: !!card.official,
+    adultOnly: !!card.adultOnly,
+    visibility: card.visibility || 'public',
+    createdBy: card.createdBy || 'system',
+    sourceCardId: card.sourceCardId || null,
+    reportCount: Number(card?.reports?.count || 0),
+    versionCount: Array.isArray(card.versions) ? card.versions.length : 0,
+    updatedAt: card.updatedAt,
+    createdAt: card.createdAt,
+});
+
+const toVersionSnapshot = (cardLike, editedBy) => ({
+    editedAt: new Date(),
+    editedBy,
+    snapshot: {
+        name: cardLike.name,
+        type: cardLike.type,
+        image: cardLike.image,
+        description: cardLike.description,
+        elements: cardLike.elements,
+        passives: cardLike.passives,
+        actions: cardLike.actions,
+        defense: cardLike.defense,
+        evasion: cardLike.evasion,
+        health: cardLike.health,
+        attack: cardLike.attack,
+        agility: cardLike.agility,
+        adultOnly: !!cardLike.adultOnly,
+    },
+});
+
+const sanitizeCardId = (value) => {
+    const cleaned = String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 40);
+    return cleaned || `card_${Date.now()}`;
+};
+
+const isValidImageUrl = (value) => /^https?:\/\/.{5,1000}$/i.test(String(value || ''));
+
+const abilityCatalog = (() => {
+    const byName = new Map();
+    for (const c of officialCards) {
+        for (const a of c.actions || []) {
+            if (!a?.name || byName.has(a.name)) continue;
+            byName.set(a.name, {
+                name: a.name,
+                actionInfo: a.actionInfo || '',
+                description: a.description || '',
+                limit: a.limit || 1,
+                usesRemaining: a.limit || 1,
+                type: a.type || '',
+                microevent: a.microevent || null,
+            });
+        }
+    }
+    return byName;
+})();
+
+const buildActionsFromNames = (abilityNames = []) =>
+    abilityNames
+        .map((name) => abilityCatalog.get(name))
+        .filter(Boolean)
+        .map((a) => ({ ...a }));
+
+const computeCardPointCost = ({ attack, defense, evasion, agility, health }) =>
+    Number(attack || 0) + Number(defense || 0) + Number(evasion || 0) + Number(agility || 0) + Math.round(Number(health || 0) * 1.4);
+
+const validateCustomCardPayload = (payload) => {
+    const name = String(payload?.name || '').trim();
+    if (!name || name.length > 60) return 'Card name is required (1-60 chars)';
+
+    const image = String(payload?.image || '').trim();
+    if (!isValidImageUrl(image)) return 'Image must be a valid http/https URL';
+
+    const stats = {
+        attack: Number(payload?.attack),
+        defense: Number(payload?.defense),
+        evasion: Number(payload?.evasion),
+        agility: Number(payload?.agility),
+        health: Number(payload?.health),
+    };
+    if (Object.values(stats).some((v) => !Number.isFinite(v))) return 'All stat fields are required';
+    if (stats.attack < 0 || stats.attack > 20) return 'Attack must be between 0 and 20';
+    if (stats.defense < 0 || stats.defense > 20) return 'Defense must be between 0 and 20';
+    if (stats.evasion < 0 || stats.evasion > 20) return 'Evasion must be between 0 and 20';
+    if (stats.agility < 0 || stats.agility > 20) return 'Agility must be between 0 and 20';
+    if (stats.health < 1 || stats.health > 30) return 'Health must be between 1 and 30';
+
+    if (computeCardPointCost(stats) > MAX_CARD_POINTS) {
+        return `Card stat budget exceeded (max ${MAX_CARD_POINTS})`;
+    }
+
+    const abilityNames = Array.isArray(payload?.abilityNames) ? payload.abilityNames : [];
+    if (abilityNames.length < 1 || abilityNames.length > 3) return 'Select 1-3 abilities';
+    const unknown = abilityNames.filter((n) => !abilityCatalog.has(n));
+    if (unknown.length) return `Unknown abilities: ${unknown.join(', ')}`;
+
+    const elements = payload?.elements && typeof payload.elements === 'object' ? payload.elements : {};
+
+    return null;
+};
+
+const seedOfficialCards = async () => {
+    for (const card of officialCards) {
+        const snapshot = cloneCardForGame(card);
+        await Card.updateOne(
+            { id: snapshot.id },
+            {
+                $setOnInsert: {
+                    ...snapshot,
+                    official: true,
+                    adultOnly: false,
+                    visibility: 'public',
+                    createdBy: 'system',
+                    sourceCardId: null,
+                },
+            },
+            { upsert: true }
+        );
+    }
+};
+
 // ── Auth routes ───────────────────────────────────────────────────────────────
 
 /**
@@ -108,6 +259,7 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
             username: user.username,
             displayName: user.displayName || '',
             avatarUrl: user.avatarUrl || '',
+            censorAdultCards: user.censorAdultCards !== false,
             friends: user.friends || [],
             friendRequests: user.friendRequests || [],
             blocked: user.blocked || [],
@@ -183,6 +335,7 @@ app.get('/api/profile', requireAuth, async (req, res) => {
             username: user.username,
             displayName: user.displayName || '',
             avatarUrl: user.avatarUrl || '',
+            censorAdultCards: user.censorAdultCards !== false,
             friends: user.friends || [],
             friendRequests: user.friendRequests || [],
             blocked: user.blocked || [],
@@ -195,26 +348,30 @@ app.get('/api/profile', requireAuth, async (req, res) => {
 
 /**
  * PATCH /api/profile
- * Body: { displayName?, avatarUrl? }
+ * Body: { displayName?, avatarUrl?, censorAdultCards? }
  * Updates the user's display name and/or avatar URL.
  */
 app.patch('/api/profile', requireAuth, async (req, res) => {
     try {
-        const { displayName, avatarUrl } = req.body;
+        const { displayName, avatarUrl, censorAdultCards } = req.body;
         if (displayName !== undefined && displayName.length > 40)
             return res.status(400).json({ error: 'Display name must be 40 characters or fewer' });
         if (avatarUrl !== undefined && !isValidUrl(avatarUrl))
             return res.status(400).json({ error: 'Avatar URL must be a valid http/https URL' });
+        if (censorAdultCards !== undefined && typeof censorAdultCards !== 'boolean')
+            return res.status(400).json({ error: 'censorAdultCards must be a boolean' });
 
         const update = {};
         if (displayName !== undefined) update.displayName = displayName.trim();
         if (avatarUrl !== undefined) update.avatarUrl = avatarUrl.trim();
+        if (censorAdultCards !== undefined) update.censorAdultCards = censorAdultCards;
 
         const user = await User.findByIdAndUpdate(req.user.id, { $set: update }, { new: true }).select('-passwordHash').lean();
         res.json({
             username: user.username,
             displayName: user.displayName || '',
             avatarUrl: user.avatarUrl || '',
+            censorAdultCards: user.censorAdultCards !== false,
         });
     } catch (err) {
         console.error('PATCH /api/profile error:', err);
@@ -354,6 +511,241 @@ app.delete('/api/profile/block/:username', requireAuth, async (req, res) => {
     }
 });
 
+// ── Card library routes ──────────────────────────────────────────────────────
+
+/**
+ * GET /api/cards
+ * Query: q?, mine?
+ */
+app.get('/api/cards', requireAuth, async (req, res) => {
+    try {
+        const q = String(req.query.q || '').trim();
+        const mine = req.query.mine === 'true';
+        const filter = mine
+            ? { createdBy: req.user.username }
+            : { visibility: 'public' };
+
+        if (q) {
+            filter.$or = [
+                { name: { $regex: q, $options: 'i' } },
+                { id: { $regex: q, $options: 'i' } },
+            ];
+        }
+
+        const cards = await Card.find(filter).sort({ official: -1, createdAt: -1 }).limit(300).lean();
+        res.json({ cards: cards.map(serializeCardForClient) });
+    } catch (err) {
+        console.error('GET /api/cards error:', err);
+        res.status(500).json({ error: 'Failed to fetch cards' });
+    }
+});
+
+/**
+ * GET /api/cards/ability-options
+ */
+app.get('/api/cards/ability-options', requireAuth, async (_req, res) => {
+    const abilities = Array.from(abilityCatalog.values()).map((a) => ({
+        name: a.name,
+        actionInfo: a.actionInfo,
+        description: a.description,
+        type: a.type,
+        microeventType: a.microevent?.type || null,
+        target: ABILITY_TARGETS[a.name] || 'enemy',
+    }));
+    res.json({ abilities });
+});
+
+/**
+ * POST /api/cards
+ * Body: { name, image, description, elements, attack, defense, evasion, agility, health, abilityNames[], adultOnly? }
+ */
+app.post('/api/cards', requireAuth, async (req, res) => {
+    try {
+        const validationError = validateCustomCardPayload(req.body);
+        if (validationError) return res.status(400).json({ error: validationError });
+
+        const baseId = sanitizeCardId(req.body.name);
+        let nextId = `${CARD_ID_PREFIX}${req.user.username}_${baseId}`;
+        if (await Card.exists({ id: nextId })) {
+            nextId = `${nextId}_${Date.now().toString(36).slice(-4)}`;
+        }
+
+        const card = await Card.create({
+            id: nextId,
+            name: String(req.body.name).trim(),
+            type: 'Battler',
+            image: String(req.body.image).trim(),
+            description: String(req.body.description || '').trim(),
+            elements: req.body.elements || {},
+            passives: [],
+            actions: buildActionsFromNames(req.body.abilityNames),
+            defense: Number(req.body.defense),
+            evasion: Number(req.body.evasion),
+            health: Number(req.body.health),
+            attack: Number(req.body.attack),
+            agility: Number(req.body.agility),
+            official: false,
+            adultOnly: !!req.body.adultOnly,
+            visibility: 'public',
+            createdBy: req.user.username,
+            versions: [],
+        });
+
+        res.status(201).json({ card: serializeCardForClient(card.toObject()) });
+    } catch (err) {
+        console.error('POST /api/cards error:', err);
+        res.status(500).json({ error: 'Failed to create card' });
+    }
+});
+
+/**
+ * POST /api/cards/:id/report
+ * Body: { reason }
+ */
+app.post('/api/cards/:id/report', requireAuth, async (req, res) => {
+    try {
+        const reason = String(req.body.reason || '').trim().slice(0, 240);
+        if (!reason) return res.status(400).json({ error: 'Report reason is required' });
+
+        const card = await Card.findOne({ id: req.params.id });
+        if (!card) return res.status(404).json({ error: 'Card not found' });
+
+        const alreadyReported = (card.reports?.entries || []).some((r) => r.reporter === req.user.username);
+        if (alreadyReported) return res.status(409).json({ error: 'You already reported this card' });
+
+        card.reports = card.reports || { count: 0, entries: [] };
+        card.reports.entries.push({ reporter: req.user.username, reason, createdAt: new Date() });
+        card.reports.count = card.reports.entries.length;
+        card.markModified('reports');
+        await card.save();
+
+        res.status(201).json({ ok: true, reports: card.reports.count });
+    } catch (err) {
+        console.error('POST /api/cards/:id/report error:', err);
+        res.status(500).json({ error: 'Failed to report card' });
+    }
+});
+
+/**
+ * PATCH /api/cards/:id
+ * Owner-only edit for non-official cards; creates version snapshot.
+ */
+app.patch('/api/cards/:id', requireAuth, async (req, res) => {
+    try {
+        const card = await Card.findOne({ id: req.params.id });
+        if (!card) return res.status(404).json({ error: 'Card not found' });
+        if (card.official) return res.status(403).json({ error: 'Official cards cannot be edited' });
+        if (card.createdBy !== req.user.username) return res.status(403).json({ error: 'Only the card owner can edit this card' });
+
+        const validationError = validateCustomCardPayload(req.body);
+        if (validationError) return res.status(400).json({ error: validationError });
+
+        card.versions = card.versions || [];
+        card.versions.push(toVersionSnapshot(card.toObject(), req.user.username));
+
+        card.name = String(req.body.name).trim();
+        card.image = String(req.body.image).trim();
+        card.description = String(req.body.description || '').trim();
+        card.elements = req.body.elements || {};
+        card.actions = buildActionsFromNames(req.body.abilityNames);
+        card.passives = [];
+        card.defense = Number(req.body.defense);
+        card.evasion = Number(req.body.evasion);
+        card.health = Number(req.body.health);
+        card.attack = Number(req.body.attack);
+        card.agility = Number(req.body.agility);
+        card.adultOnly = !!req.body.adultOnly;
+        card.markModified('elements');
+        card.markModified('actions');
+        card.markModified('versions');
+        await card.save();
+
+        res.json({ card: serializeCardForClient(card.toObject()) });
+    } catch (err) {
+        console.error('PATCH /api/cards/:id error:', err);
+        res.status(500).json({ error: 'Failed to update card' });
+    }
+});
+
+/**
+ * DELETE /api/cards/:id
+ * Owner-only delete for non-official cards.
+ */
+app.delete('/api/cards/:id', requireAuth, async (req, res) => {
+    try {
+        const card = await Card.findOne({ id: req.params.id });
+        if (!card) return res.status(404).json({ error: 'Card not found' });
+        if (card.official) return res.status(403).json({ error: 'Official cards cannot be deleted' });
+        if (card.createdBy !== req.user.username) return res.status(403).json({ error: 'Only the card owner can delete this card' });
+
+        await Card.deleteOne({ id: req.params.id });
+        res.status(204).send();
+    } catch (err) {
+        console.error('DELETE /api/cards/:id error:', err);
+        res.status(500).json({ error: 'Failed to delete card' });
+    }
+});
+
+/**
+ * POST /api/cards/:id/fork
+ * Clones a public/official card into an editable custom card for the caller.
+ */
+app.post('/api/cards/:id/fork', requireAuth, async (req, res) => {
+    try {
+        const source = await Card.findOne({ id: req.params.id }).lean();
+        if (!source) return res.status(404).json({ error: 'Card not found' });
+        if (source.visibility !== 'public') return res.status(403).json({ error: 'Card is not forkable' });
+
+        const baseId = sanitizeCardId(`${source.name}_fork`);
+        let nextId = `${CARD_ID_PREFIX}${req.user.username}_${baseId}`;
+        if (await Card.exists({ id: nextId })) {
+            nextId = `${nextId}_${Date.now().toString(36).slice(-4)}`;
+        }
+
+        const forkCard = await Card.create({
+            ...cloneCardForGame(source),
+            id: nextId,
+            name: `${source.name} (Fork)`,
+            official: false,
+            adultOnly: !!source.adultOnly,
+            visibility: 'public',
+            createdBy: req.user.username,
+            sourceCardId: source.id,
+            versions: [toVersionSnapshot(source, req.user.username)],
+        });
+
+        res.status(201).json({ card: serializeCardForClient(forkCard.toObject()) });
+    } catch (err) {
+        console.error('POST /api/cards/:id/fork error:', err);
+        res.status(500).json({ error: 'Failed to fork card' });
+    }
+});
+
+/**
+ * GET /api/cards/:id/versions
+ */
+app.get('/api/cards/:id/versions', requireAuth, async (req, res) => {
+    try {
+        const card = await Card.findOne({ id: req.params.id }).lean();
+        if (!card) return res.status(404).json({ error: 'Card not found' });
+
+        if (card.visibility !== 'public' && card.createdBy !== req.user.username) {
+            return res.status(403).json({ error: 'Not allowed to view versions for this card' });
+        }
+
+        const versions = (card.versions || []).map((v, idx) => ({
+            index: idx,
+            editedAt: v.editedAt,
+            editedBy: v.editedBy,
+            snapshot: v.snapshot,
+        })).reverse();
+        res.json({ cardId: card.id, cardName: card.name, versions });
+    } catch (err) {
+        console.error('GET /api/cards/:id/versions error:', err);
+        res.status(500).json({ error: 'Failed to load card versions' });
+    }
+});
+
 // ── Session (lobby) routes ────────────────────────────────────────────────────
 
 /**
@@ -402,6 +794,7 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
                 startingHp: Number(settings.startingHp) || 20,
                 maxBattlers: settings.maxBattlers ? Number(settings.maxBattlers) : null,
                 teamMode: settings.teamMode === 'teams' ? 'teams' : 'ffa',
+                allowCustomCards: settings.allowCustomCards !== false,
             },
         });
         res.status(201).json({ session });
@@ -504,10 +897,22 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
             return res.status(409).json({ error: `Waiting for players to choose a deck: ${names}` });
         }
 
+        const selectedIds = [...new Set(session.players.flatMap((p) => p.selectedDeck || []))];
+        const selectedDeckCards = selectedIds.length > 0
+            ? await Card.find({ id: { $in: selectedIds } }).lean()
+            : [];
+        const cardById = new Map(selectedDeckCards.map((c) => [c.id, cloneCardForGame(c)]));
+
         // Merge real players and CPU slots, ordered by slot name
         const SLOT_ORDER = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
         const combined = [
-            ...session.players.map((p) => ({ name: p.username, team: p.team, slot: p.slot, isBot: false, selectedDeck: p.selectedDeck || [] })),
+            ...session.players.map((p) => ({
+                name: p.username,
+                team: p.team,
+                slot: p.slot,
+                isBot: false,
+                selectedDeck: (p.selectedDeck || []).map((id) => cardById.get(id)).filter(Boolean),
+            })),
             ...(session.cpuSlots || []).map((c) => ({ name: c.name, team: null, slot: c.slot, isBot: true, selectedDeck: [] })),
         ].sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
 
@@ -605,13 +1010,14 @@ app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
         if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can update settings' });
         if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change settings after game starts' });
 
-        const { startingHp, maxBattlers, deckSize, teamMode, turnTimeLimit, microgameDifficulty } = req.body;
+        const { startingHp, maxBattlers, deckSize, teamMode, turnTimeLimit, microgameDifficulty, allowCustomCards } = req.body;
         if (startingHp !== undefined) session.settings.startingHp = Number(startingHp);
         if (maxBattlers !== undefined) session.settings.maxBattlers = maxBattlers === null ? null : Number(maxBattlers);
         if (deckSize !== undefined) session.settings.deckSize = deckSize === null ? null : Number(deckSize);
         if (teamMode !== undefined) session.settings.teamMode = teamMode === 'teams' ? 'teams' : 'ffa';
         if (turnTimeLimit !== undefined) session.settings.turnTimeLimit = turnTimeLimit === null ? null : Math.max(60, Number(turnTimeLimit));
         if (microgameDifficulty !== undefined) session.settings.microgameDifficulty = Math.min(5, Math.max(1, Number(microgameDifficulty) || 1));
+        if (allowCustomCards !== undefined) session.settings.allowCustomCards = !!allowCustomCards;
         session.markModified('settings');
         await session.save();
 
@@ -627,7 +1033,6 @@ app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
  * Body: { deck: string[] }  — 3-10 card IDs from the known card list.
  * Sets the calling player's selected deck and marks them as 'ready'.
  */
-const VALID_CARD_IDS = new Set(['hoodNigga', 'coldKilla', 'pyroWarden', 'voltStinger', 'terraTitan', 'shadowStalker', 'aquaticSage', 'ironMonarch', 'zephyrArcher', 'toxicChimera']);
 app.patch('/api/sessions/:id/deck', requireAuth, async (req, res) => {
     try {
         const session = await Session.findById(req.params.id);
@@ -640,8 +1045,18 @@ app.patch('/api/sessions/:id/deck', requireAuth, async (req, res) => {
         const { deck } = req.body;
         if (!Array.isArray(deck)) return res.status(400).json({ error: 'deck must be an array of card IDs' });
         if (deck.length < 3 || deck.length > 10) return res.status(400).json({ error: 'Deck must contain 3–10 cards' });
-        const unknown = deck.filter((id) => !VALID_CARD_IDS.has(id));
+        const dbCards = await Card.find({ id: { $in: deck } }).select('id official').lean();
+        const knownIds = new Set(dbCards.map((c) => c.id));
+        const unknown = deck.filter((id) => !knownIds.has(id));
         if (unknown.length > 0) return res.status(400).json({ error: `Unknown card IDs: ${unknown.join(', ')}` });
+
+        if (session.settings?.allowCustomCards === false) {
+            const officialIds = new Set(dbCards.filter((c) => c.official).map((c) => c.id));
+            const disallowed = deck.filter((id) => !officialIds.has(id));
+            if (disallowed.length > 0) {
+                return res.status(400).json({ error: 'Custom cards are disabled in this lobby' });
+            }
+        }
         // Deduplicate while preserving order
         const unique = [...new Set(deck)];
         if (unique.length < 3) return res.status(400).json({ error: 'Deck must contain at least 3 distinct cards' });

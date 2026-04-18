@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
-import cards from '../card-game/database/cards';
+import { useState, useMemo, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import defaultCards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
 
 const ELEMENT_COLORS = {
@@ -39,6 +40,8 @@ const saveDeck = (name, deck) => {
  *   error?: string | null
  */
 const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) => {
+    const token = useSelector((s) => s.auth.token);
+    const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
     const [selected, setSelected] = useState(() => new Set(initialDeck || []));
     const [savedDecks, setSavedDecks] = useState(loadSavedDecks);
     const [loadValue, setLoadValue] = useState('');
@@ -46,6 +49,27 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
     const [showSaveInput, setShowSaveInput] = useState(false);
     const [previewCard, setPreviewCard] = useState(null);
     const [confirmDeleteDeck, setConfirmDeleteDeck] = useState(null);
+    const [cards, setCards] = useState(defaultCards);
+
+    useEffect(() => {
+        let mounted = true;
+        const loadCards = async () => {
+            try {
+                const res = await fetch('/api/cards', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json();
+                if (!res.ok) return;
+                if (mounted && Array.isArray(data.cards) && data.cards.length > 0) {
+                    setCards(data.cards);
+                }
+            } catch {
+                // Keep static fallback cards.
+            }
+        };
+        if (token) loadCards();
+        return () => { mounted = false; };
+    }, [token]);
 
     const toggle = (id) => {
         setSelected((prev) => {
@@ -133,6 +157,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                 <div className="db-card-grid">
                     {cards.map((card) => {
                         const isSelected = selected.has(card.id);
+                        const isCensored = !!card.adultOnly && censorAdultCards;
                         const primaryElement = Object.entries(card.elements || {})[0];
                         const elStyle = primaryElement ? (ELEMENT_COLORS[primaryElement[0]] || ELEMENT_COLORS.normal) : ELEMENT_COLORS.normal;
                         return (
@@ -143,8 +168,8 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                                     style={isSelected ? { borderColor: elStyle.border, background: elStyle.bg } : undefined}
                                 >
                                     {isSelected && <span className="db-card-check">✓</span>}
-                                    <img src={card.image} alt={card.name} className="db-card-img" />
-                                    <div className="db-card-name">{card.name}</div>
+                                    <img src={isCensored ? defaultCards[0]?.image : card.image} alt={card.name} className="db-card-img" />
+                                    <div className="db-card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
                                     <div className="db-card-elements">
                                         {Object.entries(card.elements || {}).map(([el, val]) => {
                                             const s = ELEMENT_COLORS[el] || ELEMENT_COLORS.normal;

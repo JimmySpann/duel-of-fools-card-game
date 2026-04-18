@@ -14,6 +14,7 @@ import {
     setSoundVolume,
     setCardDanceEnabled,
     setCardDanceIntensity,
+    setCensorAdultCards,
 } from './profileSlice';
 import sounds from '../sound/soundManager';
 import useMusicPlayer from '../sound/useMusicPlayer';
@@ -24,7 +25,7 @@ const TABS = ['Profile', 'Friends', 'Blocked', 'Options'];
 
 const Profile = ({ onClose, initialTab = 'Profile' }) => {
     const dispatch = useDispatch();
-    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM, notifyLobby, soundVolume, cardDanceEnabled, cardDanceIntensity } = useSelector((s) => s.profile);
+    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM, notifyLobby, soundVolume, cardDanceEnabled, cardDanceIntensity, censorAdultCards } = useSelector((s) => s.profile);
     const username = useSelector((s) => s.auth.username);
     const { permission, request } = useNotifications();
 
@@ -493,6 +494,31 @@ const Profile = ({ onClose, initialTab = 'Profile' }) => {
                                         )}
                                     </button>
                                 ))}
+                            </div>
+                        </div>
+
+                        <div className="profile-notif-section" style={{ marginTop: '1.25rem' }}>
+                            <div className="profile-subsection-title" style={{ marginBottom: '0.5rem' }}>
+                                Content
+                            </div>
+
+                            <div className="profile-toggle-row">
+                                <span className="profile-toggle-label">
+                                    Censor adults-only cards
+                                    <span className="profile-toggle-hint">Hide adults-only card art and text in game, deck builder, and card views</span>
+                                </span>
+                                <button
+                                    type="button"
+                                    className={`profile-toggle ${censorAdultCards ? 'on' : 'off'}`}
+                                    onClick={() => {
+                                        const next = !censorAdultCards;
+                                        dispatch(setCensorAdultCards(next));
+                                        dispatch(updateProfile({ censorAdultCards: next }));
+                                    }}
+                                    aria-label="Toggle adults-only card censorship"
+                                >
+                                    <span className="profile-toggle-knob" />
+                                </button>
                             </div>
                         </div>
                     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import cardBack from '../../../../../assets/card-back.jpg';
 import fireIcon from '../../../../../assets/elements/fire-icon.png';
 import iceIcon from '../../../../../assets/elements/ice-icon.png';
@@ -138,6 +139,8 @@ const Card = ({
     isFlipped,
     showExhausted = true,
 }) => {
+    const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
+    const isCensored = !!card?.adultOnly && censorAdultCards;
 
     return (
         <div className="mini-card-container">
@@ -147,11 +150,11 @@ const Card = ({
                 <div className="mini-card-image-container">
                     <img
                         className="mini-card-image"
-                        src={card.image}
+                        src={isCensored ? cardBack : card.image}
                         alt="Card Visual"
                     />
                     <StatusBadges statusEffects={card.statusEffects} imageStack />
-                    <div className="mini-card-name">{card.name}</div>
+                    <div className="mini-card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
                 </div>
 
                 <div className="mini-card-info-container">

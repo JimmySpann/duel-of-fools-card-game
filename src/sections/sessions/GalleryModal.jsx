@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import cards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
 
@@ -34,6 +35,8 @@ const ElementChip = ({ element, value }) => {
 };
 
 const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
+    const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
+    const isCensored = !!card.adultOnly && censorAdultCards;
     const hasActions = card.actions && card.actions.length > 0;
     const hasPassives = card.passives && card.passives.length > 0;
 
@@ -41,10 +44,10 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
         <div className={`gallery-card${isExpanded ? ' expanded' : ''}`} onClick={onToggle}>
             <div className="gallery-card-header">
                 <div className="gallery-card-img-wrap">
-                    <img src={card.image} alt={card.name} className="gallery-card-img" />
+                    <img src={isCensored ? '/img/Logo.png' : card.image} alt={card.name} className="gallery-card-img" />
                 </div>
                 <div className="gallery-card-info">
-                    <div className="gallery-card-name">{card.name}</div>
+                    <div className="gallery-card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
                     <div className="gallery-card-elements">
                         {Object.entries(card.elements || {}).map(([el, val]) => (
                             <ElementChip key={el} element={el} value={val} />
@@ -68,16 +71,16 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
 
             {isExpanded && (
                 <div className="gallery-card-body" onClick={(e) => e.stopPropagation()}>
-                    <p className="gallery-card-desc">{card.description}</p>
+                    <p className="gallery-card-desc">{isCensored ? 'Description hidden by content settings.' : card.description}</p>
 
                     {hasPassives && (
                         <div className="gallery-section">
                             <div className="gallery-section-title">Passives</div>
                             {card.passives.map((p, i) => (
                                 <div key={i} className="gallery-passive">
-                                    <span className="gallery-ability-name">{p.name}</span>
-                                    <span className="gallery-ability-effect">{p.effect}</span>
-                                    <span className="gallery-ability-desc">{p.description}</span>
+                                    <span className="gallery-ability-name">{isCensored ? 'Hidden Passive' : p.name}</span>
+                                    <span className="gallery-ability-effect">{isCensored ? 'Hidden' : p.effect}</span>
+                                    <span className="gallery-ability-desc">{isCensored ? 'Text hidden by content settings.' : p.description}</span>
                                 </div>
                             ))}
                         </div>
@@ -89,15 +92,15 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
                             {card.actions.map((a, i) => (
                                 <div key={i} className="gallery-action">
                                     <div className="gallery-action-row">
-                                        <span className="gallery-ability-name">{a.name}</span>
-                                        <span className="gallery-ability-info">{a.actionInfo}</span>
+                                        <span className="gallery-ability-name">{isCensored ? 'Hidden Action' : a.name}</span>
+                                        <span className="gallery-ability-info">{isCensored ? 'Hidden' : a.actionInfo}</span>
                                         {a.microevent && (
                                             <span className="gallery-microevent-badge">
                                                 {MICROEVENT_LABELS[a.microevent.type] || a.microevent.type}
                                             </span>
                                         )}
                                     </div>
-                                    <span className="gallery-ability-desc">{a.description}</span>
+                                    <span className="gallery-ability-desc">{isCensored ? 'Text hidden by content settings.' : a.description}</span>
                                     <span className="gallery-ability-uses">Uses: {a.limit}</span>
                                 </div>
                             ))}

@@ -32,9 +32,12 @@ const defaultMaxBattlers = (playerCount) => {
 };
 
 const buildPlayer = (id, name, image, startingHp = 20, team = null, deckSize = null, isBot = false, selectedDeck = []) => {
-    // Use the player's chosen card list if provided, otherwise use all cards
+    // Use the player's chosen card list if provided, otherwise use all cards.
+    // selectedDeck can be an array of card IDs or fully-hydrated card objects.
     const cardPool = (selectedDeck && selectedDeck.length >= 3)
-        ? selectedDeck.map((cid) => cards.find((c) => c.id === cid)).filter(Boolean)
+        ? (typeof selectedDeck[0] === 'string'
+            ? selectedDeck.map((cid) => cards.find((c) => c.id === cid)).filter(Boolean)
+            : selectedDeck)
         : cards;
     let pool = shuffle(cardPool).map((c) => ({
         ...c,
