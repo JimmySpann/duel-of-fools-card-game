@@ -90,6 +90,7 @@ const createInitialState = (playerConfigs, settings = {}) => {
         lastHitEvents: [],
         recapEvents: [],
         turnSummary: [],
+        pendingRecap: {},
         cardPlayedThisTurn: false,
         turnStartedAt: Date.now(),
     };
@@ -967,7 +968,8 @@ const actions = {
 
     forfeitCurrentPlayer(state) {
         if (state.gameOver) return;
-        const player = state.players.find((p) => p.id === state.currentTurn);
+        const justActedId = state.currentTurn;
+        const player = state.players.find((p) => p.id === justActedId);
         if (!player || player.eliminated) return;
         player.health = 0;
         player.eliminated = true;
@@ -989,7 +991,16 @@ const actions = {
         state.pendingAction = null;
         state.cardPlayedThisTurn = false;
         state.lastHitEvents = [];
-        state.turnSummary = [...state.recapEvents];
+        // Accumulate this turn's events for every player who didn't just forfeit
+        if (!state.pendingRecap) state.pendingRecap = {};
+        for (const p of state.players) {
+            if (p.id !== justActedId) {
+                if (!state.pendingRecap[p.id]) state.pendingRecap[p.id] = [];
+                state.pendingRecap[p.id].push(...state.recapEvents);
+            }
+        }
+        state.turnSummary = [...(state.pendingRecap[nextPlayer.id] ?? [])];
+        state.pendingRecap[nextPlayer.id] = [];
         state.recapEvents = [];
         state.log.unshift(`--- ${nextPlayer.name}'s turn ---`);
         state.turnStartedAt = Date.now();
@@ -997,6 +1008,7 @@ const actions = {
 
     endTurn(state) {
         if (state.gameOver) return;
+        const justActedId = state.currentTurn;
         cleanupDefeated(state);
         state.lastHitEvents = [];
 
@@ -1020,7 +1032,17 @@ const actions = {
         state.pendingAction = null;
         state.cardPlayedThisTurn = false;
         processStatusEffects(nextPlayer, state);
-        state.turnSummary = [...state.recapEvents];
+        // Accumulate this turn's events for every player who didn't just act
+        if (!state.pendingRecap) state.pendingRecap = {};
+        for (const p of state.players) {
+            if (p.id !== justActedId) {
+                if (!state.pendingRecap[p.id]) state.pendingRecap[p.id] = [];
+                state.pendingRecap[p.id].push(...state.recapEvents);
+            }
+        }
+        // Pop accumulated events as the turnSummary for the incoming player
+        state.turnSummary = [...(state.pendingRecap[nextPlayer.id] ?? [])];
+        state.pendingRecap[nextPlayer.id] = [];
         state.recapEvents = [];
 
         // Mark eliminated if health dropped to 0 from DOTs

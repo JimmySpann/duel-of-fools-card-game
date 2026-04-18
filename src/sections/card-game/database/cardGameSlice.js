@@ -43,6 +43,7 @@ const createInitialState = () => ({
   lastHitEvents: [], // animation events for the current action
   recapEvents: [],   // structured events accumulating this turn
   turnSummary: [],   // snapshot shown to incoming player as recap
+  pendingRecap: {},  // per-player accumulator across multiple turns
   cardPlayedThisTurn: false,
 });
 
@@ -569,6 +570,7 @@ export const cardGameSlice = createSlice({
 
     endTurn: (state) => {
       if (state.gameOver) return;
+      const justActedId = state.currentTurn;
       cleanupDefeated(state);
       state.lastHitEvents = [];
       const nextPlayer = state.players.find((p) => p.id !== state.currentTurn);
@@ -583,8 +585,17 @@ export const cardGameSlice = createSlice({
       state.pendingAction = null;
       // Process status effects at the start of the next player's turn
       processStatusEffects(nextPlayer, state);
-      // Save all events (attacks + DOTs) as turnSummary for the incoming player's recap
-      state.turnSummary = [...state.recapEvents];
+      // Accumulate this turn's events for every player who didn't just act
+      if (!state.pendingRecap) state.pendingRecap = {};
+      for (const p of state.players) {
+        if (p.id !== justActedId) {
+          if (!state.pendingRecap[p.id]) state.pendingRecap[p.id] = [];
+          state.pendingRecap[p.id].push(...state.recapEvents);
+        }
+      }
+      // Pop accumulated events as the turnSummary for the incoming player
+      state.turnSummary = [...(state.pendingRecap[nextPlayer.id] ?? [])];
+      state.pendingRecap[nextPlayer.id] = [];
       state.recapEvents = [];
       if (nextPlayer.health <= 0) {
         const winner = state.players.find((p) => p.id !== nextPlayer.id);

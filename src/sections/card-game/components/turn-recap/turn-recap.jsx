@@ -81,10 +81,12 @@ const RecapEvent = ({ event, index, playerNames, currentPlayerId }) => {
 const TurnRecap = ({ currentPlayer, players }) => {
     const dispatch = useDispatch();
     const turnSummary = useSelector((s) => s.cardGame.turnSummary);
+    const currentTurn = useSelector((s) => s.cardGame.currentTurn);
     const [activeTab, setActiveTab] = useState('brief');
     const [search, setSearch] = useState('');
 
-    if (!turnSummary?.length) return null;
+    // Only show at the start of this player's own turn
+    if (!turnSummary?.length || currentTurn !== currentPlayer?.id) return null;
 
     const playerNames = Object.fromEntries((players ?? []).map((p) => [p.id, p.name]));
 
