@@ -11,10 +11,35 @@ const TARGET_POWER_MULT = {
     allAllies: 1.5,
 };
 
+const MICROGAME_DIFFICULTY = {
+    qte: 'easy',
+    pattern: 'easy',
+    route: 'easy',
+    mash: 'easy',
+    quiz: 'medium',
+    parry: 'medium',
+    sigil: 'medium',
+    arrow: 'medium',
+    rhythm: 'hard',
+};
+
+const MICROGAME_POWER_REDUCTION = {
+    easy: 1.2,
+    medium: 2,
+    hard: 3.1,
+};
+
 const clampNum = (value, min, max, fallback = min) => {
     const n = Number(value);
     if (!Number.isFinite(n)) return fallback;
     return Math.max(min, Math.min(max, n));
+};
+
+const getMicrogamePowerReduction = (microevent) => {
+    const type = String(microevent?.type || '');
+    if (!type) return 0;
+    const tier = MICROGAME_DIFFICULTY[type] || 'medium';
+    return MICROGAME_POWER_REDUCTION[tier] || 0;
 };
 
 const estimateCustomAbilityPower = (ability) => {
@@ -56,7 +81,7 @@ const estimateCustomAbilityPower = (ability) => {
 
     score *= TARGET_POWER_MULT[targetType] ?? 1;
     score *= (0.85 + Math.min(1.2, limit / 4.5));
-    if (ability?.microevent) score += 1.5;
+    score -= getMicrogamePowerReduction(ability?.microevent);
 
     return Math.max(0, Number(score.toFixed(2)));
 };

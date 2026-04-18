@@ -100,3 +100,24 @@ test('validateTotalCustomAbilityPowerBudget passes for balanced loadout', () => 
 
     assert.equal(err, null);
 });
+
+test('harder microgames reduce power more than easy ones', () => {
+    const baseAbility = {
+        targetType: 'enemyCard',
+        limit: 3,
+        effects: [{ type: 'damage', multiplier: 2.2, repeat: 2, flatBonus: 3 }],
+    };
+
+    const withoutMicrogame = estimateCustomAbilityPower(baseAbility);
+    const withQte = estimateCustomAbilityPower({
+        ...baseAbility,
+        microevent: { type: 'qte', outcome: 'scaled' },
+    });
+    const withRhythm = estimateCustomAbilityPower({
+        ...baseAbility,
+        microevent: { type: 'rhythm', outcome: 'scaled' },
+    });
+
+    assert.ok(withQte < withoutMicrogame);
+    assert.ok(withRhythm < withQte);
+});

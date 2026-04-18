@@ -33,6 +33,19 @@ const STATUS_TYPES = ['burned', 'frozen', 'def_up', 'def_down', 'poisoned', 'ble
 const CLEANSE_DEBUFFS = ['burned', 'frozen', 'poisoned', 'bleeding', 'def_down'];
 const MAX_CUSTOM_ABILITY_POWER = 26;
 const MAX_TOTAL_CUSTOM_ABILITY_POWER = 54;
+const MICROGAME_TYPES = ['qte', 'mash', 'pattern', 'rhythm', 'quiz', 'parry', 'route', 'sigil', 'arrow'];
+const MICROGAME_DIFFICULTY = {
+    qte: 'easy',
+    pattern: 'easy',
+    route: 'easy',
+    mash: 'easy',
+    quiz: 'medium',
+    parry: 'medium',
+    sigil: 'medium',
+    arrow: 'medium',
+    rhythm: 'hard',
+};
+const MICROGAME_POWER_REDUCTION = { easy: 1.2, medium: 2, hard: 3.1 };
 
 const createDamageEffect = () => ({ type: 'damage', multiplier: 1 });
 const createEmptyCustomAbility = () => ({
@@ -57,6 +70,12 @@ const validateCustomAbilityLocal = (ability, idx) => {
             return `${label}, effect #${i + 1}: pick at least one debuff`;
         }
     }
+    if (ability?.microevent) {
+        const mt = String(ability.microevent.type || '');
+        const mo = String(ability.microevent.outcome || '');
+        if (!MICROGAME_TYPES.includes(mt)) return `${label}: invalid microgame type`;
+        if (!['binary', 'scaled'].includes(mo)) return `${label}: invalid microgame outcome`;
+    }
     return null;
 };
 
@@ -72,6 +91,13 @@ const clampNum = (value, min, max, fallback = min) => {
     const n = Number(value);
     if (!Number.isFinite(n)) return fallback;
     return Math.max(min, Math.min(max, n));
+};
+
+const getMicrogamePowerReduction = (microevent) => {
+    const type = String(microevent?.type || '');
+    if (!type) return 0;
+    const tier = MICROGAME_DIFFICULTY[type] || 'medium';
+    return MICROGAME_POWER_REDUCTION[tier] || 0;
 };
 
 const estimateCustomAbilityPower = (ability) => {
@@ -113,7 +139,7 @@ const estimateCustomAbilityPower = (ability) => {
 
     score *= TARGET_POWER_MULT[targetType] ?? 1;
     score *= (0.85 + Math.min(1.2, limit / 4.5));
-    if (ability?.microevent) score += 1.5;
+    score -= getMicrogamePowerReduction(ability?.microevent);
 
     return Math.max(0, Number(score.toFixed(2)));
 };
@@ -174,6 +200,10 @@ const CustomCardModal = ({ onClose }) => {
     const totalAbilityCount = abilityNames.length + customAbilities.length;
     const customAbilityPowerScores = useMemo(
         () => customAbilities.map((ability) => estimateCustomAbilityPower(ability)),
+        [customAbilities]
+    );
+    const customAbilityMicrogameDiscounts = useMemo(
+        () => customAbilities.map((ability) => getMicrogamePowerReduction(ability?.microevent)),
         [customAbilities]
     );
     const totalCustomAbilityPower = useMemo(
@@ -639,6 +669,11 @@ const CustomCardModal = ({ onClose }) => {
                                         <div className="custom-card-power-track">
                                             <div className="custom-card-power-fill" style={{ width: powerFill(customAbilityPowerScores[abilityIdx] || 0, MAX_CUSTOM_ABILITY_POWER) }} />
                                         </div>
+                                        {!!customAbilityMicrogameDiscounts[abilityIdx] && (
+                                            <small>
+                                                Microgame discount: -{customAbilityMicrogameDiscounts[abilityIdx].toFixed(1)} power
+                                            </small>
+                                        )}
                                     </div>
                                     <div className="custom-card-stats-grid" style={{ gridTemplateColumns: '2fr 1fr 1fr' }}>
                                         <label className="custom-card-label">
@@ -670,6 +705,49 @@ const CustomCardModal = ({ onClose }) => {
                                                 value={ability.limit}
                                                 onChange={(e) => updateCustomAbility(abilityIdx, { limit: clampInt(e.target.value, 1, 10) })}
                                             />
+                                        </label>
+                                    </div>
+                                    <div className="custom-card-stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                                        <label className="custom-card-label">
+                                            Microgame
+                                            <select
+                                                className="custom-card-input"
+                                                value={ability.microevent?.type || ''}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (!val) updateCustomAbility(abilityIdx, { microevent: null });
+                                                    else updateCustomAbility(abilityIdx, {
+                                                        microevent: {
+                                                            type: val,
+                                                            outcome: ability.microevent?.outcome || 'scaled',
+                                                        },
+                                                    });
+                                                }}
+                                            >
+                                                <option value="">None</option>
+                                                {MICROGAME_TYPES.map((t) => (
+                                                    <option key={t} value={t}>
+                                                        {t} ({MICROGAME_DIFFICULTY[t]})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <small className="custom-card-help">Harder microgames reduce power more.</small>
+                                        </label>
+                                        <label className="custom-card-label">
+                                            Microgame Outcome
+                                            <select
+                                                className="custom-card-input"
+                                                value={ability.microevent?.outcome || 'scaled'}
+                                                disabled={!ability.microevent}
+                                                onChange={(e) => updateCustomAbility(abilityIdx, {
+                                                    microevent: ability.microevent
+                                                        ? { ...ability.microevent, outcome: e.target.value }
+                                                        : null,
+                                                })}
+                                            >
+                                                <option value="scaled">Scaled</option>
+                                                <option value="binary">Binary</option>
+                                            </select>
                                         </label>
                                     </div>
 
