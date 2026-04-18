@@ -58,8 +58,9 @@
 
 .card-dance-layer {
     transform-origin: center 62%;
-    transition: transform 0.09s linear;
+    transition: transform 0.11s cubic-bezier(0.2, 0.8, 0.2, 1);
     will-change: transform;
+    transform-style: preserve-3d;
 }
 
 .card-dance-layer.card-dance-enabled {

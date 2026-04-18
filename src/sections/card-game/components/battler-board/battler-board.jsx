@@ -6,11 +6,12 @@ import musicManager from '../../../../features/sound/musicManager';
 import './battler-board.css'
 
 const ANIM_DURATION = 900;
-const DANCE_MOTION_THRESHOLD = 0.3;
-const DANCE_PEAK_BOOST = 1.55;
+const DANCE_MOTION_THRESHOLD = 0.24;
+const DANCE_PEAK_BOOST = 1.95;
 const DANCE_MAX_X_TRAVEL = 34;
-const DANCE_MAX_LIFT = 26;
-const DANCE_MAX_ROTATION = 30;
+const DANCE_MAX_LIFT = 18;
+const DANCE_MAX_ROTATION = 22;
+const DANCE_MAX_X_ROTATION = 300;
 
 const TWO_PI = Math.PI * 2;
 const DANCE_CHOREOGRAPHIES = [
@@ -239,7 +240,7 @@ const getPatternMotion = (pattern, { trackBeats, phase, onBeat, offBeat, barline
         const glide = Math.sin(trackBeats * Math.PI * 0.5 + phase * 0.5);
         const cross = Math.sin(trackBeats * TWO_PI + phase * 1.7);
         return {
-            extraX: (glide * 0.62 + cross * 0.38) * stepAmp * 1.15,
+            extraX: (glide * 0.72 + cross * 0.42) * stepAmp * 1.26,
             extraY: Math.max(0, cross) * 1.4,
             extraRot: glide * 1.15,
             spinBoost: 0.12,
@@ -251,7 +252,7 @@ const getPatternMotion = (pattern, { trackBeats, phase, onBeat, offBeat, barline
         const tap = Math.sin(trackBeats * TWO_PI * 2 + phase * 1.4);
         const snap = Math.sign(tap) * Math.pow(Math.abs(tap), 0.6);
         return {
-            extraX: (run * 0.55 + snap * 0.85) * stepAmp,
+            extraX: (run * 0.62 + snap * 0.95) * stepAmp,
             extraY: Math.max(0, tap) * 1.9 + onBeat * 0.8,
             extraRot: snap * 1.05,
             spinBoost: 0.2,
@@ -262,7 +263,7 @@ const getPatternMotion = (pattern, { trackBeats, phase, onBeat, offBeat, barline
         const zig = Math.sin(trackBeats * TWO_PI * 1.5 + phase * 0.5);
         const zag = Math.sin(trackBeats * TWO_PI * 3 + phase * 1.9);
         return {
-            extraX: (zig * 0.8 + zag * 0.45) * stepAmp,
+            extraX: (zig * 0.94 + zag * 0.52) * stepAmp,
             extraY: Math.max(0, zag) * 1.3,
             extraRot: zig * 1.35,
             spinBoost: 0.22,
@@ -290,7 +291,7 @@ const getPatternMotion = (pattern, { trackBeats, phase, onBeat, offBeat, barline
             extraX: lane * stepAmp * 0.58,
             extraY: windup * 1.7 + release * 1.4,
             extraRot: (release - settle) * 3.4 * effectiveEnergy * intensity,
-            spinBoost: comboBoost,
+            spinBoost: comboBoost * 0.72,
         };
     }
 
@@ -360,9 +361,9 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
             const trackIndex = musicManager.getState().currentIndex || 0;
             const trackProgress = musicManager.getTrackProgress();
             // Extra local smoothing to keep board motion calm.
-            danceSmoothRef.current += (target - danceSmoothRef.current) * 0.2;
+            danceSmoothRef.current += (target - danceSmoothRef.current) * 0.28;
 
-            if (t - lastCommit > 45) {
+            if (t - lastCommit > 32) {
                 lastCommit = t;
                 setDanceEnergy(danceSmoothRef.current);
                 setDanceAudioTime(now);
@@ -448,6 +449,9 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
 
                             const stepWave = Math.sin(trackBeats * Math.PI * profile.stepFreq + phase * 0.9);
                             const stepShape = Math.sign(stepWave) * Math.pow(Math.abs(stepWave), 0.68);
+                            const stepBlock = Math.floor(trackBeats * 0.5 + phase / TWO_PI);
+                            const lanePattern = [1, -1, -1, 1];
+                            const laneBias = lanePattern[((stepBlock % lanePattern.length) + lanePattern.length) % lanePattern.length];
                             const patternMotion = getPatternMotion(namedPhase.pattern, {
                                 trackBeats,
                                 phase,
@@ -461,35 +465,50 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
 
                             const lateralSwing = primaryWave * profile.xRange;
                             const lateralKick = accentWave * onBeat * profile.xKick;
-                            const sideStepTravel = (stepShape * profile.stepAmp) + patternMotion.extraX;
+                            const laneSwitch = laneBias * profile.stepAmp * (0.36 + onBeat * 0.6);
+                            const sideStepTravel = (stepShape * profile.stepAmp) + laneSwitch + patternMotion.extraX;
                             const slideX = (lateralSwing + lateralKick + sideStepTravel) * effectiveEnergy * intensity;
 
                             const liftBase = Math.max(0, hopWave) * profile.yLift;
-                            const liftKick = (onBeat * profile.yKick) + (offBeat * profile.yKick * 0.45);
-                            const reboundLift = (onBeat - offBeat * 0.55) * profile.rebound;
-                            const liftPx = (liftBase + liftKick + reboundLift) * effectiveEnergy * intensity;
+                            const liftKick = (onBeat * profile.yKick) + (offBeat * profile.yKick * 0.24);
+                            const reboundLift = (onBeat - offBeat * 0.42) * profile.rebound;
+                            const bassPulse = clamp((onBeat * 0.95) + (barline * 1.15) + Math.max(0, gated - 0.42) * 0.95, 0, 2.2);
+                            const bassJump = bassPulse * (profile.bassJump ?? 2.7);
+                            const liftPx = (liftBase + liftKick + reboundLift + bassJump + patternMotion.extraY * 0.62) * effectiveEnergy * intensity;
 
                             const spinPulse =
                                 effectiveEnergy >= profile.spinEnergyThreshold
                                     ? beatEnvelope(trackBeats * profile.spinBeatFreq + phase / TWO_PI + profile.spinLag, profile.spinWidth)
                                     : 0;
                             const spinDirection = ((Math.floor(trackBeats) + index) % 2 === 0 ? 1 : -1);
-                            const spinDeg = spinPulse * profile.spinDeg * spinDirection * (0.65 + barline * 0.6 + patternMotion.spinBoost) * intensity;
+                            const spinDeg = spinPulse * profile.spinDeg * 0.56 * spinDirection * (0.56 + barline * 0.44 + patternMotion.spinBoost) * intensity;
+
+                            const twistThreshold = profile.xTwistThreshold ?? Math.max(0.5, profile.spinEnergyThreshold + 0.1);
+                            const twistGate = effectiveEnergy >= twistThreshold && (namedPhase.pattern === 'spinCombo' || bassPulse > 1.05);
+                            const xTwistPulse = twistGate
+                                ? beatEnvelope(trackBeats * (profile.xTwistFreq ?? 0.5) + phase / TWO_PI + 0.08, profile.xTwistWidth ?? 0.19)
+                                : 0;
+                            const xTwistDirection = ((Math.floor(trackBeats * 0.5) + index) % 2 === 0 ? 1 : -1);
+                            const rotateXDeg = xTwistPulse * (profile.xTwistDeg ?? 360) * xTwistDirection * (0.42 + Math.min(1.35, bassPulse) * 0.78) * intensity;
 
                             const baseRotateDeg =
-                                ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick) + (stepShape * profile.leanDeg) + patternMotion.extraRot) *
+                                ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick) + (stepShape * profile.leanDeg) + (patternMotion.extraRot * 0.72)) *
                                 effectiveEnergy *
                                 intensity;
                             const rotateDeg = baseRotateDeg + spinDeg;
 
-                            const scale = 1 + (onBeat * profile.scalePulse + Math.max(0, hopWave) * profile.scalePulse * 0.6) * effectiveEnergy * intensity;
+                            const scale =
+                                1 +
+                                (onBeat * profile.scalePulse + Math.max(0, hopWave) * profile.scalePulse * 0.6) * effectiveEnergy * intensity +
+                                bassPulse * (profile.bassScale ?? 0.12) * effectiveEnergy * intensity;
 
                             const safeX = clamp(slideX, -DANCE_MAX_X_TRAVEL * intensity, DANCE_MAX_X_TRAVEL * intensity);
-                            const safeLift = clamp(liftPx + (patternMotion.extraY * effectiveEnergy * intensity), 0, DANCE_MAX_LIFT * intensity);
+                            const safeLift = clamp(liftPx, 0, DANCE_MAX_LIFT * intensity);
                             const safeRotate = clamp(rotateDeg, -DANCE_MAX_ROTATION, DANCE_MAX_ROTATION);
+                            const safeRotateX = clamp(rotateXDeg, -DANCE_MAX_X_ROTATION, DANCE_MAX_X_ROTATION);
 
                             return {
-                                transform: `translateX(${safeX.toFixed(2)}px) translateY(${-safeLift.toFixed(2)}px) rotate(${safeRotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
+                                transform: `perspective(760px) translateX(${safeX.toFixed(2)}px) translateY(${-safeLift.toFixed(2)}px) rotateX(${safeRotateX.toFixed(2)}deg) rotate(${safeRotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
                             };
                         })()}
                     >
