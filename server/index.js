@@ -1911,7 +1911,7 @@ const triggerMicroevent = async (gameId, game, context, ability, socket) => {
     }
 
     if (me.type === 'arrow') {
-        startPayload.shots = 3;
+        startPayload.shots = Math.max(1, Number(me.shots ?? 3));
         startPayload.targetRadius = [0.125, 0.112, 0.098, 0.086, 0.074][effectiveDifficulty];
         startPayload.crosshairRadius = [0.14, 0.124, 0.108, 0.094, 0.082][effectiveDifficulty];
         startPayload.speed = [0.16, 0.205, 0.255, 0.315, 0.39][effectiveDifficulty];

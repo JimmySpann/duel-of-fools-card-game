@@ -392,6 +392,10 @@ const applyMicroeventModifications = (abilityName, effects, microeventResult) =>
             break;
 
         // ── Pattern scaled ────────────────────────────────────────────────────
+        case 'Gale Shot': {
+            if (score <= 0) return [];
+            return clone;
+        }
         case 'Volley': {
             const hits = Math.max(0, Math.round(score * 3));
             return clone.map((e) => e.type === 'damage' ? { ...e, repeat: hits } : e);
