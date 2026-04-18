@@ -153,8 +153,13 @@
 }
 
 @keyframes qte-pulse {
-    from { box-shadow: 0 4px 20px rgba(230, 126, 34, 0.4); }
-    to   { box-shadow: 0 4px 40px rgba(230, 126, 34, 0.9); }
+    from {
+        box-shadow: 0 4px 20px rgba(230, 126, 34, 0.4);
+    }
+
+    to {
+        box-shadow: 0 4px 40px rgba(230, 126, 34, 0.9);
+    }
 }
 
 .me-qte-prompt {
@@ -473,9 +478,20 @@
 }
 
 @keyframes countdown-pop {
-    0%   { transform: scale(1.5); opacity: 0.3; }
-    60%  { transform: scale(0.92); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(1.5);
+        opacity: 0.3;
+    }
+
+    60% {
+        transform: scale(0.92);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 /* Hit zone pulsing on GO! */
@@ -484,9 +500,17 @@
 }
 
 @keyframes hit-zone-pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.8); }
-    70%  { box-shadow: 0 0 0 12px rgba(245, 166, 35, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); }
+    0% {
+        box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.8);
+    }
+
+    70% {
+        box-shadow: 0 0 0 12px rgba(245, 166, 35, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(245, 166, 35, 0);
+    }
 }
 
 .me-pattern-speed-hint {

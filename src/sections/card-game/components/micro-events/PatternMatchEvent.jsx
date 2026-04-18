@@ -18,7 +18,7 @@ const PatternMatchEvent = ({ context, isSpectator, liveInputs, onComplete, onInp
 
     // Speed scales with difficulty: faster show and smaller gaps at higher levels
     const SHOW_MS = [500, 420, 340, 260, 190][difficulty];
-    const GAP_MS  = [250, 200, 150, 110,  70][difficulty];
+    const GAP_MS = [250, 200, 150, 110, 70][difficulty];
 
     const [phase, setPhase] = useState('countdown');
     const [litIndex, setLitIndex] = useState(null);
