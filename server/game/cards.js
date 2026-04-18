@@ -49,7 +49,7 @@ const cards = [
         actions: [
             { name: 'Searing Lash', actionInfo: 'Normal Attack', description: 'Attacks and applies burn', limit: 10, usesRemaining: 10, type: 'fire' },
             { name: 'Wall of Fire', actionInfo: 'Damage Reduction 50%', description: 'Reduces incoming damage by 50% for 1 turn', limit: 10, usesRemaining: 10, type: 'fire' },
-            { name: 'Supernova', actionInfo: 'Massive DMG / Self-Destruct', description: 'Deals massive damage but kills user', limit: 1, usesRemaining: 1, type: 'fire' }
+            { name: 'Supernova', actionInfo: 'Massive DMG / Self-Destruct', description: 'Deals massive damage but kills user', limit: 1, usesRemaining: 1, type: 'fire', microevent: { type: 'qte', outcome: 'binary' } }
         ],
         defense: 10, agility: 3, attack: 5, evasion: 2, health: 15,
     },
@@ -65,9 +65,9 @@ const cards = [
             { name: 'High Voltage', effect: '20% Stun Chance', description: 'Shocking results on contact.' }
         ],
         actions: [
-            { name: 'Quick Bolt', actionInfo: 'Priority Strike', description: 'A low damage, high priority strike', limit: 15, usesRemaining: 15 },
+            { name: 'Quick Bolt', actionInfo: 'Priority Strike', description: 'A low damage, high priority strike', limit: 15, usesRemaining: 15, microevent: { type: 'qte', outcome: 'binary' } },
             { name: 'Thunder Dash', actionInfo: 'Evasion +4 for 2 turns', description: 'Moves like a flash of light', limit: 5, usesRemaining: 5 },
-            { name: 'Short Circuit', actionInfo: 'Enemy DEF to 0', description: 'Disables enemy armor for 1 turn', limit: 3, usesRemaining: 3 }
+            { name: 'Short Circuit', actionInfo: 'Enemy DEF to 0', description: 'Disables enemy armor for 1 turn', limit: 3, usesRemaining: 3, microevent: { type: 'pattern', outcome: 'scaled' } }
         ],
         defense: 3, agility: 10, attack: 7, evasion: 9, health: 6,
     },
@@ -83,9 +83,9 @@ const cards = [
             { name: 'Hardened Crust', effect: 'Damage Taken -1', description: 'Skin as hard as bedrock.' }
         ],
         actions: [
-            { name: 'Quake', actionInfo: 'AOE Damage', description: 'Deals damage to all grounded enemies', limit: 5, usesRemaining: 5 },
+            { name: 'Quake', actionInfo: 'AOE Damage', description: 'Deals damage to all grounded enemies', limit: 5, usesRemaining: 5, microevent: { type: 'pattern', outcome: 'scaled' } },
             { name: 'Rock Toss', actionInfo: 'Ranged Damage', description: 'A heavy ranged projectile', limit: 10, usesRemaining: 10 },
-            { name: 'Fossilize', actionInfo: 'Heal 5 HP / DEF +2', description: 'Turns to stone to recover', limit: 3, usesRemaining: 3 }
+            { name: 'Fossilize', actionInfo: 'Heal 5 HP / DEF +2', description: 'Turns to stone to recover', limit: 3, usesRemaining: 3, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'easy', questionType: 'boolean' } }
         ],
         defense: 9, agility: 2, attack: 6, evasion: 1, health: 12,
     },
@@ -101,9 +101,9 @@ const cards = [
             { name: 'Fear Monger', effect: 'Enemy ATK -1', description: 'Enemies tremble in his presence.' }
         ],
         actions: [
-            { name: 'Backstab', actionInfo: '2x Damage from Behind', description: 'Lethal strike to the spine', limit: 8, usesRemaining: 8 },
+            { name: 'Backstab', actionInfo: '2x Damage from Behind', description: 'Lethal strike to the spine', limit: 8, usesRemaining: 8, microevent: { type: 'qte', outcome: 'binary' } },
             { name: 'Vanish', actionInfo: 'Invisibility for 1 turn', description: 'Becomes invisible for 1 turn', limit: 4, usesRemaining: 4 },
-            { name: 'Soul Reap', actionInfo: 'Lifesteal', description: 'Heals based on damage dealt', limit: 6, usesRemaining: 6 }
+            { name: 'Soul Reap', actionInfo: 'Lifesteal', description: 'Heals based on damage dealt', limit: 6, usesRemaining: 6, microevent: { type: 'rhythm', outcome: 'scaled', beats: 4 } }
         ],
         defense: 4, agility: 8, attack: 9, evasion: 8, health: 7,
     },
@@ -119,9 +119,9 @@ const cards = [
             { name: 'Clarity', effect: 'Immunity: Confusion', description: 'Mind as clear as still water.' }
         ],
         actions: [
-            { name: 'Healing Tide', actionInfo: 'Heal 4 HP', description: 'Heals a target ally for 4 HP', limit: 8, usesRemaining: 8 },
+            { name: 'Healing Tide', actionInfo: 'Heal 4 HP', description: 'Heals a target ally for 4 HP', limit: 8, usesRemaining: 8, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'easy', questionType: 'multiple' } },
             { name: 'Bubble Shield', actionInfo: '3 DMG Shield', description: 'Grants an ally a 3-damage shield', limit: 10, usesRemaining: 10 },
-            { name: 'Mind Wash', actionInfo: 'Reset Cooldowns', description: 'Resets all cooldowns for an ally', limit: 2, usesRemaining: 2 }
+            { name: 'Mind Wash', actionInfo: 'Reset Cooldowns', description: 'Resets all cooldowns for an ally', limit: 2, usesRemaining: 2, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'hard', questionType: 'multiple' } }
         ],
         defense: 6, agility: 5, attack: 3, evasion: 5, health: 8,
     },
@@ -137,8 +137,8 @@ const cards = [
             { name: 'Magnetic Pull', effect: 'Taunt Projectiles', description: 'Draws fire away from allies.' }
         ],
         actions: [
-            { name: 'Scepter Smash', actionInfo: 'Heavy Physical', description: 'A heavy physical blow', limit: 12, usesRemaining: 12 },
-            { name: 'Fortify', actionInfo: 'Allies DEF +2', description: 'Increases the defense of all allies', limit: 5, usesRemaining: 5 },
+            { name: 'Scepter Smash', actionInfo: 'Heavy Physical', description: 'A heavy physical blow', limit: 12, usesRemaining: 12, microevent: { type: 'qte', outcome: 'binary' } },
+            { name: 'Fortify', actionInfo: 'Allies DEF +2', description: 'Increases the defense of all allies', limit: 5, usesRemaining: 5, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'medium', questionType: 'multiple' } },
             { name: 'Rallying Cry', actionInfo: 'Cleanse Debuffs', description: 'Removes all debuffs from the team', limit: 3, usesRemaining: 3 }
         ],
         defense: 8, agility: 4, attack: 7, evasion: 3, health: 11,
@@ -156,7 +156,7 @@ const cards = [
         ],
         actions: [
             { name: 'Gale Shot', actionInfo: 'Damage + Knockback', description: 'Deals damage and pushes enemy back', limit: 10, usesRemaining: 10 },
-            { name: 'Volley', actionInfo: 'Multi-Target', description: 'Deals small damage to 3 random enemies', limit: 6, usesRemaining: 6 },
+            { name: 'Volley', actionInfo: 'Multi-Target', description: 'Deals small damage to 3 random enemies', limit: 6, usesRemaining: 6, microevent: { type: 'pattern', outcome: 'scaled' } },
             { name: 'Focus', actionInfo: 'Next Attack 2.5x DMG', description: 'Concentrates for a lethal shot', limit: 4, usesRemaining: 4 }
         ],
         defense: 4, agility: 9, attack: 6, evasion: 7, health: 7,
@@ -174,8 +174,8 @@ const cards = [
         ],
         actions: [
             { name: 'Venom Spit', actionInfo: 'Poison (3 turns)', description: 'Poisons the target for 3 turns', limit: 8, usesRemaining: 8 },
-            { name: 'Lacerate', actionInfo: 'Bleed Damage', description: 'Deals damage and applies bleed', limit: 10, usesRemaining: 10 },
-            { name: 'Noxious Cloud', actionInfo: 'AOE Poison', description: 'Covers the field in toxic gas', limit: 2, usesRemaining: 2 }
+            { name: 'Lacerate', actionInfo: 'Bleed Damage', description: 'Deals damage and applies bleed', limit: 10, usesRemaining: 10, microevent: { type: 'rhythm', outcome: 'scaled', beats: 4 } },
+            { name: 'Noxious Cloud', actionInfo: 'AOE Poison', description: 'Covers the field in toxic gas', limit: 2, usesRemaining: 2, microevent: { type: 'rhythm', outcome: 'scaled', beats: 4 } }
         ],
         defense: 4, agility: 6, attack: 7, evasion: 4, health: 10,
     },

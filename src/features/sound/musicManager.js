@@ -5,11 +5,11 @@
  */
 
 export const TRACKS = [
-    { name: 'Court Jam', src: '/audio/Court%20Jam.mp3' },
-    { name: 'Free Diver', src: '/audio/Free%20Diver.mp3' },
-    { name: 'Jester on the Prowl', src: '/audio/Jester%20on%20the%20Prowl.mp3' },
-    { name: 'Steppin n Jestin', src: '/audio/Steppin%20n%20Jestin.mp3' },
-    { name: 'Zesty Lester', src: '/audio/Zesty%20Lester.mp3' },
+    { name: 'Court Jam', src: '/audio/Court%20Jam.mp3', bpm: 120 },
+    { name: 'Free Diver', src: '/audio/Free%20Diver.mp3', bpm: 80 },
+    { name: 'Jester on the Prowl', src: '/audio/Jester%20on%20the%20Prowl.mp3', bpm: 135 },
+    { name: 'Steppin n Jestin', src: '/audio/Steppin%20n%20Jestin.mp3', bpm: 95 },
+    { name: 'Zesty Lester', src: '/audio/Zesty%20Lester.mp3', bpm: 128 },
 ];
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
@@ -141,6 +141,16 @@ const musicManager = {
         save('cg_musicVolume', _state.volume);
         if (_audio) _audio.volume = _state.volume;
         notify();
+    },
+
+    /** Returns the current playback position of the audio in seconds. */
+    getCurrentTime() {
+        return _audio?.currentTime ?? 0;
+    },
+
+    /** Returns the BPM of the currently playing track. */
+    getCurrentBPM() {
+        return TRACKS[_state.currentIndex].bpm;
     },
 
     /**

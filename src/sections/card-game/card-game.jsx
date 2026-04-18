@@ -13,6 +13,7 @@ import EnemyLayout from './components/layouts/enemy-layout/enemy-layout.jsx';
 import UserLayout from './components/layouts/user-layout/user-layout.jsx';
 import TurnRecap from './components/turn-recap/turn-recap.jsx';
 import sounds from '../../features/sound/soundManager';
+import MicroEventOverlay from './components/micro-events/MicroEventOverlay';
 import './card-game.css';
 
 const CardGame = () => {
@@ -29,6 +30,10 @@ const CardGame = () => {
     const unreadLobby = useSelector((s) =>
         activeSession ? (s.chat.unreadLobby[activeSession._id] || 0) : 0
     );
+
+    // Microevent state
+    const [microeventContext, setMicroeventContext] = useState(null);
+    const [liveInputs, setLiveInputs] = useState([]);
 
     // Panel state
     const [showBrief, setShowBrief] = useState(false);
@@ -133,16 +138,34 @@ const CardGame = () => {
 
         joinRoom(); // join immediately
 
-        const handleState = (state) => dispatch(setGameState(state));
+        const handleState = (state) => {
+            dispatch(setGameState(state));
+            // Clear overlay once the engine leaves the microevent phase
+            if (state.phase !== 'microevent') {
+                setMicroeventContext(null);
+                setLiveInputs([]);
+            }
+        };
         const handleError = ({ message }) => console.error('game:error', message);
+        const handleMicroeventStart = (ctx) => {
+            setLiveInputs([]);
+            setMicroeventContext(ctx);
+        };
+        const handleMicroeventInput = (inputPayload) => {
+            setLiveInputs((prev) => [...prev, inputPayload]);
+        };
 
         socket.on('game:state', handleState);
         socket.on('game:error', handleError);
+        socket.on('game:microevent:start', handleMicroeventStart);
+        socket.on('game:microevent:input', handleMicroeventInput);
         socket.on('connect', joinRoom); // re-join if the socket reconnects
 
         return () => {
             socket.off('game:state', handleState);
             socket.off('game:error', handleError);
+            socket.off('game:microevent:start', handleMicroeventStart);
+            socket.off('game:microevent:input', handleMicroeventInput);
             socket.off('connect', joinRoom);
         };
     }, [activeGameId, dispatch]);
@@ -237,6 +260,24 @@ const CardGame = () => {
                 </div>
             </div>
             <TurnRecap currentPlayer={myPlayer} players={players} />
+
+            {/* ── Microevent overlay ──────────────────────────────────────── */}
+            {microeventContext && (
+                <MicroEventOverlay
+                    context={microeventContext}
+                    liveInputs={liveInputs}
+                    isSpectator={microeventContext.casterPlayerId !== myPlayerId}
+                    onComplete={(result) => {
+                        const socket = getSocket();
+                        if (socket) socket.emit('game:microevent:result', { gameId: activeGameId, ...result });
+                    }}
+                    onInput={(payload) => {
+                        const socket = getSocket();
+                        if (socket) socket.emit('game:microevent:input', { gameId: activeGameId, ...payload });
+                        setLiveInputs((prev) => [...prev, payload]);
+                    }}
+                />
+            )}
 
             {/* ── Brief panel ─────────────────────────────────────────── */}
             {showBrief && (

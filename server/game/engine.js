@@ -343,6 +343,86 @@ const isUntouchable = (card, state) => {
     return false;
 };
 
+// ── Microevent effect modification ───────────────────────────────────────────
+
+/**
+ * Returns a modified copy of `effects` based on the microevent result.
+ * Binary: downgrades on failure. Scaled: scales intensity by score.
+ */
+const applyMicroeventModifications = (abilityName, effects, microeventResult) => {
+    const { success, score } = microeventResult;
+    const clone = effects.map((e) => ({
+        ...e,
+        ...(e.onHitStatus ? { onHitStatus: { ...e.onHitStatus } } : {}),
+    }));
+
+    switch (abilityName) {
+        // ── QTE binary ────────────────────────────────────────────────────────
+        case 'Supernova':
+            if (!success) return clone.map((e) => e.type === 'damage' ? { ...e, multiplier: 1 } : e);
+            break;
+        case 'Backstab':
+            if (!success) return clone.map((e) => e.type === 'damage' ? { ...e, multiplier: 1, ignoreEvasion: false } : e);
+            break;
+        case 'Scepter Smash':
+            if (!success) return clone.map((e) => e.type === 'damage' ? { ...e, multiplier: 1, round: false } : e);
+            break;
+        case 'Quick Bolt':
+            if (!success) return []; // miss entirely
+            break;
+
+        // ── Pattern scaled ────────────────────────────────────────────────────
+        case 'Volley': {
+            const hits = Math.max(0, Math.round(score * 3));
+            return clone.map((e) => e.type === 'damage' ? { ...e, repeat: hits } : e);
+        }
+        case 'Quake': {
+            const bonus = Math.round(-3 + score * 3);
+            return clone.map((e) => e.type === 'damage' ? { ...e, flatBonus: bonus } : e);
+        }
+        case 'Short Circuit': {
+            if (score < 0.34) return [];
+            if (score < 0.67) return clone.map((e) => e.type === 'status' ? { ...e, valueFn: undefined, value: 2 } : e);
+            break; // full effect (valueFn stays)
+        }
+
+        // ── Quiz binary ───────────────────────────────────────────────────────
+        case 'Fortify':
+            if (!success) return clone.map((e) => e.type === 'status' ? { ...e, value: 1 } : e);
+            break;
+        case 'Healing Tide':
+            if (!success) return clone.map((e) => e.type === 'heal' ? { ...e, amount: 2 } : e);
+            break;
+        case 'Mind Wash':
+            if (!success) return clone.map((e) => e.type === 'resetCooldowns' ? { ...e, firstOnly: true } : e);
+            break;
+        case 'Fossilize':
+            if (!success) return clone.filter((e) => e.type !== 'status');
+            break;
+
+        // ── Rhythm scaled ─────────────────────────────────────────────────────
+        case 'Noxious Cloud': {
+            const duration = Math.max(1, Math.round(score * 2));
+            return clone.map((e) => e.type === 'status' ? { ...e, duration } : e);
+        }
+        case 'Soul Reap': {
+            if (score < 0.25) return clone.map((e) => e.type === 'damage' ? { ...e, lifesteal: false } : e);
+            if (score < 0.75) return clone.map((e) => e.type === 'damage' ? { ...e, lifeStealMultiplier: 0.5 } : e);
+            break;
+        }
+        case 'Lacerate': {
+            const bleedDuration = Math.max(1, Math.round(score * 2));
+            return clone.map((e) =>
+                e.type === 'damage' && e.onHitStatus
+                    ? { ...e, onHitStatus: { ...e.onHitStatus, duration: bleedDuration } }
+                    : e
+            );
+        }
+        default: break;
+    }
+    return clone;
+};
+
 // ── Ability execution ─────────────────────────────────────────────────────────
 
 // Resolves and applies one effect descriptor to a single (caster → target) pair.
@@ -385,8 +465,10 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
                 }
             }
             if (effect.lifesteal && actualDmg > 0) {
-                caster.currentHealth = Math.min(caster.health, caster.currentHealth + actualDmg);
-                state.log.unshift(`${caster.name} drains ${actualDmg} HP!`);
+                const lsMult = effect.lifeStealMultiplier ?? 1;
+                const healed = Math.max(1, Math.floor(actualDmg * lsMult));
+                caster.currentHealth = Math.min(caster.health, caster.currentHealth + healed);
+                state.log.unshift(`${caster.name} drains ${healed} HP!`);
             }
             break;
         }
@@ -412,8 +494,13 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
             break;
         }
         case 'resetCooldowns': {
-            target.actions = target.actions.map((a) => ({ ...a, usesRemaining: a.limit }));
-            state.log.unshift(`${target.name}'s abilities are fully refreshed!`);
+            if (effect.firstOnly) {
+                if (target.actions[0]) target.actions[0] = { ...target.actions[0], usesRemaining: target.actions[0].limit };
+                state.log.unshift(`${target.name}'s first ability is partially refreshed!`);
+            } else {
+                target.actions = target.actions.map((a) => ({ ...a, usesRemaining: a.limit }));
+                state.log.unshift(`${target.name}'s abilities are fully refreshed!`);
+            }
             break;
         }
         case 'selfDestruct': {
@@ -425,7 +512,7 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
     }
 };
 
-const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, targetCardIdx, targetPlayerId = null) => {
+const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, targetCardIdx, targetPlayerId = null, microeventResult = null) => {
     const casterPlayer = state.players.find((p) => p.id === casterPlayerId);
     const resolveEnemyPlayer = () =>
         targetPlayerId
@@ -453,7 +540,10 @@ const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, target
     caster.acted = true;
     state.log.unshift(`${caster.name} uses ${ability.name}!`);
 
-    const { targetType, effects } = def;
+    const { targetType } = def;
+    const effects = (microeventResult && ability.microevent)
+        ? applyMicroeventModifications(ability.name, def.effects, microeventResult)
+        : def.effects;
 
     for (const effect of effects) {
         if (targetType === 'self') {
@@ -836,6 +926,29 @@ const actions = {
         state.phase = 'main';
     },
 
+    // Sets phase to 'microevent' to hold execution until microevent resolves.
+    holdMicroevent(state, { casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId }) {
+        state.phase = 'microevent';
+        state.pendingAction = {
+            isAbility: true,
+            casterCardIndex,
+            abilityIndex,
+            targetCardIndex: targetCardIndex ?? null,
+            targetPlayerId: targetPlayerId ?? null,
+        };
+    },
+
+    // Called by server after microevent result is received.
+    applyAbilityWithMicroevent(state, { microeventResult }) {
+        if (state.phase !== 'microevent' || !state.pendingAction?.isAbility) return;
+        const { casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId } = state.pendingAction;
+        state.lastHitEvents = [];
+        executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId, microeventResult);
+        checkWinCondition(state);
+        state.pendingAction = null;
+        state.phase = 'main';
+    },
+
     initiateAbility(state, { casterCardIndex, abilityIndex }) {
         if (state.phase !== 'main' || state.gameOver) return;
         const player = state.players.find((p) => p.id === state.currentTurn);
@@ -1151,5 +1264,5 @@ const computeCpuTurn = (state) => {
     return s;
 };
 
-module.exports = { createGame, dispatch, computeCpuTurn };
+module.exports = { createGame, dispatch, computeCpuTurn, ABILITY_TARGETS };
 

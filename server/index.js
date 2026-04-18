@@ -3,6 +3,7 @@
 require('dotenv').config();
 
 const http = require('http');
+const https = require('https');
 const express = require('express');
 const { Server: SocketIOServer } = require('socket.io');
 const cors = require('cors');
@@ -11,7 +12,7 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const webpush = require('web-push');
-const { createGame, dispatch, computeCpuTurn } = require('./game/engine');
+const { createGame, dispatch, computeCpuTurn, ABILITY_TARGETS } = require('./game/engine');
 const Game = require('./models/Game');
 const User = require('./models/User');
 const Session = require('./models/Session');
@@ -949,6 +950,128 @@ const dmRoom = (a, b) => {
     return `dm:${u1}:${u2}`;
 };
 
+// ── OpenTDB helper ────────────────────────────────────────────────────────────
+
+const fetchTrivia = (params = {}) => new Promise((resolve, reject) => {
+    const qs = new URLSearchParams({
+        amount: String(params.amount ?? 1),
+        encode: 'url3986',
+        ...(params.difficulty && { difficulty: params.difficulty }),
+        ...(params.category && { category: String(params.category) }),
+        ...(params.questionType && { type: params.questionType }),
+    }).toString();
+    https.get(`https://opentdb.com/api.php?${qs}`, (res) => {
+        let raw = '';
+        res.on('data', (c) => { raw += c; });
+        res.on('end', () => {
+            try { resolve(JSON.parse(raw)); } catch (e) { reject(e); }
+        });
+    }).on('error', reject);
+});
+
+// ── Pending microevents ───────────────────────────────────────────────────────
+// gameId → { timeoutHandle }
+const pendingMicroevents = new Map();
+
+const MICROEVENT_TIMEOUT_MS = { qte: 4000, pattern: 18000, quiz: 25000, rhythm: 15000 };
+
+const TRACK_BPMS = [120, 80, 135, 95, 128]; // matches TRACKS order in musicManager.js
+
+const triggerMicroevent = async (gameId, game, context, ability, socket) => {
+    const { casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId } = context;
+    const me = ability.microevent;
+
+    // Dispatch holdMicroevent → phase becomes 'microevent'
+    const { state: heldState, error: holdErr } = dispatch(game.state, 'holdMicroevent', {
+        casterCardIndex, abilityIndex,
+        targetCardIndex: targetCardIndex ?? null,
+        targetPlayerId: targetPlayerId ?? null,
+    });
+    if (holdErr) { socket.emit('game:error', { message: holdErr }); return; }
+
+    game.state = heldState;
+    game.markModified('state');
+    await game.save();
+
+    // Build start payload
+    const casterPlayer = heldState.players.find((p) => p.id === heldState.currentTurn);
+    const casterCard = casterPlayer?.inPlay[casterCardIndex];
+    const startPayload = {
+        type: me.type, outcome: me.outcome,
+        abilityName: ability.name,
+        casterName: casterCard?.name ?? '?',
+        casterPlayerId: heldState.currentTurn,
+        casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId,
+    };
+
+    if (me.type === 'quiz') {
+        try {
+            const data = await fetchTrivia({
+                difficulty: me.difficulty,
+                category: me.category,
+                questionType: me.questionType,
+            });
+            if (data.response_code === 0 && data.results?.[0]) {
+                const q = data.results[0];
+                const decode = (s) => decodeURIComponent(s);
+                const correct = decode(q.correct_answer);
+                const choices = [correct, ...(q.incorrect_answers || []).map(decode)];
+                for (let i = choices.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [choices[i], choices[j]] = [choices[j], choices[i]];
+                }
+                startPayload.question = decode(q.question);
+                startPayload.choices = choices;
+                startPayload.correctIndex = choices.indexOf(correct);
+            }
+        } catch (err) {
+            console.error('[Microevent] OpenTDB fetch failed:', err.message);
+            // Fall through — client handles missing question gracefully
+        }
+    }
+
+    if (me.type === 'rhythm') {
+        const currentTrackIndex = heldState._currentTrackIndex ?? 0;
+        startPayload.bpm = TRACK_BPMS[currentTrackIndex] ?? 120;
+        startPayload.beats = me.beats ?? 4;
+        startPayload.beatStartTime = Date.now() + 2000; // 2s countdown
+    }
+
+    if (me.type === 'pattern') {
+        startPayload.seed = Array.from({ length: 3 }, () => Math.floor(Math.random() * 4));
+    }
+
+    // Timeout: auto-resolve failure if active player disconnects or stalls
+    const timeoutMs = MICROEVENT_TIMEOUT_MS[me.type] ?? 10000;
+    const timeoutHandle = setTimeout(() => {
+        pendingMicroevents.delete(gameId);
+        enqueueGameAction(gameId, async () => {
+            try {
+                const g = await Game.findOne({ gameId });
+                if (!g || g.state.phase !== 'microevent') return;
+                const { state: ns } = dispatch(g.state, 'applyAbilityWithMicroevent', {
+                    microeventResult: { success: false, score: 0 },
+                });
+                g.state = ns; g.markModified('state'); await g.save();
+                io.to(`game:${gameId}`).emit('game:microevent:timeout', {});
+                io.to(`game:${gameId}`).emit('game:state', ns);
+                scheduleTimer(gameId, ns);
+                await executeCpuTurnsIfNeeded(gameId);
+            } catch (err) { console.error('[Microevent] timeout error:', err); }
+        });
+    }, timeoutMs);
+
+    pendingMicroevents.set(gameId, { timeoutHandle });
+
+    // Broadcast held state then start event
+    await Session.findOneAndUpdate(
+        { gameId },
+        { currentTurn: heldState.currentTurn }
+    ).catch(() => { });
+    io.to(`game:${gameId}`).emit('game:state', heldState);
+    io.to(`game:${gameId}`).emit('game:microevent:start', startPayload);
+};
+
 // ── Per-game action queue (prevents race conditions) ─────────────────────────
 // Multiple socket messages for the same game arriving in parallel would all
 // read the same old state from MongoDB, process independently, and the last
@@ -1182,6 +1305,42 @@ io.on('connection', (socket) => {
                 const game = await Game.findOne({ gameId });
                 if (!game) return socket.emit('game:error', { message: 'Game not found' });
 
+                // ── Microevent intercept ──────────────────────────────────────────
+                if (type === 'initiateAbility') {
+                    const { casterCardIndex, abilityIndex } = payload;
+                    const cp = game.state.players.find((p) => p.id === game.state.currentTurn);
+                    const ability = cp?.inPlay[casterCardIndex]?.actions[abilityIndex];
+                    if (ability?.microevent && game.state.phase === 'main') {
+                        const targetType = ABILITY_TARGETS[ability.name] ?? 'enemyCard';
+                        const isImmediate = ['self', 'allEnemies', 'allAllies'].includes(targetType);
+                        if (isImmediate) {
+                            await triggerMicroevent(gameId, game,
+                                { casterCardIndex, abilityIndex, targetCardIndex: null, targetPlayerId: null },
+                                ability, socket);
+                            return;
+                        }
+                        // For card-targeted abilities: fall through to dispatch normally
+                        // (goes to selectingTarget phase; microevent fires on resolve)
+                    }
+                }
+
+                if (type === 'resolveOnEnemyCard' || type === 'resolveOnAllyCard') {
+                    const pa = game.state.pendingAction;
+                    if (pa?.isAbility) {
+                        const cp = game.state.players.find((p) => p.id === game.state.currentTurn);
+                        const ability = cp?.inPlay[pa.casterCardIndex]?.actions[pa.abilityIndex];
+                        if (ability?.microevent) {
+                            const targetCardIndex = payload.targetCardIndex ?? null;
+                            const targetPlayerId = payload.targetPlayerId ?? null;
+                            await triggerMicroevent(gameId, game,
+                                { casterCardIndex: pa.casterCardIndex, abilityIndex: pa.abilityIndex, targetCardIndex, targetPlayerId },
+                                ability, socket);
+                            return;
+                        }
+                    }
+                }
+                // ── Normal dispatch ───────────────────────────────────────────────
+
                 const prevTurn = game.state.currentTurn;
                 const { state: nextState, error } = dispatch(game.state, type, payload);
                 if (error) return socket.emit('game:error', { message: error });
@@ -1214,6 +1373,57 @@ io.on('connection', (socket) => {
             } catch (err) {
                 console.error('game:action error:', err);
                 socket.emit('game:error', { message: 'Failed to process action' });
+            }
+        });
+    });
+
+    // Relay live microevent inputs to all other players (spectators mirror in real-time)
+    socket.on('game:microevent:input', ({ gameId, ...inputPayload }) => {
+        if (!gameId) return;
+        socket.to(`game:${gameId}`).emit('game:microevent:input', inputPayload);
+    });
+
+    // Active player finished the microevent — apply result and broadcast
+    socket.on('game:microevent:result', async ({ gameId, success, score }) => {
+        if (!gameId) return;
+        const pending = pendingMicroevents.get(gameId);
+        if (!pending) return;
+        clearTimeout(pending.timeoutHandle);
+        pendingMicroevents.delete(gameId);
+
+        enqueueGameAction(gameId, async () => {
+            try {
+                const game = await Game.findOne({ gameId });
+                if (!game || game.state.phase !== 'microevent') return;
+
+                const prevTurn = game.state.currentTurn;
+                const { state: nextState, error } = dispatch(game.state, 'applyAbilityWithMicroevent', {
+                    microeventResult: { success: !!success, score: Math.max(0, Math.min(1, score ?? 0)) },
+                });
+                if (error) return socket.emit('game:error', { message: error });
+
+                game.state = nextState;
+                game.markModified('state');
+                await game.save();
+
+                await Session.findOneAndUpdate(
+                    { gameId },
+                    { currentTurn: nextState.currentTurn, turnStartedAt: nextState.turnStartedAt ? new Date(nextState.turnStartedAt) : null }
+                ).catch(() => { });
+
+                io.to(`game:${gameId}`).emit('game:state', nextState);
+                scheduleTimer(gameId, nextState);
+
+                if (!nextState.gameOver && nextState.currentTurn !== prevTurn) {
+                    const nextPlayer = nextState.players.find((p) => p.id === nextState.currentTurn);
+                    if (nextPlayer && !nextPlayer.isBot) {
+                        sendTurnPush(gameId, nextState.currentTurn).catch(() => { });
+                    }
+                }
+
+                await executeCpuTurnsIfNeeded(gameId);
+            } catch (err) {
+                console.error('game:microevent:result error:', err);
             }
         });
     });
