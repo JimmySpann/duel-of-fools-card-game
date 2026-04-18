@@ -12,7 +12,14 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const webpush = require('web-push');
-const { createGame, dispatch, computeCpuTurn, ABILITY_TARGETS } = require('./game/engine');
+const { createGame, dispatch, computeCpuTurn, ABILITY_TARGETS, getAbilityTarget } = require('./game/engine');
+const {
+    MAX_CUSTOM_ABILITY_POWER,
+    MAX_TOTAL_CUSTOM_ABILITY_POWER,
+    estimateCustomAbilityPower,
+    validateCustomAbilityPowerBudget,
+    validateTotalCustomAbilityPowerBudget,
+} = require('./game/customAbilityPower');
 const Game = require('./models/Game');
 const User = require('./models/User');
 const Session = require('./models/Session');
@@ -187,6 +194,180 @@ const buildActionsFromNames = (abilityNames = []) =>
         .filter(Boolean)
         .map((a) => ({ ...a }));
 
+const ALLOWED_TARGET_TYPES = new Set(['self', 'enemyCard', 'allyCard', 'allEnemies', 'allAllies']);
+const ALLOWED_EFFECT_TYPES = new Set(['damage', 'status', 'heal', 'healSelf', 'cleanse', 'resetCooldowns', 'selfDestruct']);
+const ALLOWED_STATUS_TYPES = new Set(['burned', 'frozen', 'def_up', 'def_down', 'poisoned', 'bleeding', 'shielded', 'invulnerable', 'invisible', 'focused', 'damage_reduction', 'eva_up']);
+const ALLOWED_CLEANSE_DEBUFFS = ['burned', 'frozen', 'poisoned', 'bleeding', 'def_down'];
+const ALLOWED_MICROEVENT_TYPES = new Set(['qte', 'mash', 'pattern', 'rhythm', 'quiz', 'parry', 'route', 'sigil']);
+const ALLOWED_MICROEVENT_OUTCOMES = new Set(['binary', 'scaled']);
+
+const clampNum = (value, min, max, fallback = min) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(min, Math.min(max, n));
+};
+
+const validateCustomAbility = (ability, index) => {
+    const at = `Custom ability #${index + 1}`;
+    const name = String(ability?.name || '').trim();
+    if (!name || name.length > 60) return `${at}: name is required (1-60 chars)`;
+    if (abilityCatalog.has(name)) return `${at}: name conflicts with an official ability`;
+
+    const targetType = String(ability?.targetType || '');
+    if (!ALLOWED_TARGET_TYPES.has(targetType)) return `${at}: invalid target type`;
+
+    const limit = Number(ability?.limit);
+    if (!Number.isFinite(limit) || limit < 1 || limit > 10) return `${at}: limit must be between 1 and 10`;
+
+    const effects = Array.isArray(ability?.effects) ? ability.effects : [];
+    if (effects.length < 1 || effects.length > 3) return `${at}: choose 1-3 effects`;
+
+    for (let i = 0; i < effects.length; i += 1) {
+        const e = effects[i] || {};
+        const effectLabel = `${at}, effect #${i + 1}`;
+        if (!ALLOWED_EFFECT_TYPES.has(e.type)) return `${effectLabel}: invalid effect type`;
+
+        if (e.type === 'damage') {
+            if (e.multiplier !== undefined) {
+                const m = Number(e.multiplier);
+                if (!Number.isFinite(m) || m < 0.5 || m > 3) return `${effectLabel}: multiplier must be between 0.5 and 3`;
+            }
+            if (e.flatBonus !== undefined) {
+                const b = Number(e.flatBonus);
+                if (!Number.isFinite(b) || b < -5 || b > 8) return `${effectLabel}: flatBonus must be between -5 and 8`;
+            }
+            if (e.defPiercing !== undefined) {
+                const p = Number(e.defPiercing);
+                if (!Number.isFinite(p) || p < 0 || p > 8) return `${effectLabel}: defPiercing must be between 0 and 8`;
+            }
+            if (e.repeat !== undefined) {
+                const r = Number(e.repeat);
+                if (!Number.isFinite(r) || r < 1 || r > 5) return `${effectLabel}: repeat must be between 1 and 5`;
+            }
+        }
+
+        if (e.type === 'status') {
+            const status = String(e.status || '');
+            if (!ALLOWED_STATUS_TYPES.has(status)) return `${effectLabel}: invalid status`;
+            const value = Number(e.value);
+            const duration = Number(e.duration);
+            if (!Number.isFinite(value) || value < 1 || value > 8) return `${effectLabel}: value must be between 1 and 8`;
+            if (!Number.isFinite(duration) || duration < 1 || duration > 6) return `${effectLabel}: duration must be between 1 and 6`;
+        }
+
+        if (e.type === 'heal' || e.type === 'healSelf') {
+            const amount = Number(e.amount);
+            if (!Number.isFinite(amount) || amount < 1 || amount > 12) return `${effectLabel}: amount must be between 1 and 12`;
+        }
+
+        if (e.type === 'cleanse') {
+            const debuffs = Array.isArray(e.debuffs) ? e.debuffs : [];
+            if (debuffs.length < 1) return `${effectLabel}: choose at least one debuff`;
+            if (debuffs.some((d) => !ALLOWED_CLEANSE_DEBUFFS.includes(d))) return `${effectLabel}: invalid debuff choice`;
+        }
+    }
+
+    if (ability?.microevent) {
+        const mType = String(ability.microevent.type || '');
+        const mOutcome = String(ability.microevent.outcome || '');
+        if (!ALLOWED_MICROEVENT_TYPES.has(mType)) return `${at}: invalid microevent type`;
+        if (!ALLOWED_MICROEVENT_OUTCOMES.has(mOutcome)) return `${at}: invalid microevent outcome`;
+    }
+
+    const powerError = validateCustomAbilityPowerBudget({ ...ability, limit }, at);
+    if (powerError) return powerError;
+
+    return null;
+};
+
+const summarizeEffects = (effects = []) => effects
+    .map((e) => {
+        if (e.type === 'damage') return `Damage x${e.multiplier ?? 1}`;
+        if (e.type === 'status') return `${e.status} ${e.value}/${e.duration}t`;
+        if (e.type === 'heal') return `Heal ${e.amount}`;
+        if (e.type === 'healSelf') return `Self-heal ${e.amount}`;
+        if (e.type === 'cleanse') return `Cleanse ${e.debuffs.join(', ')}`;
+        if (e.type === 'resetCooldowns') return 'Reset cooldowns';
+        if (e.type === 'selfDestruct') return 'Self-destruct';
+        return e.type;
+    })
+    .join(' | ');
+
+const normalizeCustomAbility = (ability) => {
+    const effects = (Array.isArray(ability.effects) ? ability.effects : []).map((raw) => {
+        const e = raw || {};
+        if (e.type === 'damage') {
+            return {
+                type: 'damage',
+                ...(e.useBasicAttack ? { useBasicAttack: true } : {}),
+                ...(e.ignoreDef ? { ignoreDef: true } : {}),
+                ...(e.ignoreEvasion ? { ignoreEvasion: true } : {}),
+                ...(e.lifesteal ? { lifesteal: true } : {}),
+                ...(e.floor ? { floor: true } : {}),
+                ...(e.round ? { round: true } : {}),
+                ...(e.randomTarget ? { randomTarget: true } : {}),
+                ...(e.multiplier !== undefined ? { multiplier: clampNum(e.multiplier, 0.5, 3, 1) } : {}),
+                ...(e.flatBonus !== undefined ? { flatBonus: Math.round(clampNum(e.flatBonus, -5, 8, 0)) } : {}),
+                ...(e.defPiercing !== undefined ? { defPiercing: Math.round(clampNum(e.defPiercing, 0, 8, 0)) } : {}),
+                ...(e.repeat !== undefined ? { repeat: Math.round(clampNum(e.repeat, 1, 5, 1)) } : {}),
+            };
+        }
+        if (e.type === 'status') {
+            return {
+                type: 'status',
+                status: String(e.status),
+                value: Math.round(clampNum(e.value, 1, 8, 1)),
+                duration: Math.round(clampNum(e.duration, 1, 6, 1)),
+            };
+        }
+        if (e.type === 'heal' || e.type === 'healSelf') {
+            return {
+                type: e.type,
+                amount: Math.round(clampNum(e.amount, 1, 12, 1)),
+            };
+        }
+        if (e.type === 'cleanse') {
+            const deduped = [...new Set((Array.isArray(e.debuffs) ? e.debuffs : []).filter((d) => ALLOWED_CLEANSE_DEBUFFS.includes(d)))];
+            return {
+                type: 'cleanse',
+                debuffs: deduped,
+            };
+        }
+        if (e.type === 'resetCooldowns') return { type: 'resetCooldowns' };
+        if (e.type === 'selfDestruct') return { type: 'selfDestruct' };
+        return { type: e.type };
+    });
+
+    const limit = Math.round(clampNum(ability.limit, 1, 10, 1));
+    const targetType = String(ability.targetType || 'enemyCard');
+    const microevent = ability.microevent
+        ? {
+            type: String(ability.microevent.type),
+            outcome: String(ability.microevent.outcome),
+        }
+        : null;
+
+    return {
+        name: String(ability.name).trim(),
+        actionInfo: `${targetType} • Custom`,
+        description: summarizeEffects(effects),
+        limit,
+        usesRemaining: limit,
+        type: 'Custom',
+        microevent,
+        customConfig: {
+            targetType,
+            effects,
+        },
+    };
+};
+
+const buildActionsFromPayload = (payload = {}) => {
+    const official = buildActionsFromNames(Array.isArray(payload.abilityNames) ? payload.abilityNames : []);
+    const custom = (Array.isArray(payload.customAbilities) ? payload.customAbilities : []).map(normalizeCustomAbility);
+    return [...official, ...custom];
+};
+
 const computeCardPointCost = ({ attack, defense, evasion, agility, health }) =>
     Number(attack || 0) + Number(defense || 0) + Number(evasion || 0) + Number(agility || 0) + Math.round(Number(health || 0) * 1.4);
 
@@ -216,9 +397,25 @@ const validateCustomCardPayload = (payload) => {
     }
 
     const abilityNames = Array.isArray(payload?.abilityNames) ? payload.abilityNames : [];
-    if (abilityNames.length < 1 || abilityNames.length > 3) return 'Select 1-3 abilities';
+    const customAbilities = Array.isArray(payload?.customAbilities) ? payload.customAbilities : [];
+    if (abilityNames.length + customAbilities.length < 1 || abilityNames.length + customAbilities.length > 3) return 'Select 1-3 abilities';
     const unknown = abilityNames.filter((n) => !abilityCatalog.has(n));
     if (unknown.length) return `Unknown abilities: ${unknown.join(', ')}`;
+    const duplicateOfficial = abilityNames.some((n, i) => abilityNames.indexOf(n) !== i);
+    if (duplicateOfficial) return 'Official abilities must be unique';
+
+    const customNames = new Set();
+    for (let i = 0; i < customAbilities.length; i += 1) {
+        const err = validateCustomAbility(customAbilities[i], i);
+        if (err) return err;
+        const nm = String(customAbilities[i].name || '').trim().toLowerCase();
+        if (customNames.has(nm)) return 'Custom ability names must be unique';
+        customNames.add(nm);
+        if (abilityNames.some((n) => n.toLowerCase() === nm)) return 'Custom ability names cannot duplicate selected official abilities';
+    }
+
+    const totalPowerError = validateTotalCustomAbilityPowerBudget(customAbilities);
+    if (totalPowerError) return totalPowerError;
 
     const elements = payload?.elements && typeof payload.elements === 'object' ? payload.elements : {};
 
@@ -544,15 +741,53 @@ app.get('/api/cards', requireAuth, async (req, res) => {
  * GET /api/cards/ability-options
  */
 app.get('/api/cards/ability-options', requireAuth, async (_req, res) => {
-    const abilities = Array.from(abilityCatalog.values()).map((a) => ({
-        name: a.name,
-        actionInfo: a.actionInfo,
-        description: a.description,
-        type: a.type,
-        microeventType: a.microevent?.type || null,
-        target: ABILITY_TARGETS[a.name] || 'enemy',
-    }));
-    res.json({ abilities });
+    try {
+        const official = Array.from(abilityCatalog.values()).map((a) => ({
+            name: a.name,
+            actionInfo: a.actionInfo,
+            description: a.description,
+            type: a.type,
+            limit: a.limit,
+            microeventType: a.microevent?.type || null,
+            microevent: a.microevent || null,
+            target: ABILITY_TARGETS[a.name] || 'enemyCard',
+            isCustom: false,
+            createdBy: 'system',
+            effectTypes: [],
+            customConfig: null,
+        }));
+
+        const sourceCards = await Card.find({ visibility: 'public' }).select('createdBy actions').limit(300).lean();
+        const seen = new Set();
+        const customExamples = [];
+        for (const card of sourceCards) {
+            for (const action of card.actions || []) {
+                if (!action?.customConfig?.targetType || !Array.isArray(action.customConfig.effects)) continue;
+                const key = `${action.name}::${card.createdBy}`.toLowerCase();
+                if (seen.has(key)) continue;
+                seen.add(key);
+                customExamples.push({
+                    name: action.name,
+                    actionInfo: action.actionInfo || `${action.customConfig.targetType} • Custom`,
+                    description: action.description || 'Custom ability',
+                    type: action.type || 'Custom',
+                    limit: action.limit || 1,
+                    microeventType: action.microevent?.type || null,
+                    microevent: action.microevent || null,
+                    target: action.customConfig.targetType,
+                    isCustom: true,
+                    createdBy: card.createdBy || 'Unknown',
+                    effectTypes: action.customConfig.effects.map((e) => e.type).filter(Boolean),
+                    customConfig: action.customConfig,
+                });
+            }
+        }
+
+        res.json({ abilities: [...official, ...customExamples] });
+    } catch (err) {
+        console.error('GET /api/cards/ability-options error:', err);
+        res.status(500).json({ error: 'Failed to load ability options' });
+    }
 });
 
 /**
@@ -578,7 +813,7 @@ app.post('/api/cards', requireAuth, async (req, res) => {
             description: String(req.body.description || '').trim(),
             elements: req.body.elements || {},
             passives: [],
-            actions: buildActionsFromNames(req.body.abilityNames),
+            actions: buildActionsFromPayload(req.body),
             defense: Number(req.body.defense),
             evasion: Number(req.body.evasion),
             health: Number(req.body.health),
@@ -647,7 +882,7 @@ app.patch('/api/cards/:id', requireAuth, async (req, res) => {
         card.image = String(req.body.image).trim();
         card.description = String(req.body.description || '').trim();
         card.elements = req.body.elements || {};
-        card.actions = buildActionsFromNames(req.body.abilityNames);
+        card.actions = buildActionsFromPayload(req.body);
         card.passives = [];
         card.defense = Number(req.body.defense);
         card.evasion = Number(req.body.evasion);
@@ -1908,7 +2143,7 @@ io.on('connection', (socket) => {
                     const cp = game.state.players.find((p) => p.id === game.state.currentTurn);
                     const ability = cp?.inPlay[casterCardIndex]?.actions[abilityIndex];
                     if (ability?.microevent && game.state.phase === 'main') {
-                        const targetType = ABILITY_TARGETS[ability.name] ?? 'enemyCard';
+                        const targetType = getAbilityTarget(ability);
                         const isImmediate = ['self', 'allEnemies', 'allAllies'].includes(targetType);
                         if (isImmediate) {
                             await triggerMicroevent(gameId, game,

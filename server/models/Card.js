@@ -11,6 +11,7 @@ const abilitySchema = new mongoose.Schema(
         usesRemaining: { type: Number, required: true, min: 0, max: 30 },
         type: { type: String, trim: true, maxlength: 20, default: '' },
         microevent: { type: mongoose.Schema.Types.Mixed, default: null },
+        customConfig: { type: mongoose.Schema.Types.Mixed, default: null },
     },
     { _id: false }
 );

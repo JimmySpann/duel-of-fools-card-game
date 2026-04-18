@@ -13,6 +13,8 @@ const LOCAL_ONLY_ACTIONS = new Set(['cardGame/setGameState', 'cardGame/resetGame
 // Returns true if this action will be intercepted by the server to hold for a
 // microevent — meaning we must NOT apply it optimistically, or the hit will
 // appear on-screen before the minigame even starts.
+const getAbilityTargetType = (ability) => ability?.customConfig?.targetType || ABILITY_TARGETS[ability?.name] || 'enemyCard';
+
 const wouldTriggerMicroevent = (type, payload, cardGameState) => {
   const state = cardGameState;
   const cp = state.players?.find((p) => p.id === state.currentTurn);
@@ -32,7 +34,7 @@ const wouldTriggerMicroevent = (type, payload, cardGameState) => {
     // card-targeted abilities fall through to selectingTarget and are intercepted
     // later at resolveOnEnemyCard instead.
     const IMMEDIATE = new Set(['self', 'allEnemies', 'allAllies']);
-    const targetType = ABILITY_TARGETS[ability.name] ?? 'enemyCard';
+    const targetType = getAbilityTargetType(ability);
     return IMMEDIATE.has(targetType);
   }
 

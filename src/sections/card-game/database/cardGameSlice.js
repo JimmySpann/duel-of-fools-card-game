@@ -220,6 +220,19 @@ const ABILITY_TARGETS = Object.fromEntries(
   Object.entries(ABILITY_DEFS).map(([name, def]) => [name, def.targetType])
 );
 
+const getAbilityDefinition = (ability) => {
+  if (!ability) return null;
+  if (ability.customConfig && ability.customConfig.targetType && Array.isArray(ability.customConfig.effects)) {
+    return ability.customConfig;
+  }
+  return ABILITY_DEFS[ability.name] || null;
+};
+
+const getAbilityTargetType = (ability) => {
+  const def = getAbilityDefinition(ability);
+  return def?.targetType || 'enemyCard';
+};
+
 // ── Ability execution ─────────────────────────────────────────────────────────
 
 const isUntouchable = (card, state) => {
@@ -324,7 +337,7 @@ const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, target
     return;
   }
 
-  const def = ABILITY_DEFS[ability.name];
+  const def = getAbilityDefinition(ability);
   if (!def) {
     ability.usesRemaining -= 1;
     caster.acted = true;
@@ -459,7 +472,7 @@ export const cardGameSlice = createSlice({
       const ability = card.actions[abilityIndex];
       if (!ability || ability.usesRemaining <= 0) { state.log.unshift(`${ability?.name ?? 'Ability'} has no uses left!`); return; }
 
-      const targetType = ABILITY_TARGETS[ability.name] ?? 'enemyCard';
+      const targetType = getAbilityTargetType(ability);
 
       if (targetType === 'self' || targetType === 'allEnemies' || targetType === 'allAllies') {
         state.lastHitEvents = [];

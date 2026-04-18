@@ -2114,6 +2114,59 @@
     color: #ff8f8f;
 }
 
+.custom-card-power-box {
+    border: 1px solid #2e3452;
+    border-radius: 8px;
+    padding: 0.42rem 0.55rem;
+    background: #151a2d;
+    margin: 0.35rem 0;
+}
+
+.custom-card-power-box.over {
+    border-color: #c85f74;
+    background: #321a24;
+}
+
+.custom-card-power-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #c9d0ea;
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.custom-card-power-track {
+    height: 7px;
+    border-radius: 999px;
+    background: #0f1323;
+    overflow: hidden;
+    border: 1px solid #353d61;
+}
+
+.custom-card-power-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #56b986, #c4d665);
+}
+
+.custom-card-power-box.over .custom-card-power-fill {
+    background: linear-gradient(90deg, #d36d78, #f09f66);
+}
+
+.custom-card-power-box small {
+    display: block;
+    margin-top: 0.3rem;
+    color: #96a0c9;
+    font-size: 0.68rem;
+}
+
+.custom-card-help {
+    color: #8d97c0;
+    font-size: 0.66rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
 .custom-card-subtitle {
     color: #c3c8e3;
     font-size: 0.85rem;
@@ -2145,6 +2198,40 @@
 }
 
 .custom-card-ability.selected {
+    border-color: #63bca0;
+    background: #1a3b32;
+    color: #c3ffe9;
+}
+
+.custom-card-ability-editor {
+    border-style: dashed;
+}
+
+.custom-card-flag-grid {
+    grid-column: span 4;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
+    margin-top: 0.15rem;
+}
+
+.custom-card-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.custom-card-chip {
+    border: 1px solid #394068;
+    border-radius: 999px;
+    background: #1f2340;
+    color: #cad1ef;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+
+.custom-card-chip.active {
     border-color: #63bca0;
     background: #1a3b32;
     color: #c3ffe9;

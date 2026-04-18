@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import cards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
@@ -152,11 +152,15 @@ const RULES_TURN_STEPS = [
 const ALL_ELEMENTS = ['fire', 'ice', 'electric', 'earth', 'death', 'water', 'air', 'normal'];
 
 const GalleryModal = ({ onClose }) => {
+    const token = useSelector((s) => s.auth.token);
     const [tab, setTab] = useState('cards');
     const [search, setSearch] = useState('');
     const [elementFilter, setElementFilter] = useState(null);
     const [previewCard, setPreviewCard] = useState(null);
     const [expandedId, setExpandedId] = useState(null);
+    const [abilitySearch, setAbilitySearch] = useState('');
+    const [abilityTypeFilter, setAbilityTypeFilter] = useState('all');
+    const [abilityExamples, setAbilityExamples] = useState([]);
 
     const filtered = useMemo(() => {
         return cards.filter((c) => {
@@ -165,6 +169,39 @@ const GalleryModal = ({ onClose }) => {
             return matchSearch && matchElement;
         });
     }, [search, elementFilter]);
+
+    const filteredAbilities = useMemo(() => {
+        const q = abilitySearch.trim().toLowerCase();
+        return abilityExamples.filter((a) => {
+            const matchesText = !q
+                || String(a.name || '').toLowerCase().includes(q)
+                || String(a.description || '').toLowerCase().includes(q)
+                || String(a.target || '').toLowerCase().includes(q)
+                || String(a.createdBy || '').toLowerCase().includes(q)
+                || (a.effectTypes || []).some((t) => String(t).toLowerCase().includes(q));
+            const matchesType = abilityTypeFilter === 'all'
+                || (abilityTypeFilter === 'custom' ? !!a.isCustom : !a.isCustom);
+            return matchesText && matchesType;
+        });
+    }, [abilityExamples, abilitySearch, abilityTypeFilter]);
+
+    useEffect(() => {
+        let mounted = true;
+        const loadAbilities = async () => {
+            try {
+                const res = await fetch('/api/cards/ability-options', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json();
+                if (!res.ok || !mounted) return;
+                setAbilityExamples(Array.isArray(data.abilities) ? data.abilities : []);
+            } catch {
+                if (mounted) setAbilityExamples([]);
+            }
+        };
+        if (token) loadAbilities();
+        return () => { mounted = false; };
+    }, [token]);
 
     return (
         <div className="gallery-overlay" onClick={onClose}>
@@ -180,6 +217,12 @@ const GalleryModal = ({ onClose }) => {
                         onClick={() => setTab('cards')}
                     >
                         Battler Cards
+                    </button>
+                    <button
+                        className={`gallery-tab${tab === 'abilities' ? ' active' : ''}`}
+                        onClick={() => setTab('abilities')}
+                    >
+                        Abilities
                     </button>
                     <button
                         className={`gallery-tab${tab === 'rules' ? ' active' : ''}`}
@@ -229,6 +272,43 @@ const GalleryModal = ({ onClose }) => {
                                     isExpanded={expandedId === card.id}
                                     onToggle={() => setExpandedId((v) => (v === card.id ? null : card.id))}
                                 />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {tab === 'abilities' && (
+                    <div className="gallery-cards-panel">
+                        <div className="gallery-filter-row">
+                            <input
+                                className="gallery-search"
+                                type="text"
+                                placeholder="Search abilities..."
+                                value={abilitySearch}
+                                onChange={(e) => setAbilitySearch(e.target.value)}
+                                autoFocus
+                            />
+                            <div className="gallery-element-filters">
+                                <button className={`gallery-element-filter-btn${abilityTypeFilter === 'all' ? ' active' : ''}`} onClick={() => setAbilityTypeFilter('all')}>All</button>
+                                <button className={`gallery-element-filter-btn${abilityTypeFilter === 'official' ? ' active' : ''}`} onClick={() => setAbilityTypeFilter('official')}>Official</button>
+                                <button className={`gallery-element-filter-btn${abilityTypeFilter === 'custom' ? ' active' : ''}`} onClick={() => setAbilityTypeFilter('custom')}>Custom</button>
+                            </div>
+                        </div>
+                        <div className="gallery-card-list">
+                            {filteredAbilities.length === 0 && <p className="gallery-empty">No abilities match your search.</p>}
+                            {filteredAbilities.map((a, i) => (
+                                <div key={`${a.name}-${a.createdBy || 'system'}-${i}`} className="gallery-action">
+                                    <div className="gallery-action-row">
+                                        <span className="gallery-ability-name">{a.name}</span>
+                                        <span className="gallery-ability-info">{a.target}</span>
+                                        {a.microeventType && <span className="gallery-microevent-badge">{MICROEVENT_LABELS[a.microeventType] || a.microeventType}</span>}
+                                    </div>
+                                    <span className="gallery-ability-desc">{a.description}</span>
+                                    <span className="gallery-ability-uses">
+                                        {a.isCustom ? `Custom by ${a.createdBy || 'Unknown'}` : 'Official'}
+                                        {Array.isArray(a.effectTypes) && a.effectTypes.length > 0 ? ` · Effects: ${a.effectTypes.join(', ')}` : ''}
+                                    </span>
+                                </div>
                             ))}
                         </div>
                     </div>

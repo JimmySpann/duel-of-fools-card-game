@@ -27,8 +27,98 @@ const initialElements = {
     normal: 0,
 };
 
+const TARGET_TYPES = ['self', 'enemyCard', 'allyCard', 'allEnemies', 'allAllies'];
+const EFFECT_TYPES = ['damage', 'status', 'heal', 'healSelf', 'cleanse', 'resetCooldowns', 'selfDestruct'];
+const STATUS_TYPES = ['burned', 'frozen', 'def_up', 'def_down', 'poisoned', 'bleeding', 'shielded', 'invulnerable', 'invisible', 'focused', 'damage_reduction', 'eva_up'];
+const CLEANSE_DEBUFFS = ['burned', 'frozen', 'poisoned', 'bleeding', 'def_down'];
+const MAX_CUSTOM_ABILITY_POWER = 26;
+const MAX_TOTAL_CUSTOM_ABILITY_POWER = 54;
+
+const createDamageEffect = () => ({ type: 'damage', multiplier: 1 });
+const createEmptyCustomAbility = () => ({
+    name: '',
+    targetType: 'enemyCard',
+    limit: 2,
+    effects: [createDamageEffect()],
+    microevent: null,
+});
+
 const computePoints = (stats) =>
     Number(stats.attack) + Number(stats.defense) + Number(stats.evasion) + Number(stats.agility) + Math.round(Number(stats.health) * 1.4);
+
+const validateCustomAbilityLocal = (ability, idx) => {
+    const label = `Custom ability #${idx + 1}`;
+    if (!String(ability?.name || '').trim()) return `${label}: name is required`;
+    const effects = Array.isArray(ability?.effects) ? ability.effects : [];
+    if (effects.length < 1 || effects.length > 3) return `${label}: choose 1-3 effects`;
+    for (let i = 0; i < effects.length; i += 1) {
+        const e = effects[i] || {};
+        if (e.type === 'cleanse' && (!Array.isArray(e.debuffs) || e.debuffs.length < 1)) {
+            return `${label}, effect #${i + 1}: pick at least one debuff`;
+        }
+    }
+    return null;
+};
+
+const TARGET_POWER_MULT = {
+    self: 0.9,
+    enemyCard: 1,
+    allyCard: 1,
+    allEnemies: 1.75,
+    allAllies: 1.5,
+};
+
+const clampNum = (value, min, max, fallback = min) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(min, Math.min(max, n));
+};
+
+const estimateCustomAbilityPower = (ability) => {
+    const targetType = String(ability?.targetType || 'enemyCard');
+    const effects = Array.isArray(ability?.effects) ? ability.effects : [];
+    const limit = clampNum(ability?.limit, 1, 10, 1);
+    let score = 0;
+
+    for (const raw of effects) {
+        const e = raw || {};
+        if (e.type === 'damage') {
+            score += (clampNum(e.multiplier, 0.5, 3, 1) * 4);
+            score += Math.max(0, clampNum(e.flatBonus, -5, 8, 0)) * 0.8;
+            score += clampNum(e.defPiercing, 0, 8, 0) * 0.7;
+            score += (clampNum(e.repeat, 1, 5, 1) - 1) * 2;
+            if (e.ignoreDef) score += 2;
+            if (e.ignoreEvasion) score += 2;
+            if (e.lifesteal) score += 2.5;
+            if (e.randomTarget) score += 0.8;
+            if (e.useBasicAttack) score -= 0.6;
+        }
+        if (e.type === 'status') {
+            const status = String(e.status || '');
+            const value = clampNum(e.value, 1, 8, 1);
+            const duration = clampNum(e.duration, 1, 6, 1);
+            score += value * duration * 0.85;
+            if (status === 'invulnerable' || status === 'invisible') score += 2;
+            if (status === 'shielded' || status === 'damage_reduction') score += 1.4;
+        }
+        if (e.type === 'heal' || e.type === 'healSelf') {
+            score += clampNum(e.amount, 1, 12, 1) * 0.8;
+        }
+        if (e.type === 'cleanse') {
+            score += Math.max(1, (Array.isArray(e.debuffs) ? e.debuffs.length : 0)) * 1.2;
+        }
+        if (e.type === 'resetCooldowns') score += 7;
+        if (e.type === 'selfDestruct') score -= 2.2;
+    }
+
+    score *= TARGET_POWER_MULT[targetType] ?? 1;
+    score *= (0.85 + Math.min(1.2, limit / 4.5));
+    if (ability?.microevent) score += 1.5;
+
+    return Math.max(0, Number(score.toFixed(2)));
+};
+
+const powerFill = (value, max) => `${Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100))}%`;
 
 const CustomCardModal = ({ onClose }) => {
     const token = useSelector((s) => s.auth.token);
@@ -52,6 +142,8 @@ const CustomCardModal = ({ onClose }) => {
     const [stats, setStats] = useState(initialStats);
     const [elements, setElements] = useState(initialElements);
     const [abilityNames, setAbilityNames] = useState([]);
+    const [customAbilities, setCustomAbilities] = useState([]);
+    const [abilitySearch, setAbilitySearch] = useState('');
     const [adultOnly, setAdultOnly] = useState(false);
 
     const maxPoints = 48;
@@ -67,6 +159,30 @@ const CustomCardModal = ({ onClose }) => {
         if (!q) return cards;
         return cards.filter((c) => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q));
     }, [cards, query]);
+
+    const filteredAbilityExamples = useMemo(() => {
+        const q = abilitySearch.trim().toLowerCase();
+        if (!q) return abilities;
+        return abilities.filter((a) =>
+            String(a.name || '').toLowerCase().includes(q)
+            || String(a.description || '').toLowerCase().includes(q)
+            || String(a.target || '').toLowerCase().includes(q)
+            || (a.effectTypes || []).some((e) => String(e).toLowerCase().includes(q))
+        );
+    }, [abilities, abilitySearch]);
+
+    const totalAbilityCount = abilityNames.length + customAbilities.length;
+    const customAbilityPowerScores = useMemo(
+        () => customAbilities.map((ability) => estimateCustomAbilityPower(ability)),
+        [customAbilities]
+    );
+    const totalCustomAbilityPower = useMemo(
+        () => Number(customAbilityPowerScores.reduce((sum, score) => sum + score, 0).toFixed(2)),
+        [customAbilityPowerScores]
+    );
+    const isPowerOverBudget =
+        customAbilityPowerScores.some((score) => score > MAX_CUSTOM_ABILITY_POWER)
+        || totalCustomAbilityPower > MAX_TOTAL_CUSTOM_ABILITY_POWER;
 
     useEffect(() => {
         let mounted = true;
@@ -108,7 +224,7 @@ const CustomCardModal = ({ onClose }) => {
     const toggleAbility = (abilityName) => {
         setAbilityNames((prev) => {
             if (prev.includes(abilityName)) return prev.filter((x) => x !== abilityName);
-            if (prev.length >= 3) return prev;
+            if (prev.length + customAbilities.length >= 3) return prev;
             return [...prev, abilityName];
         });
     };
@@ -117,11 +233,110 @@ const CustomCardModal = ({ onClose }) => {
         setElements((prev) => ({ ...prev, [key]: clampInt(value, 0, 5) }));
     };
 
+    const addCustomAbility = () => {
+        setCustomAbilities((prev) => {
+            if (abilityNames.length + prev.length >= 3) return prev;
+            return [...prev, createEmptyCustomAbility()];
+        });
+    };
+
+    const removeCustomAbility = (idx) => {
+        setCustomAbilities((prev) => prev.filter((_, i) => i !== idx));
+    };
+
+    const updateCustomAbility = (idx, patch) => {
+        setCustomAbilities((prev) => prev.map((ab, i) => (i === idx ? { ...ab, ...patch } : ab)));
+    };
+
+    const addEffect = (abilityIdx) => {
+        setCustomAbilities((prev) => prev.map((ab, i) => {
+            if (i !== abilityIdx) return ab;
+            if ((ab.effects || []).length >= 3) return ab;
+            return { ...ab, effects: [...(ab.effects || []), createDamageEffect()] };
+        }));
+    };
+
+    const removeEffect = (abilityIdx, effectIdx) => {
+        setCustomAbilities((prev) => prev.map((ab, i) => {
+            if (i !== abilityIdx) return ab;
+            const nextEffects = (ab.effects || []).filter((_, ei) => ei !== effectIdx);
+            return { ...ab, effects: nextEffects.length ? nextEffects : [createDamageEffect()] };
+        }));
+    };
+
+    const updateEffect = (abilityIdx, effectIdx, patch) => {
+        setCustomAbilities((prev) => prev.map((ab, i) => {
+            if (i !== abilityIdx) return ab;
+            const nextEffects = (ab.effects || []).map((e, ei) => (ei === effectIdx ? { ...e, ...patch } : e));
+            return { ...ab, effects: nextEffects };
+        }));
+    };
+
+    const setEffectType = (abilityIdx, effectIdx, type) => {
+        setCustomAbilities((prev) => prev.map((ab, i) => {
+            if (i !== abilityIdx) return ab;
+            const nextEffects = (ab.effects || []).map((e, ei) => {
+                if (ei !== effectIdx) return e;
+                if (type === 'damage') return { type: 'damage', multiplier: 1 };
+                if (type === 'status') return { type: 'status', status: 'burned', value: 1, duration: 2 };
+                if (type === 'heal' || type === 'healSelf') return { type, amount: 3 };
+                if (type === 'cleanse') return { type: 'cleanse', debuffs: ['burned'] };
+                if (type === 'resetCooldowns') return { type: 'resetCooldowns' };
+                if (type === 'selfDestruct') return { type: 'selfDestruct' };
+                return { type: 'damage', multiplier: 1 };
+            });
+            return { ...ab, effects: nextEffects };
+        }));
+    };
+
+    const toggleEffectDebuff = (abilityIdx, effectIdx, debuff) => {
+        setCustomAbilities((prev) => prev.map((ab, i) => {
+            if (i !== abilityIdx) return ab;
+            const nextEffects = (ab.effects || []).map((effect, ei) => {
+                if (ei !== effectIdx || effect.type !== 'cleanse') return effect;
+                const current = new Set(Array.isArray(effect.debuffs) ? effect.debuffs : []);
+                if (current.has(debuff)) current.delete(debuff);
+                else current.add(debuff);
+                return { ...effect, debuffs: [...current] };
+            });
+            return { ...ab, effects: nextEffects };
+        }));
+    };
+
+    const applyAbilityTemplate = (template) => {
+        if (!template?.isCustom || !template.customConfig) return;
+        setCustomAbilities((prev) => {
+            if (abilityNames.length + prev.length >= 3) return prev;
+            return [
+                ...prev,
+                {
+                    name: template.name || '',
+                    targetType: template.customConfig.targetType || 'enemyCard',
+                    limit: clampInt(template.limit ?? 2, 1, 10),
+                    effects: Array.isArray(template.customConfig.effects) && template.customConfig.effects.length
+                        ? template.customConfig.effects.map((e) => ({ ...e }))
+                        : [createDamageEffect()],
+                    microevent: template.microevent || null,
+                },
+            ];
+        });
+    };
+
     const handleCreate = async (e) => {
         e.preventDefault();
         setCreateLoading(true);
         setError('');
         try {
+            const duplicateNames = new Set();
+            for (let i = 0; i < customAbilities.length; i += 1) {
+                const err = validateCustomAbilityLocal(customAbilities[i], i);
+                if (err) throw new Error(err);
+                const key = String(customAbilities[i].name || '').trim().toLowerCase();
+                if (duplicateNames.has(key)) throw new Error('Custom ability names must be unique');
+                duplicateNames.add(key);
+                if (abilityNames.some((n) => n.toLowerCase() === key)) throw new Error('Custom ability names cannot match selected official abilities');
+            }
+
             const payload = {
                 name,
                 description,
@@ -133,6 +348,7 @@ const CustomCardModal = ({ onClose }) => {
                 agility: stats.agility,
                 health: stats.health,
                 abilityNames,
+                customAbilities,
                 adultOnly,
             };
             const res = await fetch(editingCardId ? `/api/cards/${encodeURIComponent(editingCardId)}` : '/api/cards', {
@@ -156,6 +372,7 @@ const CustomCardModal = ({ onClose }) => {
             setStats(initialStats);
             setElements(initialElements);
             setAbilityNames([]);
+            setCustomAbilities([]);
             setAdultOnly(false);
             setEditingCardId(null);
         } catch (err) {
@@ -178,7 +395,20 @@ const CustomCardModal = ({ onClose }) => {
             health: Number(card.health || 1),
         });
         setElements({ ...initialElements, ...(card.elements || {}) });
-        setAbilityNames((card.actions || []).map((a) => a.name).slice(0, 3));
+        const actions = card.actions || [];
+        setAbilityNames(actions.filter((a) => !a.customConfig).map((a) => a.name).slice(0, 3));
+        setCustomAbilities(actions
+            .filter((a) => a.customConfig)
+            .map((a) => ({
+                name: a.name || '',
+                targetType: a.customConfig?.targetType || 'enemyCard',
+                limit: clampInt(a.limit ?? 2, 1, 10),
+                effects: Array.isArray(a.customConfig?.effects) && a.customConfig.effects.length
+                    ? a.customConfig.effects.map((e) => ({ ...e }))
+                    : [createDamageEffect()],
+                microevent: a.microevent || null,
+            }))
+            .slice(0, 3));
         setAdultOnly(!!card.adultOnly);
     };
 
@@ -190,6 +420,7 @@ const CustomCardModal = ({ onClose }) => {
         setStats(initialStats);
         setElements(initialElements);
         setAbilityNames([]);
+        setCustomAbilities([]);
         setAdultOnly(false);
     };
 
@@ -342,9 +573,15 @@ const CustomCardModal = ({ onClose }) => {
                         </div>
 
                         <div className="custom-card-abilities">
-                            <div className="custom-card-subtitle">Abilities (pick up to 3)</div>
+                            <div className="custom-card-subtitle">Abilities (pick up to 3 total)</div>
+                            <input
+                                className="custom-card-input"
+                                placeholder="Search ability examples..."
+                                value={abilitySearch}
+                                onChange={(e) => setAbilitySearch(e.target.value)}
+                            />
                             <div className="custom-card-ability-list">
-                                {abilities.map((a) => (
+                                {filteredAbilityExamples.filter((a) => !a.isCustom).map((a) => (
                                     <button
                                         key={a.name}
                                         type="button"
@@ -353,10 +590,212 @@ const CustomCardModal = ({ onClose }) => {
                                         title={a.description}
                                     >
                                         <span>{a.name}</span>
-                                        <small>{a.actionInfo}</small>
+                                        <small>{a.actionInfo} {a.microeventType ? `· ${a.microeventType}` : ''}</small>
                                     </button>
                                 ))}
                             </div>
+                            <div className="custom-card-subtitle" style={{ marginTop: '0.6rem' }}>Community Examples</div>
+                            <div className="custom-card-ability-list">
+                                {filteredAbilityExamples.filter((a) => a.isCustom).slice(0, 20).map((a, idx) => (
+                                    <button
+                                        key={`${a.name}-${a.createdBy}-${idx}`}
+                                        type="button"
+                                        className="custom-card-ability"
+                                        onClick={() => applyAbilityTemplate(a)}
+                                        title={a.description}
+                                        disabled={totalAbilityCount >= 3}
+                                    >
+                                        <span>{a.name}</span>
+                                        <small>{a.target} · By {a.createdBy || 'Unknown'}</small>
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="custom-card-subtitle" style={{ marginTop: '0.6rem' }}>Build Custom Abilities</div>
+                            <div className={`custom-card-power-box${isPowerOverBudget ? ' over' : ''}`}>
+                                <div className="custom-card-power-row">
+                                    <span>Total custom power</span>
+                                    <strong>{totalCustomAbilityPower} / {MAX_TOTAL_CUSTOM_ABILITY_POWER}</strong>
+                                </div>
+                                <div className="custom-card-power-track">
+                                    <div className="custom-card-power-fill" style={{ width: powerFill(totalCustomAbilityPower, MAX_TOTAL_CUSTOM_ABILITY_POWER) }} />
+                                </div>
+                                <small>Keep each custom ability under {MAX_CUSTOM_ABILITY_POWER} and total under {MAX_TOTAL_CUSTOM_ABILITY_POWER}.</small>
+                            </div>
+                            <button
+                                type="button"
+                                className="custom-card-row-btn"
+                                onClick={addCustomAbility}
+                                disabled={totalAbilityCount >= 3}
+                            >
+                                + Add Custom Ability
+                            </button>
+                            {customAbilities.map((ability, abilityIdx) => (
+                                <div key={`ca-${abilityIdx}`} className="custom-card-ability custom-card-ability-editor selected" style={{ marginTop: '0.45rem' }}>
+                                    <div className={`custom-card-power-box${customAbilityPowerScores[abilityIdx] > MAX_CUSTOM_ABILITY_POWER ? ' over' : ''}`}>
+                                        <div className="custom-card-power-row">
+                                            <span>Ability power</span>
+                                            <strong>{customAbilityPowerScores[abilityIdx] || 0} / {MAX_CUSTOM_ABILITY_POWER}</strong>
+                                        </div>
+                                        <div className="custom-card-power-track">
+                                            <div className="custom-card-power-fill" style={{ width: powerFill(customAbilityPowerScores[abilityIdx] || 0, MAX_CUSTOM_ABILITY_POWER) }} />
+                                        </div>
+                                    </div>
+                                    <div className="custom-card-stats-grid" style={{ gridTemplateColumns: '2fr 1fr 1fr' }}>
+                                        <label className="custom-card-label">
+                                            Name
+                                            <input
+                                                className="custom-card-input"
+                                                value={ability.name}
+                                                maxLength={60}
+                                                onChange={(e) => updateCustomAbility(abilityIdx, { name: e.target.value })}
+                                            />
+                                        </label>
+                                        <label className="custom-card-label">
+                                            Target
+                                            <select
+                                                className="custom-card-input"
+                                                value={ability.targetType}
+                                                onChange={(e) => updateCustomAbility(abilityIdx, { targetType: e.target.value })}
+                                            >
+                                                {TARGET_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                        </label>
+                                        <label className="custom-card-label">
+                                            Uses
+                                            <input
+                                                className="custom-card-input"
+                                                type="number"
+                                                min={1}
+                                                max={10}
+                                                value={ability.limit}
+                                                onChange={(e) => updateCustomAbility(abilityIdx, { limit: clampInt(e.target.value, 1, 10) })}
+                                            />
+                                        </label>
+                                    </div>
+
+                                    {(ability.effects || []).map((effect, effectIdx) => (
+                                        <div key={`ef-${abilityIdx}-${effectIdx}`} className="custom-card-elements-grid" style={{ gridTemplateColumns: '1.2fr 1fr 1fr 1fr', marginTop: '0.35rem' }}>
+                                            <label className="custom-card-label">
+                                                Effect
+                                                <select
+                                                    className="custom-card-input"
+                                                    value={effect.type}
+                                                    onChange={(e) => setEffectType(abilityIdx, effectIdx, e.target.value)}
+                                                >
+                                                    {EFFECT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                                                </select>
+                                            </label>
+
+                                            {effect.type === 'damage' && (
+                                                <>
+                                                    <label className="custom-card-label">
+                                                        Multiplier
+                                                        <input className="custom-card-input" type="number" min={0.5} max={3} step={0.1} value={effect.multiplier ?? 1}
+                                                            onChange={(e) => updateEffect(abilityIdx, effectIdx, { multiplier: Number(e.target.value) })} />
+                                                        <small className="custom-card-help">Higher values raise power quickly.</small>
+                                                    </label>
+                                                    <label className="custom-card-label">
+                                                        Flat Bonus
+                                                        <input className="custom-card-input" type="number" min={-5} max={8} value={effect.flatBonus ?? 0}
+                                                            onChange={(e) => updateEffect(abilityIdx, effectIdx, { flatBonus: clampInt(e.target.value, -5, 8) })} />
+                                                        <small className="custom-card-help">Adds fixed damage before mitigation.</small>
+                                                    </label>
+                                                    <label className="custom-card-label">
+                                                        DEF Pierce
+                                                        <input className="custom-card-input" type="number" min={0} max={8} value={effect.defPiercing ?? 0}
+                                                            onChange={(e) => updateEffect(abilityIdx, effectIdx, { defPiercing: clampInt(e.target.value, 0, 8) })} />
+                                                        <small className="custom-card-help">Ignores target defense by this amount.</small>
+                                                    </label>
+                                                    <label className="custom-card-label">
+                                                        Repeat
+                                                        <input className="custom-card-input" type="number" min={1} max={5} value={effect.repeat ?? 1}
+                                                            onChange={(e) => updateEffect(abilityIdx, effectIdx, { repeat: clampInt(e.target.value, 1, 5) })} />
+                                                        <small className="custom-card-help">Multiple hits scale power sharply.</small>
+                                                    </label>
+                                                    <div className="custom-card-flag-grid">
+                                                        <label className="custom-card-toggle-row"><input type="checkbox" checked={!!effect.useBasicAttack} onChange={(e) => updateEffect(abilityIdx, effectIdx, { useBasicAttack: e.target.checked })} />Basic attack roll</label>
+                                                        <label className="custom-card-toggle-row"><input type="checkbox" checked={!!effect.ignoreDef} onChange={(e) => updateEffect(abilityIdx, effectIdx, { ignoreDef: e.target.checked })} />Ignore DEF</label>
+                                                        <label className="custom-card-toggle-row"><input type="checkbox" checked={!!effect.ignoreEvasion} onChange={(e) => updateEffect(abilityIdx, effectIdx, { ignoreEvasion: e.target.checked })} />Ignore EVA</label>
+                                                        <label className="custom-card-toggle-row"><input type="checkbox" checked={!!effect.lifesteal} onChange={(e) => updateEffect(abilityIdx, effectIdx, { lifesteal: e.target.checked })} />Lifesteal</label>
+                                                        <label className="custom-card-toggle-row"><input type="checkbox" checked={!!effect.randomTarget} onChange={(e) => updateEffect(abilityIdx, effectIdx, { randomTarget: e.target.checked })} />Random target</label>
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {effect.type === 'status' && (
+                                                <>
+                                                    <label className="custom-card-label">
+                                                        Status
+                                                        <select className="custom-card-input" value={effect.status || 'burned'}
+                                                            onChange={(e) => updateEffect(abilityIdx, effectIdx, { status: e.target.value })}>
+                                                            {STATUS_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                                        </select>
+                                                    </label>
+                                                    <label className="custom-card-label">
+                                                        Value
+                                                        <input className="custom-card-input" type="number" min={1} max={8} value={effect.value ?? 1}
+                                                            onChange={(e) => updateEffect(abilityIdx, effectIdx, { value: clampInt(e.target.value, 1, 8) })} />
+                                                        <small className="custom-card-help">Status intensity per tick.</small>
+                                                    </label>
+                                                    <label className="custom-card-label">
+                                                        Duration
+                                                        <input className="custom-card-input" type="number" min={1} max={6} value={effect.duration ?? 2}
+                                                            onChange={(e) => updateEffect(abilityIdx, effectIdx, { duration: clampInt(e.target.value, 1, 6) })} />
+                                                        <small className="custom-card-help">Long duration can exceed budget fast.</small>
+                                                    </label>
+                                                </>
+                                            )}
+
+                                            {(effect.type === 'heal' || effect.type === 'healSelf') && (
+                                                <label className="custom-card-label">
+                                                    Amount
+                                                    <input className="custom-card-input" type="number" min={1} max={12} value={effect.amount ?? 3}
+                                                        onChange={(e) => updateEffect(abilityIdx, effectIdx, { amount: clampInt(e.target.value, 1, 12) })} />
+                                                    <small className="custom-card-help">Large heals cost more budget.</small>
+                                                </label>
+                                            )}
+
+                                            {effect.type === 'cleanse' && (
+                                                <div className="custom-card-label" style={{ gridColumn: 'span 3' }}>
+                                                    Debuffs
+                                                    <div className="custom-card-chip-list">
+                                                        {CLEANSE_DEBUFFS.map((d) => {
+                                                            const active = (effect.debuffs || []).includes(d);
+                                                            return (
+                                                                <button
+                                                                    key={d}
+                                                                    type="button"
+                                                                    className={`custom-card-chip${active ? ' active' : ''}`}
+                                                                    onClick={() => toggleEffectDebuff(abilityIdx, effectIdx, d)}
+                                                                >
+                                                                    {d}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <button
+                                                type="button"
+                                                className="custom-card-row-btn danger"
+                                                onClick={() => removeEffect(abilityIdx, effectIdx)}
+                                            >
+                                                Remove Effect
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.45rem' }}>
+                                        <button type="button" className="custom-card-row-btn" onClick={() => addEffect(abilityIdx)}>
+                                            + Effect
+                                        </button>
+                                        <button type="button" className="custom-card-row-btn danger" onClick={() => removeCustomAbility(abilityIdx)}>
+                                            Remove Ability
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
 
                         <label className="custom-card-toggle-row">
@@ -369,7 +808,7 @@ const CustomCardModal = ({ onClose }) => {
                         <button
                             className="custom-card-create-btn"
                             type="submit"
-                            disabled={createLoading || usedPoints > maxPoints || abilityNames.length < 1}
+                            disabled={createLoading || usedPoints > maxPoints || totalAbilityCount < 1 || isPowerOverBudget}
                         >
                             {createLoading ? 'Saving…' : editingCardId ? 'Update Card' : 'Create Card'}
                         </button>
