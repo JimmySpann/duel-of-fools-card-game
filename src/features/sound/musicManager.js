@@ -104,12 +104,11 @@ const musicManager = {
     },
 
     pause() {
-        if (_audio) {
-            _audio.pause();
-            _state.playing = false;
-            saveCookie('cg_musicEnabled', false);
-            notify();
-        }
+        if (_audio) _audio.pause();
+        _state.playing = false;
+        _state.enabled = false;
+        saveCookie('cg_musicEnabled', false);
+        notify();
     },
 
     toggle() {
