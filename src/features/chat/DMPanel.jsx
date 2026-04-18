@@ -19,7 +19,7 @@ import './chat.css';
  *   anchor — 'header' positions the panel opening downward from the button (for toolbar use)
  *            omit for the default fixed bottom-right float
  */
-const DMPanel = ({ anchor }) => {
+const DMPanel = ({ anchor, open: controlledOpen, onOpenChange, hideToggle = false }) => {
     const dispatch = useDispatch();
     const myUsername = useSelector((s) => s.auth.username);
     const dmList = useSelector((s) => s.chat.dmList);
@@ -30,10 +30,17 @@ const DMPanel = ({ anchor }) => {
     const unreadDm = useSelector((s) => s.chat.unreadDm);
     const unreadLobby = useSelector((s) => s.chat.unreadLobby);
 
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
     const [newRecipient, setNewRecipient] = useState('');
     const [text, setText] = useState('');
     const bottomRef = useRef(null);
+
+    const open = controlledOpen ?? internalOpen;
+    const setOpen = (nextValue) => {
+        const next = typeof nextValue === 'function' ? nextValue(open) : nextValue;
+        if (controlledOpen === undefined) setInternalOpen(next);
+        onOpenChange?.(next);
+    };
 
     const totalUnreadDm = Object.values(unreadDm).reduce((a, b) => a + b, 0);
     const totalUnreadLobby = Object.values(unreadLobby).reduce((a, b) => a + b, 0);
@@ -92,12 +99,14 @@ const DMPanel = ({ anchor }) => {
     return (
         <div className={`dm-container${anchor === 'header' ? ' dm-container--header' : ''}`}>
             {/* Toggle button */}
-            <button
-                className={`dm-toggle-btn${anchor === 'header' ? ' dm-toggle-btn--header' : ''}${totalUnread > 0 ? ' has-unread' : ''}`}
-                onClick={() => setOpen((v) => !v)}
-            >
-                💬 Messages{totalUnread > 0 && <span className="dm-badge">{totalUnread}</span>}
-            </button>
+            {!hideToggle && (
+                <button
+                    className={`dm-toggle-btn${anchor === 'header' ? ' dm-toggle-btn--header' : ''}${totalUnread > 0 ? ' has-unread' : ''}`}
+                    onClick={() => setOpen((v) => !v)}
+                >
+                    💬 Messages{totalUnread > 0 && <span className="dm-badge">{totalUnread}</span>}
+                </button>
+            )}
 
             {open && (
                 <div className="dm-panel">
@@ -107,6 +116,7 @@ const DMPanel = ({ anchor }) => {
                             <div className="dm-conv-header">
                                 <button className="dm-back-btn" onClick={() => dispatch(closeDm())}>←</button>
                                 <span className="dm-conv-title">{activeDm}</span>
+                                {hideToggle && <button className="dm-back-btn" onClick={() => setOpen(false)}>✕</button>}
                             </div>
                             <div className="chat-messages">
                                 {messages.length === 0 && (
@@ -143,7 +153,10 @@ const DMPanel = ({ anchor }) => {
                     ) : (
                         /* ── Inbox / thread list ── */
                         <div className="dm-inbox">
-                            <div className="dm-inbox-header">Direct Messages</div>
+                            <div className="dm-inbox-header">
+                                <span>Direct Messages</span>
+                                {hideToggle && <button className="dm-back-btn" onClick={() => setOpen(false)}>✕</button>}
+                            </div>
 
                             {/* Start a new DM */}
                             <form className="dm-new-form" onSubmit={handleNewDm}>

@@ -393,6 +393,7 @@ const Sessions = () => {
     const { username } = useSelector((s) => s.auth);
     const { displayName, avatarUrl, friendRequests } = useSelector((s) => s.profile);
     const unreadLobby = useSelector((s) => s.chat.unreadLobby);
+    const unreadDm = useSelector((s) => s.chat.unreadDm);
 
     const [view, setView] = useState('list'); // 'list' | 'create' | 'join' | 'preview' | 'lobby'
     const [newName, setNewName] = useState('');
@@ -401,6 +402,7 @@ const Sessions = () => {
     const [showProfile, setShowProfile] = useState(false);
     const [showGallery, setShowGallery] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [showMessages, setShowMessages] = useState(false);
 
     useEffect(() => {
         dispatch(fetchSessions());
@@ -621,7 +623,6 @@ const Sessions = () => {
                         <span className="sessions-brand-title">Duel of Fools</span>
                     </button>
                     <div className="sessions-header-right">
-                        <DMPanel anchor="header" />
                         <button className="sessions-gallery-btn" onClick={() => setShowGallery(true)} title="View all cards and game rules">
                             📖 Gallery
                         </button>
@@ -638,12 +639,31 @@ const Sessions = () => {
                                 />
                                 <span className="sessions-username">{displayName || username}</span>
                                 <span className="sessions-profile-caret">▾</span>
-                                {friendRequests.length > 0 && (
-                                    <span className="sessions-profile-badge">{friendRequests.length}</span>
+                                {(friendRequests.length > 0 || Object.values(unreadDm).some((v) => v > 0)) && (
+                                    <span className="sessions-profile-badge">
+                                        {friendRequests.length + Object.values(unreadDm).reduce((a, b) => a + b, 0)}
+                                    </span>
                                 )}
                             </button>
                             {showProfileMenu && (
                                 <div className="sessions-profile-dropdown">
+                                    <button
+                                        className="sessions-profile-dropdown-item"
+                                        onClick={() => { setShowProfileMenu(false); setView('list'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                    >
+                                        🏠 Lobbies
+                                    </button>
+                                    <button
+                                        className="sessions-profile-dropdown-item"
+                                        onClick={() => { setShowProfileMenu(false); setShowMessages(true); }}
+                                    >
+                                        💬 Messages
+                                        {Object.values(unreadDm).reduce((a, b) => a + b, 0) > 0 && (
+                                            <span className="sessions-dropdown-badge">
+                                                {Object.values(unreadDm).reduce((a, b) => a + b, 0)}
+                                            </span>
+                                        )}
+                                    </button>
                                     <button
                                         className="sessions-profile-dropdown-item"
                                         onClick={() => { setShowProfileMenu(false); setShowProfile(true); }}
@@ -710,6 +730,7 @@ const Sessions = () => {
             </div>
             {showProfile && <Profile onClose={() => setShowProfile(false)} />}
             {showGallery && <GalleryModal onClose={() => setShowGallery(false)} />}
+            <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
         </div>
     );
 };

@@ -195,6 +195,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    justify-content: space-between;
     width: 100%;
     padding: 0.5rem 0.85rem;
     border: none;
@@ -223,6 +224,17 @@
     height: 1px;
     background: #2e3148;
     margin: 4px 0;
+}
+
+.sessions-dropdown-badge {
+    background: #e05a5a;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 99px;
+    padding: 0.05rem 0.35rem;
+    min-width: 16px;
+    text-align: center;
 }
 
 .sessions-logout-btn {

@@ -152,22 +152,6 @@
     gap: 6px;
 }
 
-.account-button {
-    margin-left: 5px;
-    border-radius: 10px;
-    padding: 3px 10px;
-    background-color: rgb(145, 60, 145);
-    cursor: pointer;
-    color: white;
-    font-size: 13px;
-    font-weight: 600;
-    border: none;
-}
-
-.account-button:hover {
-    background-color: rgb(170, 80, 170);
-}
-
 /* ── In-game profile button ─────────────────────────────────────────────── */
 .header-profile-wrap {
     position: relative;
@@ -250,24 +234,6 @@
 
 .header-profile-dropdown-item.signout:hover {
     background: rgba(224, 90, 90, 0.12);
-}
-
-/* Hide standalone Lobbies button on narrow screens; it moves into the profile dropdown */
-@media (max-width: 480px) {
-    .account-button {
-        display: none;
-    }
-}
-
-/* Show the Lobbies dropdown item only on narrow screens (hidden on wide since button is visible) */
-.lobbies-mobile {
-    display: none;
-}
-
-@media (max-width: 480px) {
-    .lobbies-mobile {
-        display: block;
-    }
 }
 
 /* ── Active player button ───────────────────────────────────────────────── */

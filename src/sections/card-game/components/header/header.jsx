@@ -63,7 +63,6 @@ const Header = ({
                 <span className="header-title header-title--clickable">Duel of Fools</span>
             </button>
             <div className="account-buttons-container">
-                <button className="account-button" onClick={onLobbies}>Lobbies</button>
                 <div className="header-profile-wrap">
                     <button
                         className="header-profile-btn"
@@ -81,7 +80,7 @@ const Header = ({
                     {showProfileMenu && (
                         <div className="header-profile-dropdown">
                             <button
-                                className="header-profile-dropdown-item lobbies-mobile"
+                                className="header-profile-dropdown-item"
                                 onClick={() => { setShowProfileMenu(false); onLobbies(); }}
                             >
                                 🏠 Lobbies
