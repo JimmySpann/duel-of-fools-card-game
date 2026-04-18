@@ -15,6 +15,7 @@ const cards = [
         actions: [
             { name: 'Expelli-Drip-Mus', actionInfo: 'Disarm & Stun', description: 'Blasts the enemy clothes off, leaving them stunned.', limit: 5, usesRemaining: 5, microevent: { type: 'qte', outcome: 'binary' } },
             { name: 'Nimbus 2000 Retro', actionInfo: 'Evasion +5', description: 'Hopping on the vintage broom for a quick getaway.', limit: 8, usesRemaining: 8, microevent: { type: 'route', outcome: 'scaled' } },
+            { name: 'Wand Flex', actionInfo: 'Magic Damage', description: 'Points the gold-plated wand and lets the drip do the talking. No cap.', limit: 12, usesRemaining: 12, microevent: { type: 'arrow', outcome: 'scaled', shots: 1 } },
         ],
         defense: 5, agility: 8, attack: 7, evasion: 7, health: 10, category: 'dripwarts',
     },
@@ -156,21 +157,21 @@ const cards = [
         defense: 4, agility: 8, attack: 9, evasion: 6, health: 8, category: 'dripwarts',
     },
     {
-        id: 'siriusStreet',
-        name: 'Sirius Street',
-        elements: { death: 2, air: 3 },
-        type: 'Battler',
-        image: 'https://i.ytimg.com/vi/MnHjz8jvWFk/hqdefault.jpg',
-        description: 'Fresh out of Azkaban and straight to the tailor.',
-        passives: [
-            { name: 'Animagus Instinct', effect: 'Agility +3', description: 'Reflexes of a black dog.' },
-            { name: 'Prison Break', effect: 'Ignore Traps/Hazards', description: "You can't keep him contained." },
+        "id": "ronRiches",
+        "name": "Ron Riches",
+        "elements": { "fire": 2, "normal": 3 },
+        "type": "Battler",
+        "image": "https://i.postimg.cc/c6v35sSZ/wesley.jpg",
+        "description": "Sick of hand-me-downs, Ron hit the jackpot. Now his robes are pure silk and his pockets are never empty.",
+        "passives": [
+            { "name": "King Weasley", "effect": "DEF +2 if HP < 50%", "description": "He starts playing for keeps when the pressure is on." },
+            { "name": "Hand-Me-Down Hype", "effect": "Steal 1 random buff on hit", "description": "What's yours is now his, and he wears it better." }
         ],
-        actions: [
-            { name: 'Shadow Pounce', actionInfo: 'Physical Damage', description: 'Strikes from the dark with canine ferocity.', limit: 10, usesRemaining: 10, microevent: { type: 'route', outcome: 'scaled' } },
-            { name: 'Howl at the Moon', actionInfo: 'AOE Fear', description: 'A chilling cry that lowers enemy evasion.', limit: 4, usesRemaining: 4, microevent: { type: 'mash', outcome: 'scaled' } },
+        "actions": [
+            { "name": "Slug Vomit Trap", "actionInfo": "Poison + Skip Turn", "description": "A classic hex with a designer twist. Disgusting but effective.", "limit": 4, "usesRemaining": 4, "microevent": { "type": "qte", "outcome": "binary" } },
+            { "name": "Broken Wand Blast", "actionInfo": "High Variance DMG", "description": "It might backfire, or it might be a crit. High risk, high drip.", "limit": 10, "usesRemaining": 10, "microevent": { "type": "mash", "outcome": "scaled" } }
         ],
-        defense: 5, agility: 9, attack: 8, evasion: 7, health: 10, category: 'dripwarts',
+        "defense": 6, "agility": 5, "attack": 7, "evasion": 4, "health": 12, "category": "dripwarts"
     },
     {
         id: 'hoodNigga',
