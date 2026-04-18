@@ -14,6 +14,14 @@ const ELEMENT_COLORS = {
     normal: { bg: '#1e2030', color: '#aab0cc', border: '#3a4060' },
 };
 
+const CATEGORY_ORDER = ['official v1', 'dripwarts', 'unknown'];
+const CATEGORY_LABELS = { 'official v1': 'Official V1', 'dripwarts': 'Dripwarts', 'unknown': 'Unknown' };
+const CATEGORY_STYLES = {
+    'official v1': { bg: '#1a2400', color: '#a3e635', border: '#4a7a10' },
+    'dripwarts': { bg: '#1e0a33', color: '#c084fc', border: '#7c3aed' },
+    'unknown': { bg: '#1e2030', color: '#aab0cc', border: '#3a4060' },
+};
+
 const SAVED_DECKS_KEY = 'cg_saved_decks';
 
 const loadSavedDecks = () => {
@@ -50,6 +58,8 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
     const [previewCard, setPreviewCard] = useState(null);
     const [confirmDeleteDeck, setConfirmDeleteDeck] = useState(null);
     const [cards, setCards] = useState(defaultCards);
+    const [search, setSearch] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('all');
 
     useEffect(() => {
         let mounted = true;
@@ -115,6 +125,14 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
     const handleClearAll = () => {
         setSelected(new Set());
     };
+
+    const filteredCards = useMemo(() => {
+        return cards.filter((c) => {
+            const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase());
+            const matchCategory = categoryFilter === 'all' || (c.category || 'unknown') === categoryFilter;
+            return matchSearch && matchCategory;
+        });
+    }, [cards, search, categoryFilter]);
 
     // Deck presets
     const officialDefaultDeck = useMemo(() => cards.filter(c => c.category === 'official v1').map(c => c.id), [cards]);
@@ -188,8 +206,34 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                     </div>
                 </div>
 
+                <div className="db-filter-row">
+                    <input
+                        className="gallery-search"
+                        type="text"
+                        placeholder="Search cards…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <div className="gallery-element-filters">
+                        {['all', ...CATEGORY_ORDER].map((cat) => {
+                            const style = cat === 'all' ? null : CATEGORY_STYLES[cat];
+                            const isActive = categoryFilter === cat;
+                            return (
+                                <button
+                                    key={cat}
+                                    className={`gallery-element-filter-btn${isActive ? ' active' : ''}`}
+                                    style={isActive && style ? { background: style.bg, color: style.color, borderColor: style.border } : undefined}
+                                    onClick={() => setCategoryFilter(cat)}
+                                >
+                                    {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 <div className="db-card-grid">
-                    {cards.map((card) => {
+                    {filteredCards.map((card) => {
                         const isSelected = selected.has(card.id);
                         const isCensored = !!card.adultOnly && censorAdultCards;
                         const primaryElement = Object.entries(card.elements || {})[0];

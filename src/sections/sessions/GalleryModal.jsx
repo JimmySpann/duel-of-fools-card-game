@@ -1,9 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import cards from '../card-game/database/cards';
+import defaultCards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
-import RulesView from '../shared/rules/RulesView';
-import RulesModal from '../shared/rules/RulesModal';
 
 const ELEMENT_COLORS = {
     fire: { bg: '#7c1a00', color: '#ff7a40', border: '#b04000' },
@@ -135,23 +133,21 @@ const GalleryModal = ({ onClose }) => {
     const token = useSelector((s) => s.auth.token);
     const [tab, setTab] = useState('cards');
     const [search, setSearch] = useState('');
-    const [elementFilter, setElementFilter] = useState(null);
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [previewCard, setPreviewCard] = useState(null);
     const [expandedId, setExpandedId] = useState(null);
     const [abilitySearch, setAbilitySearch] = useState('');
     const [abilityTypeFilter, setAbilityTypeFilter] = useState('all');
     const [abilityExamples, setAbilityExamples] = useState([]);
-    const [showRulesModal, setShowRulesModal] = useState(false);
+    const [cards, setCards] = useState(defaultCards);
 
     const filtered = useMemo(() => {
         return cards.filter((c) => {
             const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase());
-            const matchElement = !elementFilter || Object.keys(c.elements || {}).includes(elementFilter);
             const matchCategory = categoryFilter === 'all' || (c.category || 'unknown') === categoryFilter;
-            return matchSearch && matchElement && matchCategory;
+            return matchSearch && matchCategory;
         });
-    }, [search, elementFilter, categoryFilter]);
+    }, [search, categoryFilter, cards]);
 
     const filteredAbilities = useMemo(() => {
         const q = abilitySearch.trim().toLowerCase();
@@ -167,6 +163,24 @@ const GalleryModal = ({ onClose }) => {
             return matchesText && matchesType;
         });
     }, [abilityExamples, abilitySearch, abilityTypeFilter]);
+
+    useEffect(() => {
+        let mounted = true;
+        const loadCards = async () => {
+            try {
+                const res = await fetch('/api/cards', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json();
+                if (!res.ok || !mounted) return;
+                if (Array.isArray(data.cards) && data.cards.length > 0) setCards(data.cards);
+            } catch {
+                // keep static fallback
+            }
+        };
+        if (token) loadCards();
+        return () => { mounted = false; };
+    }, [token]);
 
     useEffect(() => {
         let mounted = true;
@@ -207,12 +221,6 @@ const GalleryModal = ({ onClose }) => {
                     >
                         Abilities
                     </button>
-                    <button
-                        className={`gallery-tab${tab === 'rules' ? ' active' : ''}`}
-                        onClick={() => setTab('rules')}
-                    >
-                        Rules
-                    </button>
                 </div>
 
                 {tab === 'cards' && (
@@ -227,21 +235,6 @@ const GalleryModal = ({ onClose }) => {
                                 autoFocus
                             />
                             <div className="gallery-element-filters">
-                                {ALL_ELEMENTS.map((el) => {
-                                    const style = ELEMENT_COLORS[el];
-                                    return (
-                                        <button
-                                            key={el}
-                                            className={`gallery-element-filter-btn${elementFilter === el ? ' active' : ''}`}
-                                            style={elementFilter === el ? { background: style.bg, color: style.color, borderColor: style.border } : undefined}
-                                            onClick={() => setElementFilter(elementFilter === el ? null : el)}
-                                        >
-                                            {el}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <div className="gallery-element-filters" style={{ marginTop: '6px' }}>
                                 {['all', ...CATEGORY_ORDER].map((cat) => {
                                     const style = cat === 'all' ? null : CATEGORY_STYLES[cat];
                                     const isActive = categoryFilter === cat;
@@ -337,22 +330,7 @@ const GalleryModal = ({ onClose }) => {
                     </div>
                 )}
 
-                {tab === 'rules' && (
-                    <div className="gallery-rules-panel">
-                        <RulesView mode="brief" sectionIds={['objective', 'turnFlow', 'actions', 'combat', 'status', 'microevents', 'limits']} />
-                        <button className="rules-open-full-btn" onClick={() => setShowRulesModal(true)}>
-                            Open Full Rules Deep Dive
-                        </button>
-                    </div>
-                )}
             </div>
-
-            {showRulesModal && (
-                <RulesModal
-                    onClose={() => setShowRulesModal(false)}
-                    title="Rules Deep Dive"
-                />
-            )}
 
             {previewCard && (
                 <div className="fc-preview-overlay" onClick={() => setPreviewCard(null)}>
