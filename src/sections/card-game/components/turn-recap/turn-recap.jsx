@@ -156,7 +156,6 @@ const TurnRecap = ({ currentPlayer, players }) => {
                             placeholder="Search by card, player, or effect…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            autoFocus
                         />
                         {search && (
                             <button className="recap-search-clear" onClick={() => setSearch('')}>✕</button>

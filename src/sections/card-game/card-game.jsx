@@ -331,7 +331,6 @@ const CardGame = () => {
                                         placeholder="Search log…"
                                         value={briefSearch}
                                         onChange={(e) => setBriefSearch(e.target.value)}
-                                        autoFocus
                                     />
                                     {briefSearch && (
                                         <button className="game-panel-log-search-clear" onClick={() => setBriefSearch('')}>✕</button>

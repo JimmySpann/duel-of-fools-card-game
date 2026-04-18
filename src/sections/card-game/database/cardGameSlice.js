@@ -634,4 +634,5 @@ export const {
   setGameState,
 } = cardGameSlice.actions;
 
+export { ABILITY_TARGETS };
 export default cardGameSlice.reducer;
