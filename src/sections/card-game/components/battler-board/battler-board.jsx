@@ -178,6 +178,8 @@ const beatEnvelope = (phase, width = 0.32) => {
     return normalized * normalized;
 };
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
 const getPhaseProfile = (choreo, trackBeats) => {
     const cycleBars = Math.max(1, choreo.cycleBars || 8);
     const barInCycle = ((trackBeats / 4) % cycleBars + cycleBars) % cycleBars;
@@ -188,7 +190,120 @@ const getPhaseProfile = (choreo, trackBeats) => {
     };
 };
 
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const DANCE_PHASE_MAPS = [
+    [
+        { name: 'intro', start: 0, end: 0.14, pattern: 'twoStep', overrides: { spinDeg: 0, stepAmp: 3.1, yKick: 6.4 } },
+        { name: 'verse', start: 0.14, end: 0.45, pattern: 'grapevine', overrides: { xRange: 12.2, stepAmp: 5.2 } },
+        { name: 'chorus', start: 0.45, end: 0.7, pattern: 'spinCombo', overrides: { spinDeg: 165, yKick: 10.6 } },
+        { name: 'bridge', start: 0.7, end: 0.88, pattern: 'shuffleRun', overrides: { hopFreq: 4, stepFreq: 2, yLift: 6.2 } },
+        { name: 'outro', start: 0.88, end: 1.01, pattern: 'twoStep', overrides: { xRange: 8.8, spinDeg: 40 } },
+    ],
+    [
+        { name: 'intro', start: 0, end: 0.2, pattern: 'floatStep', overrides: { swayFreq: 0.35, stepAmp: 1.4, spinDeg: 0 } },
+        { name: 'verse', start: 0.2, end: 0.48, pattern: 'floatStep', overrides: { xRange: 8.4, yLift: 7.2 } },
+        { name: 'chorus', start: 0.48, end: 0.74, pattern: 'grapevine', overrides: { stepAmp: 3.5, spinDeg: 75, spinEnergyThreshold: 0.56 } },
+        { name: 'bridge', start: 0.74, end: 0.9, pattern: 'shuffleRun', overrides: { hopFreq: 2, xKick: 3.3, stepFreq: 1 } },
+        { name: 'outro', start: 0.9, end: 1.01, pattern: 'floatStep', overrides: { xRange: 6.8, yKick: 5.2, spinDeg: 0 } },
+    ],
+    [
+        { name: 'intro', start: 0, end: 0.1, pattern: 'shuffleRun', overrides: { stepAmp: 4.5, spinDeg: 70 } },
+        { name: 'verse', start: 0.1, end: 0.43, pattern: 'zigZag', overrides: { xRange: 14.8, stepAmp: 6.9, yKick: 11.2 } },
+        { name: 'chorus', start: 0.43, end: 0.7, pattern: 'spinCombo', overrides: { spinDeg: 190, spinBeatFreq: 1.2 } },
+        { name: 'bridge', start: 0.7, end: 0.88, pattern: 'zigZag', overrides: { hopFreq: 4, stepFreq: 2, yLift: 7.1 } },
+        { name: 'outro', start: 0.88, end: 1.01, pattern: 'twoStep', overrides: { xRange: 10.2, spinDeg: 60 } },
+    ],
+    [
+        { name: 'intro', start: 0, end: 0.14, pattern: 'twoStep', overrides: { stepFreq: 0.5, stepAmp: 2.2, spinDeg: 0 } },
+        { name: 'verse', start: 0.14, end: 0.46, pattern: 'grapevine', overrides: { xRange: 10.9, stepAmp: 4.8 } },
+        { name: 'chorus', start: 0.46, end: 0.72, pattern: 'shuffleRun', overrides: { hopFreq: 4, stepFreq: 2, spinDeg: 135 } },
+        { name: 'bridge', start: 0.72, end: 0.9, pattern: 'spinCombo', overrides: { spinDeg: 150, spinEnergyThreshold: 0.46 } },
+        { name: 'outro', start: 0.9, end: 1.01, pattern: 'twoStep', overrides: { xRange: 7.6, stepAmp: 2.4, spinDeg: 35 } },
+    ],
+    [
+        { name: 'intro', start: 0, end: 0.12, pattern: 'shuffleRun', overrides: { stepAmp: 3.4, spinDeg: 65 } },
+        { name: 'verse', start: 0.12, end: 0.42, pattern: 'zigZag', overrides: { xRange: 12.3, stepAmp: 5.6, yKick: 9.8 } },
+        { name: 'chorus', start: 0.42, end: 0.7, pattern: 'spinCombo', overrides: { spinDeg: 175, spinBeatFreq: 1.1 } },
+        { name: 'bridge', start: 0.7, end: 0.88, pattern: 'grapevine', overrides: { swayFreq: 1, xKick: 4.4, stepFreq: 1 } },
+        { name: 'outro', start: 0.88, end: 1.01, pattern: 'twoStep', overrides: { xRange: 8.2, spinDeg: 50 } },
+    ],
+];
+
+const getNamedSongPhase = (trackIndex, progress) => {
+    const map = DANCE_PHASE_MAPS[trackIndex % DANCE_PHASE_MAPS.length] || DANCE_PHASE_MAPS[0];
+    const safeProgress = Number.isFinite(progress) ? clamp(progress, 0, 1) : 0;
+    return map.find((phase) => safeProgress >= phase.start && safeProgress < phase.end) || map[map.length - 1];
+};
+
+const getPatternMotion = (pattern, { trackBeats, phase, onBeat, offBeat, barline, stepAmp, effectiveEnergy, intensity }) => {
+    if (pattern === 'grapevine') {
+        const glide = Math.sin(trackBeats * Math.PI * 0.5 + phase * 0.5);
+        const cross = Math.sin(trackBeats * TWO_PI + phase * 1.7);
+        return {
+            extraX: (glide * 0.62 + cross * 0.38) * stepAmp * 1.15,
+            extraY: Math.max(0, cross) * 1.4,
+            extraRot: glide * 1.15,
+            spinBoost: 0.12,
+        };
+    }
+
+    if (pattern === 'shuffleRun') {
+        const run = Math.sin(trackBeats * Math.PI + phase * 0.7);
+        const tap = Math.sin(trackBeats * TWO_PI * 2 + phase * 1.4);
+        const snap = Math.sign(tap) * Math.pow(Math.abs(tap), 0.6);
+        return {
+            extraX: (run * 0.55 + snap * 0.85) * stepAmp,
+            extraY: Math.max(0, tap) * 1.9 + onBeat * 0.8,
+            extraRot: snap * 1.05,
+            spinBoost: 0.2,
+        };
+    }
+
+    if (pattern === 'zigZag') {
+        const zig = Math.sin(trackBeats * TWO_PI * 1.5 + phase * 0.5);
+        const zag = Math.sin(trackBeats * TWO_PI * 3 + phase * 1.9);
+        return {
+            extraX: (zig * 0.8 + zag * 0.45) * stepAmp,
+            extraY: Math.max(0, zag) * 1.3,
+            extraRot: zig * 1.35,
+            spinBoost: 0.22,
+        };
+    }
+
+    if (pattern === 'floatStep') {
+        const drift = Math.sin(trackBeats * Math.PI * 0.5 + phase * 0.4);
+        const swell = Math.sin(trackBeats * Math.PI + phase * 0.9);
+        return {
+            extraX: drift * stepAmp * 0.75,
+            extraY: Math.max(0, swell) * 1.1,
+            extraRot: drift * 0.55,
+            spinBoost: 0,
+        };
+    }
+
+    if (pattern === 'spinCombo') {
+        const windup = beatEnvelope(trackBeats * 0.5 + phase / TWO_PI, 0.2);
+        const release = beatEnvelope(trackBeats + 0.25 + phase / TWO_PI, 0.16);
+        const settle = beatEnvelope(trackBeats + 0.62 + phase / TWO_PI, 0.22);
+        const lane = Math.sin(trackBeats * TWO_PI + phase * 0.5);
+        const comboBoost = (windup * 0.32 + release * 1.05 + barline * 0.45 - settle * 0.35);
+        return {
+            extraX: lane * stepAmp * 0.58,
+            extraY: windup * 1.7 + release * 1.4,
+            extraRot: (release - settle) * 3.4 * effectiveEnergy * intensity,
+            spinBoost: comboBoost,
+        };
+    }
+
+    // twoStep default
+    const step = Math.sin(trackBeats * Math.PI + phase * 0.65);
+    const groove = Math.sign(step) * Math.pow(Math.abs(step), 0.75);
+    return {
+        extraX: groove * stepAmp * 0.9,
+        extraY: Math.max(0, step) * 1.2,
+        extraRot: groove * 0.9 + (onBeat - offBeat * 0.35) * 0.6,
+        spinBoost: 0.06,
+    };
+};
 
 const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = true }) => {
     const dispatch = useDispatch();
@@ -203,6 +318,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
     const [danceAudioTime, setDanceAudioTime] = useState(0);
     const [danceBpm, setDanceBpm] = useState(120);
     const [danceTrackIndex, setDanceTrackIndex] = useState(0);
+    const [danceTrackProgress, setDanceTrackProgress] = useState(0);
     const danceSmoothRef = useRef(0);
     const rafRef = useRef(null);
 
@@ -232,6 +348,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
             danceSmoothRef.current = 0;
             setDanceEnergy(0);
             setDanceAudioTime(0);
+            setDanceTrackProgress(0);
             return;
         }
 
@@ -241,6 +358,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
             const now = musicManager.getCurrentTime();
             const bpm = Math.max(60, musicManager.getCurrentBPM() || 120);
             const trackIndex = musicManager.getState().currentIndex || 0;
+            const trackProgress = musicManager.getTrackProgress();
             // Extra local smoothing to keep board motion calm.
             danceSmoothRef.current += (target - danceSmoothRef.current) * 0.2;
 
@@ -250,6 +368,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                 setDanceAudioTime(now);
                 setDanceBpm(bpm);
                 setDanceTrackIndex(trackIndex);
+                setDanceTrackProgress(trackProgress);
             }
             rafRef.current = requestAnimationFrame(tick);
         };
@@ -310,7 +429,11 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const choreo = DANCE_CHOREOGRAPHIES[danceTrackIndex % DANCE_CHOREOGRAPHIES.length] || DANCE_CHOREOGRAPHIES[0];
                             const phase = phaseFrom(card.id, index);
                             const trackBeats = danceAudioTime * (danceBpm / 60);
-                            const profile = getPhaseProfile(choreo, trackBeats);
+                            const namedPhase = getNamedSongPhase(danceTrackIndex, danceTrackProgress);
+                            const profile = {
+                                ...getPhaseProfile(choreo, trackBeats),
+                                ...(namedPhase.overrides || {}),
+                            };
                             const primaryWave = Math.sin(trackBeats * TWO_PI * profile.swayFreq + phase);
                             const hopWave = Math.sin(trackBeats * TWO_PI * profile.hopFreq + phase * 0.7);
                             const accentWave = Math.sin(trackBeats * TWO_PI + phase + profile.accentLag * TWO_PI);
@@ -325,10 +448,20 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
 
                             const stepWave = Math.sin(trackBeats * Math.PI * profile.stepFreq + phase * 0.9);
                             const stepShape = Math.sign(stepWave) * Math.pow(Math.abs(stepWave), 0.68);
+                            const patternMotion = getPatternMotion(namedPhase.pattern, {
+                                trackBeats,
+                                phase,
+                                onBeat,
+                                offBeat,
+                                barline,
+                                stepAmp: profile.stepAmp,
+                                effectiveEnergy,
+                                intensity,
+                            });
 
                             const lateralSwing = primaryWave * profile.xRange;
                             const lateralKick = accentWave * onBeat * profile.xKick;
-                            const sideStepTravel = stepShape * profile.stepAmp;
+                            const sideStepTravel = (stepShape * profile.stepAmp) + patternMotion.extraX;
                             const slideX = (lateralSwing + lateralKick + sideStepTravel) * effectiveEnergy * intensity;
 
                             const liftBase = Math.max(0, hopWave) * profile.yLift;
@@ -341,10 +474,10 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                                     ? beatEnvelope(trackBeats * profile.spinBeatFreq + phase / TWO_PI + profile.spinLag, profile.spinWidth)
                                     : 0;
                             const spinDirection = ((Math.floor(trackBeats) + index) % 2 === 0 ? 1 : -1);
-                            const spinDeg = spinPulse * profile.spinDeg * spinDirection * (0.65 + barline * 0.6) * intensity;
+                            const spinDeg = spinPulse * profile.spinDeg * spinDirection * (0.65 + barline * 0.6 + patternMotion.spinBoost) * intensity;
 
                             const baseRotateDeg =
-                                ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick) + (stepShape * profile.leanDeg)) *
+                                ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick) + (stepShape * profile.leanDeg) + patternMotion.extraRot) *
                                 effectiveEnergy *
                                 intensity;
                             const rotateDeg = baseRotateDeg + spinDeg;
@@ -352,7 +485,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const scale = 1 + (onBeat * profile.scalePulse + Math.max(0, hopWave) * profile.scalePulse * 0.6) * effectiveEnergy * intensity;
 
                             const safeX = clamp(slideX, -DANCE_MAX_X_TRAVEL * intensity, DANCE_MAX_X_TRAVEL * intensity);
-                            const safeLift = clamp(liftPx, 0, DANCE_MAX_LIFT * intensity);
+                            const safeLift = clamp(liftPx + (patternMotion.extraY * effectiveEnergy * intensity), 0, DANCE_MAX_LIFT * intensity);
                             const safeRotate = clamp(rotateDeg, -DANCE_MAX_ROTATION, DANCE_MAX_ROTATION);
 
                             return {

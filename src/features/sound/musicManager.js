@@ -196,6 +196,14 @@ const musicManager = {
         return TRACKS[_state.currentIndex].bpm;
     },
 
+    /** Returns normalized track progress from 0..1, or 0 when unavailable. */
+    getTrackProgress() {
+        const duration = _audio?.duration;
+        const currentTime = _audio?.currentTime ?? 0;
+        if (!Number.isFinite(duration) || duration <= 0) return 0;
+        return Math.max(0, Math.min(1, currentTime / duration));
+    },
+
     /**
      * Returns a smoothed 0..1 reactive value based on low-mid frequency energy.
      * Safe fallback: returns 0 when analysis is unavailable or music is paused.
