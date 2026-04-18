@@ -980,7 +980,17 @@ const actions = {
         if (ability?.microevent) {
             const { success, score } = microeventResult;
             const { outcome, type } = ability.microevent;
-            const typeLabel = { qte: 'QTE', pattern: 'Pattern Match', quiz: 'Quiz', rhythm: 'Rhythm' }[type] ?? type;
+            const typeLabel = {
+                qte: 'QTE',
+                pattern: 'Pattern Match',
+                quiz: 'Quiz',
+                rhythm: 'Rhythm',
+                mash: 'Mash',
+                parry: 'Parry Chain',
+                route: 'Mana Route',
+                sigil: 'Sigil Recall',
+                arrow: 'Arrow Volley',
+            }[type] ?? type;
             const casterName = casterPlayer?.inPlay[casterCardIndex]?.name ?? 'Unknown';
 
             if (outcome === 'binary') {

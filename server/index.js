@@ -198,7 +198,7 @@ const ALLOWED_TARGET_TYPES = new Set(['self', 'enemyCard', 'allyCard', 'allEnemi
 const ALLOWED_EFFECT_TYPES = new Set(['damage', 'status', 'heal', 'healSelf', 'cleanse', 'resetCooldowns', 'selfDestruct']);
 const ALLOWED_STATUS_TYPES = new Set(['burned', 'frozen', 'def_up', 'def_down', 'poisoned', 'bleeding', 'shielded', 'invulnerable', 'invisible', 'focused', 'damage_reduction', 'eva_up']);
 const ALLOWED_CLEANSE_DEBUFFS = ['burned', 'frozen', 'poisoned', 'bleeding', 'def_down'];
-const ALLOWED_MICROEVENT_TYPES = new Set(['qte', 'mash', 'pattern', 'rhythm', 'quiz', 'parry', 'route', 'sigil']);
+const ALLOWED_MICROEVENT_TYPES = new Set(['qte', 'mash', 'pattern', 'rhythm', 'quiz', 'parry', 'route', 'sigil', 'arrow']);
 const ALLOWED_MICROEVENT_OUTCOMES = new Set(['binary', 'scaled']);
 
 const clampNum = (value, min, max, fallback = min) => {
@@ -1758,6 +1758,7 @@ const MICROEVENT_TIMEOUT_MS = {
     parry: 12000,
     route: 16000,
     sigil: 14000,
+    arrow: 14000,
 };
 
 const TRACK_BPMS = [120, 80, 135, 95, 128]; // matches TRACKS order in musicManager.js
@@ -1893,6 +1894,17 @@ const triggerMicroevent = async (gameId, game, context, ability, socket) => {
         const seqLen = effectiveDifficulty <= 1 ? 3 : effectiveDifficulty <= 3 ? 4 : 5;
         startPayload.seed = Array.from({ length: seqLen }, () => Math.floor(Math.random() * 4));
         startPayload.seqLen = seqLen;
+    }
+
+    if (me.type === 'arrow') {
+        startPayload.shots = 3;
+        startPayload.targetRadius = [0.125, 0.112, 0.098, 0.086, 0.074][effectiveDifficulty];
+        startPayload.crosshairRadius = [0.14, 0.124, 0.108, 0.094, 0.082][effectiveDifficulty];
+        startPayload.speed = [0.16, 0.205, 0.255, 0.315, 0.39][effectiveDifficulty];
+        startPayload.centerBias = [0.62, 0.52, 0.42, 0.32, 0.24][effectiveDifficulty];
+        startPayload.retargetMinMs = [520, 470, 420, 360, 320][effectiveDifficulty];
+        startPayload.retargetMaxMs = [980, 900, 790, 700, 620][effectiveDifficulty];
+        startPayload.timeoutMs = 14000;
     }
 
     // Timeout: auto-resolve failure if active player disconnects or stalls

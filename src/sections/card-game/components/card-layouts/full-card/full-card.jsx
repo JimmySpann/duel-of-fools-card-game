@@ -21,6 +21,7 @@ const MICROEVENT_LABELS = {
     parry: 'Parry',
     route: 'Route',
     sigil: 'Sigil',
+    arrow: 'Arrow',
 };
 
 const STATUS_INFO = {

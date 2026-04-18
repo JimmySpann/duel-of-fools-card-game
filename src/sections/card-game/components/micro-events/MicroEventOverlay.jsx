@@ -6,6 +6,7 @@ import MashEvent from './MashEvent';
 import ParryChainEvent from './ParryChainEvent';
 import ManaRouteEvent from './ManaRouteEvent';
 import SigilRecallEvent from './SigilRecallEvent';
+import ArrowShotEvent from './ArrowShotEvent';
 import './micro-events.css';
 
 /**
@@ -39,6 +40,7 @@ const MicroEventOverlay = ({ context, liveInputs, isSpectator, onComplete, onInp
             {context.type === 'parry' && <ParryChainEvent    {...eventProps} />}
             {context.type === 'route' && <ManaRouteEvent     {...eventProps} />}
             {context.type === 'sigil' && <SigilRecallEvent   {...eventProps} />}
+            {context.type === 'arrow' && <ArrowShotEvent     {...eventProps} />}
         </div>
     );
 };

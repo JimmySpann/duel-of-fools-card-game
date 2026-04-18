@@ -170,6 +170,112 @@
     text-align: center;
 }
 
+/* ── Arrow Shots ─────────────────────────────────────────────────────────── */
+
+.me-arrow-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.me-arrow-hud {
+    display: flex;
+    gap: 16px;
+    color: #e8e8f0;
+    font-size: 0.92rem;
+    letter-spacing: 0.04em;
+}
+
+.me-arrow-arena {
+    position: relative;
+    width: min(66vw, 460px);
+    aspect-ratio: 1 / 1;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background:
+        radial-gradient(circle at 55% 46%, rgba(255, 220, 160, 0.09), rgba(8, 15, 26, 0.95)),
+        linear-gradient(135deg, rgba(40, 60, 28, 0.22), rgba(18, 22, 34, 0.82));
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.me-arrow-crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(170, 215, 255, 0.9);
+    border-radius: 50%;
+    box-shadow: 0 0 18px rgba(120, 185, 255, 0.45);
+}
+
+.me-arrow-crosshair::before,
+.me-arrow-crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(175, 224, 255, 0.88);
+}
+
+.me-arrow-crosshair::before {
+    left: 50%;
+    top: -18%;
+    width: 2px;
+    height: 136%;
+    transform: translateX(-50%);
+}
+
+.me-arrow-crosshair::after {
+    top: 50%;
+    left: -18%;
+    width: 136%;
+    height: 2px;
+    transform: translateY(-50%);
+}
+
+.me-arrow-target {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 36% 32%, #fff, #d94848 30%, #3f0d0d 78%);
+    border: 2px solid rgba(255, 238, 238, 0.85);
+    box-shadow: 0 0 22px rgba(255, 80, 80, 0.55);
+}
+
+.me-arrow-target.flash {
+    box-shadow: 0 0 34px rgba(255, 255, 255, 0.8), 0 0 52px rgba(255, 90, 90, 0.75);
+}
+
+.me-arrow-feedback {
+    color: #d8dce8;
+    min-height: 1.3em;
+    letter-spacing: 0.03em;
+    text-align: center;
+}
+
+.me-arrow-shoot-btn {
+    width: 210px;
+    height: 50px;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 0.95rem;
+    letter-spacing: 0.06em;
+    color: #fff;
+    background: linear-gradient(135deg, #2e6abf, #26408f);
+    box-shadow: 0 6px 20px rgba(45, 96, 185, 0.5);
+}
+
+.me-arrow-shoot-btn:hover:not(:disabled) {
+    transform: scale(1.03);
+}
+
+.me-arrow-shoot-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 /* ── Pattern Match ───────────────────────────────────────────────────────── */
 
 .me-pattern-container {

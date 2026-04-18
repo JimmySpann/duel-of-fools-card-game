@@ -23,6 +23,7 @@ const MICROEVENT_LABELS = {
     parry: 'Parry',
     route: 'Route',
     sigil: 'Sigil',
+    arrow: 'Arrow',
 };
 
 const ElementChip = ({ element, value }) => {

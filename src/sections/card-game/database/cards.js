@@ -155,7 +155,7 @@ const cards = [
         ],
         actions: [
             { name: 'Gale Shot', actionInfo: 'Damage + Knockback', description: 'Deals damage and pushes enemy back', limit: 10, usesRemaining: 10 },
-            { name: 'Volley', actionInfo: 'Multi-Target', description: 'Deals small damage to 3 random enemies', limit: 6, usesRemaining: 6, microevent: { type: 'pattern', outcome: 'scaled' } },
+            { name: 'Volley', actionInfo: 'Multi-Target', description: 'Deals small damage to 3 random enemies', limit: 6, usesRemaining: 6, microevent: { type: 'arrow', outcome: 'scaled' } },
             { name: 'Focus', actionInfo: 'Next Attack 2.5x DMG', description: 'Concentrates for a lethal shot', limit: 4, usesRemaining: 4 }
         ],
         defense: 4, agility: 9, attack: 6, evasion: 7, health: 7
