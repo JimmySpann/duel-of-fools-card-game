@@ -229,10 +229,9 @@ const Card = ({
             </div>
 
             <div className={`card-back ${isFlipped ? 'rotateY-0' : ''}`}>
-                <img
-                    src={cardBack}
-                    className="card-back-image"
-                />
+                <div className="card-back-face">
+                    <img src="/img/Logo.png" className="card-back-logo" alt="Card Back" />
+                </div>
             </div>
         </div>
     );

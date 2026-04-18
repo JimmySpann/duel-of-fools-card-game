@@ -312,7 +312,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
     const dispatch = useDispatch();
     const lastHitEvents = useSelector((state) => state.cardGame.lastHitEvents);
     const cardDanceEnabled = useSelector((state) => state.profile.cardDanceEnabled !== false);
-    const cardDanceIntensity = useSelector((state) => state.profile.cardDanceIntensity ?? 0.8);
+    const cardDanceIntensity = useSelector((state) => state.profile.cardDanceIntensity ?? 0.6);
     const [hoveredCardIndex, setHoveredCardIndex] = useState(null);
     const [flippedCards] = useState({});
     // { [cardId]: { type, damage } }

@@ -93,11 +93,11 @@ const loadNotifPrefs = () => {
             notifyLobby: localStorage.getItem('cg_notifyLobby') !== 'false',
             soundVolume: parseFloat(localStorage.getItem('cg_soundVolume') ?? '0.7'),
             cardDanceEnabled: localStorage.getItem('cg_cardDanceEnabled') !== 'false',
-            cardDanceIntensity: Math.max(0.1, Math.min(1.5, parseFloat(localStorage.getItem('cg_cardDanceIntensity') ?? '0.8'))),
+            cardDanceIntensity: Math.max(0.1, Math.min(1.5, parseFloat(localStorage.getItem('cg_cardDanceIntensity') ?? '0.6'))),
             censorAdultCards: localStorage.getItem('cg_censorAdultCards') !== 'false',
         };
     } catch {
-        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7, cardDanceEnabled: true, cardDanceIntensity: 0.8, censorAdultCards: true };
+        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7, cardDanceEnabled: true, cardDanceIntensity: 0.6, censorAdultCards: true };
     }
 };
 
@@ -136,7 +136,7 @@ const profileSlice = createSlice({
             try { localStorage.setItem('cg_cardDanceEnabled', state.cardDanceEnabled); } catch { }
         },
         setCardDanceIntensity(state, action) {
-            state.cardDanceIntensity = Math.max(0.1, Math.min(1.5, Number(action.payload) || 0.8));
+            state.cardDanceIntensity = Math.max(0.1, Math.min(1.5, Number(action.payload) || 0.6));
             try { localStorage.setItem('cg_cardDanceIntensity', state.cardDanceIntensity); } catch { }
         },
         setCensorAdultCards(state, action) {
