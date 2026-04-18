@@ -1100,7 +1100,10 @@ app.post('/api/sessions/join', requireAuth, async (req, res) => {
         if (alreadyIn) return res.json({ session }); // idempotent re-join
 
         const SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
-        const usedSlots = new Set(session.players.map((p) => p.slot));
+        const usedSlots = new Set([
+            ...session.players.map((p) => p.slot),
+            ...(session.cpuSlots || []).map((c) => c.slot),
+        ]);
         const nextSlot = SLOTS.find((s) => !usedSlots.has(s));
         if (!nextSlot) return res.status(409).json({ error: 'Session is full' });
 
@@ -1127,7 +1130,10 @@ app.post('/api/sessions/:id/join', requireAuth, async (req, res) => {
         if (alreadyIn) return res.json({ session }); // idempotent
 
         const SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
-        const usedSlots = new Set(session.players.map((p) => p.slot));
+        const usedSlots = new Set([
+            ...session.players.map((p) => p.slot),
+            ...(session.cpuSlots || []).map((c) => c.slot),
+        ]);
         const nextSlot = SLOTS.find((s) => !usedSlots.has(s));
         if (!nextSlot) return res.status(409).json({ error: 'Session is full' });
 
