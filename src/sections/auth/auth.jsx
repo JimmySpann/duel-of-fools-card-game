@@ -20,7 +20,7 @@ const Auth = () => {
     const handleFirstInteraction = () => {
         if (!triedAutoplay.current) {
             triedAutoplay.current = true;
-            if (music.enabled) musicManager.play();
+            musicManager.autoPlay();
         }
     };
 

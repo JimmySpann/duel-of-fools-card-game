@@ -142,6 +142,16 @@ const musicManager = {
         if (_audio) _audio.volume = _state.volume;
         notify();
     },
+
+    /**
+     * Start music only if the user hasn't disabled it and volume is above zero.
+     * No-op if already playing. Safe to call on every page/view change.
+     */
+    autoPlay() {
+        if (_state.enabled && _state.volume > 0 && !_state.playing) {
+            this.play();
+        }
+    },
 };
 
 export default musicManager;

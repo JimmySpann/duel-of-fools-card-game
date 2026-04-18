@@ -5,6 +5,7 @@ import { pollSession, fetchSessionById } from './features/sessions/sessionsSlice
 import { clearChat } from './features/chat/chatSlice';
 import { fetchProfile, resetProfile } from './features/profile/profileSlice';
 import { connectSocket, disconnectSocket } from './features/chat/socket';
+import musicManager from './features/sound/musicManager';
 import Auth from './sections/auth/auth.jsx';
 import Sessions from './sections/sessions/sessions.jsx';
 import CardGame from './sections/card-game/card-game.jsx';
@@ -61,6 +62,26 @@ function App() {
       dispatch(resetProfile());
     }
   }, [token, dispatch]);
+
+  // Start music on first user interaction — covers all pages
+  useEffect(() => {
+    const handler = () => {
+      musicManager.autoPlay();
+      document.removeEventListener('click', handler, true);
+      document.removeEventListener('keydown', handler, true);
+    };
+    document.addEventListener('click', handler, true);
+    document.addEventListener('keydown', handler, true);
+    return () => {
+      document.removeEventListener('click', handler, true);
+      document.removeEventListener('keydown', handler, true);
+    };
+  }, []);
+
+  // Re-attempt when switching views (auth ↔ sessions ↔ game)
+  useEffect(() => {
+    musicManager.autoPlay();
+  }, [token, activeGameId]);
 
   // While in lobby (no game yet), poll so non-host sees the game start
   useEffect(() => {
