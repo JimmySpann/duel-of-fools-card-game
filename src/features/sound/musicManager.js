@@ -25,6 +25,22 @@ const save = (key, val) => {
     try { localStorage.setItem(key, JSON.stringify(val)); } catch { }
 };
 
+// Cookie helpers (used for muted state so it persists across sessions)
+const loadCookie = (key, fallback) => {
+    try {
+        const match = document.cookie.split('; ').find((c) => c.startsWith(key + '='));
+        return match ? JSON.parse(decodeURIComponent(match.split('=')[1])) : fallback;
+    } catch { return fallback; }
+};
+
+const saveCookie = (key, val) => {
+    try {
+        const expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 1);
+        document.cookie = `${key}=${encodeURIComponent(JSON.stringify(val))};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+    } catch { }
+};
+
 // ── Internal state ────────────────────────────────────────────────────────────
 
 let _audio = null;
@@ -32,7 +48,7 @@ let _state = {
     playing: false,
     currentIndex: load('cg_musicIndex', 0),
     volume: load('cg_musicVolume', 0.5),
-    enabled: load('cg_musicEnabled', true),
+    enabled: loadCookie('cg_musicEnabled', true),
 };
 
 const _subscribers = new Set();
@@ -81,7 +97,7 @@ const musicManager = {
             .then(() => {
                 _state.playing = true;
                 _state.enabled = true;
-                save('cg_musicEnabled', true);
+                saveCookie('cg_musicEnabled', true);
                 notify();
             })
             .catch(() => { });
@@ -91,7 +107,7 @@ const musicManager = {
         if (_audio) {
             _audio.pause();
             _state.playing = false;
-            save('cg_musicEnabled', false);
+            saveCookie('cg_musicEnabled', false);
             notify();
         }
     },
