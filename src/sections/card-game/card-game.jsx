@@ -32,7 +32,8 @@ const CardGame = () => {
 
     // Panel state
     const [showBrief, setShowBrief] = useState(false);
-    const [briefTab, setBriefTab] = useState('rules');
+    const [briefTab, setBriefTab] = useState('fullBrief');
+    const [briefSearch, setBriefSearch] = useState('');
     const [showChat, setShowChat] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
 
@@ -253,6 +254,12 @@ const CardGame = () => {
                         {/* Tab switcher */}
                         <div className="game-panel-tabs">
                             <button
+                                className={`game-panel-tab${briefTab === 'fullBrief' ? ' active' : ''}`}
+                                onClick={() => setBriefTab('fullBrief')}
+                            >
+                                Full Brief
+                            </button>
+                            <button
                                 className={`game-panel-tab${briefTab === 'rules' ? ' active' : ''}`}
                                 onClick={() => setBriefTab('rules')}
                             >
@@ -265,6 +272,36 @@ const CardGame = () => {
                                 Turn Brief
                             </button>
                         </div>
+
+                        {/* ── Full Brief tab ── */}
+                        {briefTab === 'fullBrief' && (
+                            <div className="game-panel-section">
+                                <div className="game-panel-log-search-row">
+                                    <input
+                                        className="game-panel-log-search"
+                                        type="text"
+                                        placeholder="Search log…"
+                                        value={briefSearch}
+                                        onChange={(e) => setBriefSearch(e.target.value)}
+                                        autoFocus
+                                    />
+                                    {briefSearch && (
+                                        <button className="game-panel-log-search-clear" onClick={() => setBriefSearch('')}>✕</button>
+                                    )}
+                                </div>
+                                <ol className="game-panel-log">
+                                    {(briefSearch
+                                        ? log.filter((entry) => entry.toLowerCase().includes(briefSearch.toLowerCase()))
+                                        : log
+                                    ).map((entry, i) => (
+                                        <li key={i} className="game-panel-log-entry">{entry}</li>
+                                    ))}
+                                    {briefSearch && log.filter((e) => e.toLowerCase().includes(briefSearch.toLowerCase())).length === 0 && (
+                                        <li className="game-panel-log-empty">No entries match "{briefSearch}"</li>
+                                    )}
+                                </ol>
+                            </div>
+                        )}
 
                         {/* ── Rules tab ── */}
                         {briefTab === 'rules' && (
