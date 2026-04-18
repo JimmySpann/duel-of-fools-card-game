@@ -13,6 +13,7 @@ import {
     removeCpu,
     leaveSessionLobby,
     deleteSession,
+    submitDeck,
     setActiveSession,
     clearSessionError,
 } from '../../features/sessions/sessionsSlice';
@@ -21,6 +22,8 @@ import { setGameState } from '../card-game/database/cardGameSlice';
 import LobbyChat from '../../features/chat/LobbyChat';
 import DMPanel from '../../features/chat/DMPanel';
 import Profile from '../../features/profile/Profile';
+import GalleryModal from './GalleryModal';
+import DeckBuilderModal from './DeckBuilderModal';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import './sessions.css';
 
@@ -49,6 +52,14 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
     const playerCount = session.players.length + cpuSlots.length;
     const unreadLobby = useSelector((s) => s.chat.unreadLobby[session._id] || 0);
     const [showChat, setShowChat] = useState(false);
+    const [showDeckBuilder, setShowDeckBuilder] = useState(false);
+
+    // My player entry (null for observers)
+    const myPlayer = session.players.find((p) => p.username === username);
+    const myDeckStatus = myPlayer?.deckStatus || 'preparation';
+
+    // All human players must be 'ready' before host can start
+    const allReady = session.players.every((p) => p.deckStatus === 'ready');
 
     // Clear unread count when chat is opened
     useEffect(() => {
@@ -61,6 +72,12 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
 
     const handleTeamChange = (slot, team) => {
         dispatch(updateTeam({ sessionId: session._id, slot, team }));
+    };
+
+    const handleDeckConfirm = (deck) => {
+        dispatch(submitDeck({ sessionId: session._id, deck })).then((res) => {
+            if (!res.error) setShowDeckBuilder(false);
+        });
     };
 
     return (
@@ -167,12 +184,29 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                     const slotNum = i + 1;
                     const isCpu = !!cpu;
                     const isFilled = !!player || isCpu;
+                    const isMe = player?.username === username;
                     return (
                         <div key={slot} className={`lobby-slot ${isFilled ? (isCpu ? 'cpu' : 'filled') : 'empty'}`}>
                             <span className="lobby-slot-label">Player {slotNum}</span>
                             <span className="lobby-slot-name">
                                 {isCpu ? `🤖 ${cpu.name}` : player ? player.username : 'Open'}
                             </span>
+                            {/* Deck status badge for human players */}
+                            {player && !isCpu && (
+                                <span className={`lobby-slot-status${player.deckStatus === 'ready' ? ' ready' : ' prep'}`}>
+                                    {player.deckStatus === 'ready' ? '✓ Ready' : '⏳ Preparation'}
+                                </span>
+                            )}
+                            {/* Build / Edit Deck button for the current user */}
+                            {isMe && (
+                                <button
+                                    className={`lobby-build-deck-btn${myDeckStatus === 'ready' ? ' edit' : ''}`}
+                                    onClick={() => setShowDeckBuilder(true)}
+                                    disabled={loading}
+                                >
+                                    {myDeckStatus === 'ready' ? '✏ Edit Deck' : '🃏 Build Deck'}
+                                </button>
+                            )}
                             {isCpu && isHost && (
                                 <button
                                     className="lobby-slot-remove-cpu"
@@ -233,9 +267,10 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                     <button
                         className="lobby-start-btn"
                         onClick={onStart}
-                        disabled={playerCount < 2 || loading}
+                        disabled={playerCount < 2 || !allReady || loading}
+                        title={!allReady ? 'Waiting for all players to build their deck' : undefined}
                     >
-                        {loading ? 'Starting…' : playerCount < 2 ? 'Need at least 2 players…' : 'Start Game'}
+                        {loading ? 'Starting…' : playerCount < 2 ? 'Need at least 2 players…' : !allReady ? 'Waiting for players…' : 'Start Game'}
                     </button>
                     <button className="lobby-delete-btn" onClick={onDelete} disabled={loading}>
                         Delete Session
@@ -243,7 +278,11 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                 </div>
             ) : (
                 <div className="lobby-actions">
-                    <p className="lobby-waiting-msg">Waiting for the host to start the game…</p>
+                    <p className="lobby-waiting-msg">
+                        {myDeckStatus !== 'ready'
+                            ? 'Choose your deck to get ready!'
+                            : 'Waiting for the host to start the game…'}
+                    </p>
                     <button className="lobby-leave-btn" onClick={onLeave} disabled={loading}>
                         Leave Session
                     </button>
@@ -257,6 +296,17 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                 💬 Chat{!showChat && unreadLobby > 0 && <span className="lobby-chat-badge">{unreadLobby}</span>}
             </button>
             {showChat && <LobbyChat sessionId={session._id} isWatching={true} />}
+
+            {/* Deck builder modal */}
+            {showDeckBuilder && (
+                <DeckBuilderModal
+                    onClose={() => setShowDeckBuilder(false)}
+                    onConfirm={handleDeckConfirm}
+                    initialDeck={myPlayer?.selectedDeck || []}
+                    loading={loading}
+                    error={error}
+                />
+            )}
         </div>
     );
 };
@@ -349,6 +399,7 @@ const Sessions = () => {
     const [joinCode, setJoinCode] = useState('');
     const [previewSession, setPreviewSession] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
+    const [showGallery, setShowGallery] = useState(false);
 
     useEffect(() => {
         dispatch(fetchSessions());
@@ -567,6 +618,9 @@ const Sessions = () => {
                     <img src="/img/Logo.png" alt="Duel of Fools" className="sessions-logo" />
                     <div className="sessions-header-right">
                         <DMPanel anchor="header" />
+                        <button className="sessions-gallery-btn" onClick={() => setShowGallery(true)} title="View all cards and game rules">
+                            📖 Gallery
+                        </button>
                         <button className="sessions-profile-btn" onClick={() => setShowProfile(true)}>
                             <img
                                 className="sessions-profile-avatar"
@@ -631,6 +685,7 @@ const Sessions = () => {
                 </section>
             </div>
             {showProfile && <Profile onClose={() => setShowProfile(false)} />}
+            {showGallery && <GalleryModal onClose={() => setShowGallery(false)} />}
         </div>
     );
 };

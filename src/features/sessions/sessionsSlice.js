@@ -154,6 +154,18 @@ export const deleteSession = createAsyncThunk('sessions/delete', async ({ sessio
     return sessionId;
 });
 
+export const submitDeck = createAsyncThunk('sessions/submitDeck', async ({ sessionId, deck }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/deck`, {
+        method: 'PATCH',
+        headers: authHeader(token),
+        body: JSON.stringify({ deck }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.session;
+});
+
 const sessionsSlice = createSlice({
     name: 'sessions',
     initialState: {
@@ -277,7 +289,16 @@ const sessionsSlice = createSlice({
                 state.activeSession = null;
                 state.list = state.list.filter((s) => s._id !== action.payload);
             })
-            .addCase(deleteSession.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
+            .addCase(deleteSession.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+
+            .addCase(submitDeck.pending, (state) => { state.loading = true; state.error = null; })
+            .addCase(submitDeck.fulfilled, (state, action) => {
+                state.loading = false;
+                state.activeSession = action.payload;
+                const idx = state.list.findIndex((s) => s._id === action.payload._id);
+                if (idx >= 0) state.list[idx] = action.payload;
+            })
+            .addCase(submitDeck.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
     },
 });
 

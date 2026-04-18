@@ -11,6 +11,8 @@ const playerSlotSchema = new mongoose.Schema(
         username: { type: String, required: true },
         slot: { type: String, enum: VALID_SLOTS, required: true },
         team: { type: String, enum: VALID_TEAMS, default: null },
+        selectedDeck: { type: [String], default: [] },
+        deckStatus: { type: String, enum: ['preparation', 'ready'], default: 'preparation' },
     },
     { _id: false }
 );
@@ -30,6 +32,7 @@ const settingsSchema = new mongoose.Schema(
         deckSize: { type: Number, default: null, min: 4, max: 50 },   // null = all cards
         teamMode: { type: String, enum: ['ffa', 'teams'], default: 'ffa' },
         turnTimeLimit: { type: Number, default: 86400, min: 60 },     // seconds; null = no limit
+        microgameDifficulty: { type: Number, default: 1, min: 1, max: 5 },
     },
     { _id: false }
 );

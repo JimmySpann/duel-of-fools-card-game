@@ -497,11 +497,18 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
         const totalPlayers = session.players.length + (session.cpuSlots?.length || 0);
         if (totalPlayers < 2) return res.status(409).json({ error: 'Need at least 2 players (including CPUs) to start' });
 
+        // Require all human players to have chosen a deck
+        const notReady = session.players.filter((p) => p.deckStatus !== 'ready');
+        if (notReady.length > 0) {
+            const names = notReady.map((p) => p.username).join(', ');
+            return res.status(409).json({ error: `Waiting for players to choose a deck: ${names}` });
+        }
+
         // Merge real players and CPU slots, ordered by slot name
         const SLOT_ORDER = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
         const combined = [
-            ...session.players.map((p) => ({ name: p.username, team: p.team, slot: p.slot, isBot: false })),
-            ...(session.cpuSlots || []).map((c) => ({ name: c.name, team: null, slot: c.slot, isBot: true })),
+            ...session.players.map((p) => ({ name: p.username, team: p.team, slot: p.slot, isBot: false, selectedDeck: p.selectedDeck || [] })),
+            ...(session.cpuSlots || []).map((c) => ({ name: c.name, team: null, slot: c.slot, isBot: true, selectedDeck: [] })),
         ].sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
 
         const playerConfigs = combined.map((p, i) => ({
@@ -509,6 +516,7 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
             name: p.name,
             team: session.settings?.teamMode === 'teams' ? (p.team || null) : null,
             isBot: p.isBot,
+            selectedDeck: p.selectedDeck,
         }));
 
         const settings = {
@@ -517,6 +525,7 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
             deckSize: session.settings?.deckSize ?? null,
             teamMode: session.settings?.teamMode ?? 'ffa',
             turnTimeLimit: session.settings?.turnTimeLimit ?? 86400,
+            microgameDifficulty: session.settings?.microgameDifficulty ?? 1,
         };
 
         const gameId = uuidv4();
@@ -602,6 +611,7 @@ app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
         if (deckSize !== undefined) session.settings.deckSize = deckSize === null ? null : Number(deckSize);
         if (teamMode !== undefined) session.settings.teamMode = teamMode === 'teams' ? 'teams' : 'ffa';
         if (turnTimeLimit !== undefined) session.settings.turnTimeLimit = turnTimeLimit === null ? null : Math.max(60, Number(turnTimeLimit));
+        if (microgameDifficulty !== undefined) session.settings.microgameDifficulty = Math.min(5, Math.max(1, Number(microgameDifficulty) || 1));
         session.markModified('settings');
         await session.save();
 
@@ -609,6 +619,42 @@ app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('PATCH /api/sessions/:id/settings error:', err);
         res.status(500).json({ error: 'Failed to update settings' });
+    }
+});
+
+/**
+ * PATCH /api/sessions/:id/deck
+ * Body: { deck: string[] }  — 3-10 card IDs from the known card list.
+ * Sets the calling player's selected deck and marks them as 'ready'.
+ */
+const VALID_CARD_IDS = new Set(['hoodNigga', 'coldKilla', 'pyroWarden', 'voltStinger', 'terraTitan', 'shadowStalker', 'aquaticSage', 'ironMonarch', 'zephyrArcher', 'toxicChimera']);
+app.patch('/api/sessions/:id/deck', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change deck after game starts' });
+
+        const player = session.players.find((p) => String(p.userId) === req.user.id);
+        if (!player) return res.status(403).json({ error: 'You are not in this session' });
+
+        const { deck } = req.body;
+        if (!Array.isArray(deck)) return res.status(400).json({ error: 'deck must be an array of card IDs' });
+        if (deck.length < 3 || deck.length > 10) return res.status(400).json({ error: 'Deck must contain 3–10 cards' });
+        const unknown = deck.filter((id) => !VALID_CARD_IDS.has(id));
+        if (unknown.length > 0) return res.status(400).json({ error: `Unknown card IDs: ${unknown.join(', ')}` });
+        // Deduplicate while preserving order
+        const unique = [...new Set(deck)];
+        if (unique.length < 3) return res.status(400).json({ error: 'Deck must contain at least 3 distinct cards' });
+
+        player.selectedDeck = unique;
+        player.deckStatus = 'ready';
+        session.markModified('players');
+        await session.save();
+
+        res.json({ session });
+    } catch (err) {
+        console.error('PATCH /api/sessions/:id/deck error:', err);
+        res.status(500).json({ error: 'Failed to update deck' });
     }
 });
 
