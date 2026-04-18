@@ -53,6 +53,7 @@
     .hand-container--desktop {
         display: flex;
         align-items: flex-end;
+        overflow-y: visible !important;
         padding-top: 80px;
         /* room for rotated cards to arc upward */
         padding-bottom: 8px;
