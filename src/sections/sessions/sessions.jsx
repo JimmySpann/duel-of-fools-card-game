@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
     fetchSessions,
     createSession,
+    updateSessionVisibility,
     joinSession,
     joinSessionById,
     startSession,
@@ -27,6 +28,7 @@ import DeckBuilderModal from './DeckBuilderModal';
 import CustomCardModal from './CustomCardModal';
 import RulesModal from '../shared/rules/RulesModal';
 import { markLobbyRead } from '../../features/chat/chatSlice';
+import { getSocket } from '../../features/chat/socket';
 import './sessions.css';
 
 const POLL_INTERVAL = 3000;
@@ -45,16 +47,23 @@ const defaultMaxBattlers = (count) => {
     return 4;
 };
 
+const inviteLinkFromCode = (joinCode) => `${window.location.origin}/?join=${encodeURIComponent(joinCode || '')}`;
+
 // ── Lobby view ─────────────────────────────────────────────────────────────────
 const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading, error, dispatch }) => {
     const isHost = session.host.username === username;
+    const isPublic = session.isPublic !== false;
     const settings = session.settings || {};
     const teamMode = settings.teamMode || 'ffa';
     const cpuSlots = session.cpuSlots || [];
     const playerCount = session.players.length + cpuSlots.length;
+    const inviteLink = inviteLinkFromCode(session.joinCode);
     const unreadLobby = useSelector((s) => s.chat.unreadLobby[session._id] || 0);
     const [showChat, setShowChat] = useState(false);
     const [showDeckBuilder, setShowDeckBuilder] = useState(false);
+    const [inviteUsername, setInviteUsername] = useState('');
+    const [inviteFeedback, setInviteFeedback] = useState('');
+    const [inviteFeedbackType, setInviteFeedbackType] = useState('');
 
     // My player entry (null for observers)
     const myPlayer = session.players.find((p) => p.username === username);
@@ -82,12 +91,96 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
         });
     };
 
+    const setFeedback = (message, type = 'info') => {
+        setInviteFeedback(message);
+        setInviteFeedbackType(type);
+    };
+
+    const copyToClipboard = async (text, successMessage) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setFeedback(successMessage, 'success');
+        } catch {
+            setFeedback('Clipboard unavailable in this browser context.', 'error');
+        }
+    };
+
+    const handleSendInviteDm = (e) => {
+        e.preventDefault();
+        const toUsername = inviteUsername.trim();
+        if (!toUsername) {
+            setFeedback('Enter a username to send an invite.', 'error');
+            return;
+        }
+
+        const socket = getSocket();
+        if (!socket) {
+            setFeedback('Chat socket not connected yet. Try again in a moment.', 'error');
+            return;
+        }
+
+        const msg = `Join my Duel of Fools session "${session.name}"\nInvite link: ${inviteLink}\nJoin code: ${session.joinCode}`;
+        socket.emit('dm:message', { toUsername, text: msg });
+        setInviteUsername('');
+        setFeedback(`Invite sent to ${toUsername}.`, 'success');
+    };
+
     return (
         <div className="lobby-container">
             <button className="sessions-back-btn" onClick={onBack}>← Back to Sessions</button>
             <h2 className="lobby-title">{session.name}</h2>
             <p className="lobby-code-label">Invite code</p>
             <div className="lobby-code">{session.joinCode}</div>
+            <div className="lobby-visibility-row">
+                <span className={`lobby-visibility-chip ${isPublic ? 'public' : 'private'}`}>
+                    {isPublic ? '🌐 Public Session' : '🔒 Private Session'}
+                </span>
+                {isHost && (
+                    <button
+                        className="lobby-visibility-toggle-btn"
+                        onClick={() => dispatch(updateSessionVisibility({ sessionId: session._id, isPublic: !isPublic }))}
+                        disabled={loading || session.status !== 'waiting'}
+                    >
+                        Make {isPublic ? 'Private' : 'Public'}
+                    </button>
+                )}
+            </div>
+            <div className="lobby-invite-tools">
+                <button
+                    className="lobby-invite-tool-btn"
+                    type="button"
+                    onClick={() => copyToClipboard(inviteLink, 'Invite link copied.')}
+                >
+                    🔗 Copy Invite Link
+                </button>
+                <button
+                    className="lobby-invite-tool-btn"
+                    type="button"
+                    onClick={() => copyToClipboard(session.joinCode, 'Join code copied.')}
+                >
+                    📋 Copy Join Code
+                </button>
+            </div>
+            <form className="lobby-invite-dm-form" onSubmit={handleSendInviteDm}>
+                <label className="lobby-invite-dm-label" htmlFor="invite-username">
+                    Send invite in messages
+                </label>
+                <div className="lobby-invite-dm-row">
+                    <input
+                        id="invite-username"
+                        className="lobby-invite-dm-input"
+                        type="text"
+                        placeholder="Username..."
+                        value={inviteUsername}
+                        onChange={(e) => setInviteUsername(e.target.value)}
+                        maxLength={40}
+                    />
+                    <button className="lobby-invite-dm-send" type="submit">Send Invite</button>
+                </div>
+                {inviteFeedback && (
+                    <p className={`lobby-invite-feedback ${inviteFeedbackType}`}>{inviteFeedback}</p>
+                )}
+            </form>
 
             {/* Settings — host-only */}
             {isHost && (
@@ -359,6 +452,9 @@ const SessionCard = ({ session, isParticipant, openSlots, isMyTurn, currentTurnN
             <div className="session-card-info">
                 <span className="session-card-name">{session.name}</span>
                 <span className={`session-card-status ${session.status}`}>{statusLabel(session.status)}</span>
+                <span className={`session-card-visibility ${(session.isPublic !== false) ? 'public' : 'private'}`}>
+                    {(session.isPublic !== false) ? 'Public' : 'Private'}
+                </span>
                 {isMyTurn && <span className="session-card-your-turn">⚔ Your Turn!</span>}
                 {!isMyTurn && currentTurnName && (
                     <span className="session-card-their-turn">🎲 {currentTurnName}'s Turn</span>
@@ -412,6 +508,7 @@ const Sessions = () => {
 
     const [view, setView] = useState('list'); // 'list' | 'create' | 'join' | 'preview' | 'lobby'
     const [newName, setNewName] = useState('');
+    const [newSessionIsPublic, setNewSessionIsPublic] = useState(true);
     const [joinCode, setJoinCode] = useState('');
     const [previewSession, setPreviewSession] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
@@ -421,9 +518,26 @@ const Sessions = () => {
     const [showRules, setShowRules] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
+    const inviteJoinAttemptedRef = useRef(false);
 
     useEffect(() => {
         dispatch(fetchSessions());
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (inviteJoinAttemptedRef.current) return;
+        const url = new URL(window.location.href);
+        const join = (url.searchParams.get('join') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+        if (!join) return;
+
+        inviteJoinAttemptedRef.current = true;
+        url.searchParams.delete('join');
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+
+        dispatch(clearSessionError());
+        dispatch(joinSession({ joinCode: join })).then((res) => {
+            if (!res.error) setView('lobby');
+        });
     }, [dispatch]);
 
     // Poll active session in lobby
@@ -439,11 +553,11 @@ const Sessions = () => {
         (e) => {
             e.preventDefault();
             if (!newName.trim()) return;
-            dispatch(createSession({ name: newName.trim() })).then((res) => {
+            dispatch(createSession({ name: newName.trim(), isPublic: newSessionIsPublic })).then((res) => {
                 if (!res.error) setView('lobby');
             });
         },
-        [dispatch, newName]
+        [dispatch, newName, newSessionIsPublic]
     );
 
     const handleJoin = useCallback(
@@ -465,18 +579,10 @@ const Sessions = () => {
         [dispatch]
     );
 
-    const handleJoinDirectly = useCallback(
-        (session) => {
-            dispatch(joinSessionById({ sessionId: session._id })).then((res) => {
-                if (!res.error) setView('lobby');
-            });
-        },
-        [dispatch]
-    );
-
     const handleBack = useCallback(() => {
         setView('list');
         setNewName('');
+        setNewSessionIsPublic(true);
         setJoinCode('');
         setPreviewSession(null);
         dispatch(clearSessionError());
@@ -586,6 +692,17 @@ const Sessions = () => {
                                 required
                                 autoFocus
                             />
+                        </label>
+                        <label className="sessions-label">
+                            Session Visibility
+                            <select
+                                className="sessions-input"
+                                value={newSessionIsPublic ? 'public' : 'private'}
+                                onChange={(e) => setNewSessionIsPublic(e.target.value === 'public')}
+                            >
+                                <option value="public">Public (listed in Sessions)</option>
+                                <option value="private">Private (hidden; join by code/link)</option>
+                            </select>
                         </label>
                         {error && <p className="sessions-error">{error}</p>}
                         <button className="sessions-submit" type="submit" disabled={loading}>

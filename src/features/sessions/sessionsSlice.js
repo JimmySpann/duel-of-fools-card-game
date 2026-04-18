@@ -23,12 +23,24 @@ export const fetchSessionById = createAsyncThunk('sessions/fetchById', async (se
     return data.session;
 });
 
-export const createSession = createAsyncThunk('sessions/create', async ({ name }, { getState, rejectWithValue }) => {
+export const createSession = createAsyncThunk('sessions/create', async ({ name, isPublic = true }, { getState, rejectWithValue }) => {
     const token = getState().auth.token;
     const res = await fetch(API, {
         method: 'POST',
         headers: authHeader(token),
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, isPublic }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.session;
+});
+
+export const updateSessionVisibility = createAsyncThunk('sessions/updateVisibility', async ({ sessionId, isPublic }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/visibility`, {
+        method: 'PATCH',
+        headers: authHeader(token),
+        body: JSON.stringify({ isPublic }),
     });
     const data = await res.json();
     if (!res.ok) return rejectWithValue(data.error);
@@ -255,6 +267,13 @@ const sessionsSlice = createSlice({
             })
             .addCase(updateSettings.rejected, (state, action) => { state.error = action.payload; })
 
+            .addCase(updateSessionVisibility.fulfilled, (state, action) => {
+                state.activeSession = action.payload;
+                const idx = state.list.findIndex((s) => s._id === action.payload._id);
+                if (idx >= 0) state.list[idx] = action.payload;
+            })
+            .addCase(updateSessionVisibility.rejected, (state, action) => { state.error = action.payload; })
+
             .addCase(updateTeam.fulfilled, (state, action) => {
                 state.activeSession = action.payload;
                 const idx = state.list.findIndex((s) => s._id === action.payload._id);
@@ -325,4 +344,5 @@ const sessionsSlice = createSlice({
     },
 });
 
-export const { clearSessionError, leaveSession, setActiveSession } = sessionsSlice.actions; export default sessionsSlice.reducer;
+export const { clearSessionError, leaveSession, setActiveSession } = sessionsSlice.actions;
+export default sessionsSlice.reducer;

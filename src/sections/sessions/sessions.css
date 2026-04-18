@@ -431,6 +431,25 @@
     color: #8890b0;
 }
 
+.session-card-visibility {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+.session-card-visibility.public {
+    color: #9edbcf;
+    background: rgba(54, 150, 124, 0.2);
+}
+
+.session-card-visibility.private {
+    color: #f2d4a5;
+    background: rgba(178, 118, 40, 0.22);
+}
+
 .session-card-your-turn {
     display: inline-block;
     background: #1e8c4e;
@@ -715,6 +734,139 @@
     border-radius: 12px;
     padding: 0.5rem 1.5rem;
     margin-bottom: 2rem;
+}
+
+.lobby-visibility-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: -1rem 0 1rem;
+}
+
+.lobby-visibility-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.lobby-visibility-chip.public {
+    color: #9edbcf;
+    background: rgba(54, 150, 124, 0.18);
+    border: 1px solid rgba(85, 184, 158, 0.45);
+}
+
+.lobby-visibility-chip.private {
+    color: #f2d4a5;
+    background: rgba(178, 118, 40, 0.2);
+    border: 1px solid rgba(214, 147, 67, 0.45);
+}
+
+.lobby-visibility-toggle-btn {
+    border: 1px solid #3a4060;
+    background: #1a1d27;
+    color: #dde0f0;
+    border-radius: 8px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.lobby-visibility-toggle-btn:hover:not(:disabled) {
+    background: #252942;
+}
+
+.lobby-visibility-toggle-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.lobby-invite-tools {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.65rem;
+}
+
+.lobby-invite-tool-btn {
+    border: 1px solid #3a4060;
+    background: #1a1d27;
+    color: #dde0f0;
+    border-radius: 8px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.lobby-invite-tool-btn:hover {
+    background: #252942;
+}
+
+.lobby-invite-dm-form {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto 1rem;
+    background: #181b26;
+    border: 1px solid #2e3148;
+    border-radius: 10px;
+    padding: 0.7rem 0.85rem;
+}
+
+.lobby-invite-dm-label {
+    display: block;
+    text-align: left;
+    color: #9ca3bf;
+    font-size: 0.8rem;
+    margin-bottom: 0.4rem;
+}
+
+.lobby-invite-dm-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.lobby-invite-dm-input {
+    flex: 1;
+    min-width: 0;
+    background: #262940;
+    color: #dde0f0;
+    border: 1px solid #3a4060;
+    border-radius: 6px;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.9rem;
+}
+
+.lobby-invite-dm-send {
+    border: none;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.84rem;
+    padding: 0.45rem 0.8rem;
+    cursor: pointer;
+}
+
+.lobby-invite-feedback {
+    margin: 0.45rem 0 0;
+    text-align: left;
+    font-size: 0.8rem;
+}
+
+.lobby-invite-feedback.success {
+    color: #77d3a6;
+}
+
+.lobby-invite-feedback.error {
+    color: #e05a5a;
 }
 
 .lobby-slots {

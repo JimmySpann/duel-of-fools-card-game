@@ -48,6 +48,7 @@ const sessionSchema = new mongoose.Schema(
         },
         players: { type: [playerSlotSchema], default: [] },
         cpuSlots: { type: [cpuSlotSchema], default: [] },
+        isPublic: { type: Boolean, default: true },
         settings: { type: settingsSchema, default: () => ({}) },
         // 'waiting' → lobby open, 'in-progress' → game running, 'finished' → game over
         status: { type: String, enum: ['waiting', 'in-progress', 'finished'], default: 'waiting' },

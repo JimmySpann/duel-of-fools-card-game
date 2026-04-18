@@ -1007,7 +1007,13 @@ app.get('/api/sessions', requireAuth, async (req, res) => {
         const sessions = await Session.find({
             $or: [
                 { 'players.userId': userId },
-                { status: 'waiting' },
+                {
+                    status: 'waiting',
+                    $or: [
+                        { isPublic: true },
+                        { isPublic: { $exists: false } },
+                    ],
+                },
             ],
         }).sort({ updatedAt: -1 }).lean();
         res.json({ sessions });
@@ -1046,7 +1052,7 @@ app.delete('/api/sessions/completed', requireAuth, async (req, res) => {
  */
 app.post('/api/sessions', requireAuth, async (req, res) => {
     try {
-        const { name, settings = {} } = req.body;
+        const { name, settings = {}, isPublic = true } = req.body;
         if (!name || !name.trim()) return res.status(400).json({ error: 'Session name is required' });
 
         let joinCode;
@@ -1061,6 +1067,7 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
             joinCode,
             host: { userId: req.user.id, username: req.user.username },
             players: [{ userId: req.user.id, username: req.user.username, slot: 'player1', team: null }],
+            isPublic: isPublic !== false,
             settings: {
                 startingHp: Number(settings.startingHp) || 20,
                 maxBattlers: settings.maxBattlers ? Number(settings.maxBattlers) : null,
@@ -1301,6 +1308,30 @@ app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('PATCH /api/sessions/:id/settings error:', err);
         res.status(500).json({ error: 'Failed to update settings' });
+    }
+});
+
+/**
+ * PATCH /api/sessions/:id/visibility
+ * Body: { isPublic: boolean }
+ * Host-only; toggles session visibility while in waiting state.
+ */
+app.patch('/api/sessions/:id/visibility', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can change visibility' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change visibility after game starts' });
+
+        const { isPublic } = req.body;
+        if (typeof isPublic !== 'boolean') return res.status(400).json({ error: 'isPublic must be a boolean' });
+
+        session.isPublic = isPublic;
+        await session.save();
+        res.json({ session });
+    } catch (err) {
+        console.error('PATCH /api/sessions/:id/visibility error:', err);
+        res.status(500).json({ error: 'Failed to update visibility' });
     }
 });
 
