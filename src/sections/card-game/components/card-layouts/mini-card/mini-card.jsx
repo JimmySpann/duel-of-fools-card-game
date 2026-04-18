@@ -10,18 +10,18 @@ import deathIcon from '../../../../../assets/elements/death-icon.png';
 import './mini-card.css';
 
 const STATUS_BADGE_CONFIG = {
-    burned: { label: 'BRN', bg: '#c0392b' },
-    frozen: { label: 'FRZ', bg: '#2980b9' },
-    invulnerable: { label: 'INV', bg: '#f39c12' },
-    invisible: { label: 'GHT', bg: '#7f8c8d' },
-    poisoned: { label: 'PSN', bg: '#27ae60' },
-    bleeding: { label: 'BLD', bg: '#922b21' },
-    focused: { label: 'FOC', bg: '#8e44ad' },
-    shielded: { label: 'SHD', bg: '#1abc9c' },
-    def_up: { label: '+DEF', bg: '#2ecc71' },
-    def_down: { label: '-DEF', bg: '#e74c3c' },
-    eva_up: { label: '+EVA', bg: '#3498db' },
-    damage_reduction: { label: '½DMG', bg: '#e67e22' },
+    burned: { label: 'BRN', bg: '#7a1500', border: '#c0392b', showVal: true, valSuffix: '/t', buff: false },
+    frozen: { label: 'FRZ', bg: '#0a3d62', border: '#2980b9', showVal: false, buff: false },
+    invulnerable: { label: 'INV', bg: '#7d4e00', border: '#f39c12', showVal: false, buff: true },
+    invisible: { label: 'GHT', bg: '#2c3e50', border: '#7f8c8d', showVal: false, buff: true },
+    poisoned: { label: 'PSN', bg: '#0b5120', border: '#27ae60', showVal: true, valSuffix: '/t', buff: false },
+    bleeding: { label: 'BLD', bg: '#5b0a07', border: '#922b21', showVal: true, valSuffix: '/t', buff: false },
+    focused: { label: 'FOC', bg: '#4a1a6b', border: '#8e44ad', showVal: false, buff: true },
+    shielded: { label: 'SHD', bg: '#0e5549', border: '#1abc9c', showVal: true, valPrefix: '+', buff: true },
+    def_up: { label: '+DEF', bg: '#145a32', border: '#2ecc71', showVal: true, buff: true },
+    def_down: { label: '-DEF', bg: '#78281f', border: '#e74c3c', showVal: true, buff: false },
+    eva_up: { label: '+EVA', bg: '#1a3f6f', border: '#3498db', showVal: true, buff: true },
+    damage_reduction: { label: '½DMG', bg: '#6e3000', border: '#e67e22', showVal: false, buff: true },
 };
 
 // Returns the net modifier for a given stat from statusEffects
@@ -52,14 +52,24 @@ const StatusBadges = ({ statusEffects }) => {
             {statusEffects.map((s, i) => {
                 const cfg = STATUS_BADGE_CONFIG[s.type];
                 if (!cfg) return null;
+                const showVal = cfg.showVal && s.value != null && s.value !== 1;
+                const showDur = s.duration != null && s.duration < 999;
                 return (
                     <span
                         key={i}
-                        className="status-badge"
-                        style={{ backgroundColor: cfg.bg }}
-                        title={`${s.type}${s.duration !== 999 ? ` (${s.duration})` : ''}`}
+                        className={`status-badge${cfg.buff ? ' buff' : ' debuff'}`}
+                        style={{ backgroundColor: cfg.bg, borderColor: cfg.border }}
+                        title={`${s.type}${s.value != null ? ` (${s.value})` : ''}${showDur ? `, ${s.duration} turns remaining` : ''}`}
                     >
-                        {cfg.label}
+                        <span className="status-badge-label">{cfg.label}</span>
+                        {showVal && (
+                            <span className="status-badge-value">
+                                {cfg.valPrefix || ''}{s.value}{cfg.valSuffix || ''}
+                            </span>
+                        )}
+                        {showDur && (
+                            <span className="status-badge-dur">{s.duration}t</span>
+                        )}
                     </span>
                 );
             })}

@@ -241,14 +241,46 @@ body {
 }
 
 .status-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
     color: white;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 800;
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 8px;
+    border: 1px solid transparent;
     letter-spacing: 0.5px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
     white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.status-badge-label {
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.status-badge-value {
+    font-size: 22px;
+    font-weight: 900;
+    margin-left: 2px;
+}
+
+.status-badge.buff .status-badge-value {
+    color: #b8ffda;
+}
+
+.status-badge.debuff .status-badge-value {
+    color: #ffd0d0;
+}
+
+.status-badge-dur {
+    font-size: 15px;
+    font-weight: 600;
+    opacity: 0.75;
+    margin-left: 1px;
+    align-self: center;
 }
 
 /* ── Disabled ability buttons ────────────────────────────────────────────── */
