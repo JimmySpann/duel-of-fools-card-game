@@ -767,6 +767,10 @@ const CustomCardModal = ({ onClose }) => {
         setError('');
     };
 
+    const handleBuildDeck = () => {
+        onClose();
+    };
+
     const handleGenerateConcept = async () => {
         if (!aiPrompt.trim()) {
             setAiError('Describe your card idea first.');
@@ -1432,14 +1436,32 @@ const CustomCardModal = ({ onClose }) => {
 
                         {error && <p className="custom-card-error">{error}</p>}
 
-                        <button
-                            className="custom-card-create-btn"
-                            type="submit"
-                            disabled={createLoading || usedPoints > maxPoints || totalAbilityCount < 1 || isPowerOverBudget}
-                            title="Save this card. Disabled if stat budget or custom ability power budget is exceeded, or if no ability is selected."
-                        >
-                            {createLoading ? 'Saving…' : editingCardId ? 'Update Card' : 'Create Card'}
-                        </button>
+                        <div className="custom-card-submit-actions">
+                            <button
+                                className="custom-card-build-deck-btn"
+                                type="button"
+                                onClick={handleBuildDeck}
+                                title="Close this modal and go back to deck tools."
+                            >
+                                <svg className="custom-card-btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <rect x="4" y="6" width="12" height="14" rx="2" ry="2" />
+                                    <rect x="8" y="4" width="12" height="14" rx="2" ry="2" />
+                                </svg>
+                                <span>Build Deck</span>
+                            </button>
+                            <button
+                                className="custom-card-create-btn"
+                                type="submit"
+                                disabled={createLoading || usedPoints > maxPoints || totalAbilityCount < 1 || isPowerOverBudget}
+                                title="Save this card. Disabled if stat budget or custom ability power budget is exceeded, or if no ability is selected."
+                            >
+                                <svg className="custom-card-btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <rect x="4" y="5" width="16" height="14" rx="2" ry="2" />
+                                    <path d="M12 8v8M8 12h8" />
+                                </svg>
+                                <span>{createLoading ? 'Saving…' : editingCardId ? 'Update Card' : 'Create Cards'}</span>
+                            </button>
+                        </div>
                         {editingCardId && (
                             <button className="custom-card-cancel-edit-btn" type="button" onClick={cancelEdit} title="Discard edits and return to create mode.">
                                 Cancel Edit

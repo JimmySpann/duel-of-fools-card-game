@@ -1,5 +1,11 @@
 import { pipeline } from '@xenova/transformers';
 
+const AI_DEBUG = process.env.NODE_ENV !== 'production';
+const aiLog = (...args) => {
+    if (!AI_DEBUG) return;
+    console.log('[AI]', ...args);
+};
+
 export const AI_MODEL_PRESETS = [
     {
         id: 'onnx-community/Bonsai-1.7B-ONNX',
@@ -23,12 +29,17 @@ const generatorCache = new Map();
 const getFallbackModelOrder = (primaryModelId) => {
     const all = AI_MODEL_PRESETS.map((m) => m.id);
     const ordered = [primaryModelId, ...all.filter((id) => id !== primaryModelId)];
+    aiLog('Fallback model order:', ordered);
     return ordered.filter(Boolean);
 };
 
 const getGenerator = async (modelId) => {
-    if (generatorCache.has(modelId)) return generatorCache.get(modelId);
+    if (generatorCache.has(modelId)) {
+        aiLog('Using cached generator for model:', modelId);
+        return generatorCache.get(modelId);
+    }
 
+    aiLog('Loading generator for model:', modelId);
     const generatorPromise = pipeline('text-generation', modelId);
     generatorCache.set(modelId, generatorPromise);
     return generatorPromise;
@@ -70,6 +81,15 @@ const runGeneration = async (modelId, prompt, options = {}) => {
         repetitionPenalty = 1.08,
     } = options;
 
+    aiLog('runGeneration start', {
+        modelId,
+        promptLength: String(prompt || '').length,
+        maxNewTokens,
+        temperature,
+        topP,
+        repetitionPenalty,
+    });
+
     const generator = await getGenerator(modelId);
     const output = await generator(prompt, {
         max_new_tokens: maxNewTokens,
@@ -82,11 +102,18 @@ const runGeneration = async (modelId, prompt, options = {}) => {
 
     const text = normalizeOutputText(output);
     const parsed = extractJsonObject(text);
+    aiLog('runGeneration output received', {
+        modelId,
+        outputTextLength: text.length,
+        parsedJson: !!parsed,
+    });
 
     if (!parsed) {
+        aiLog('runGeneration failed JSON parse for model:', modelId);
         throw new Error('Model returned malformed JSON.');
     }
 
+    aiLog('runGeneration success for model:', modelId);
     return parsed;
 };
 
@@ -94,19 +121,28 @@ const runGenerationWithFallback = async ({ modelId, prompt, options }) => {
     const order = getFallbackModelOrder(modelId);
     const attempts = [];
 
+    aiLog('runGenerationWithFallback start', {
+        primaryModel: modelId,
+        attemptsPlanned: order.length,
+    });
+
     for (const currentModelId of order) {
         try {
+            aiLog('Attempting generation with model:', currentModelId);
             const parsed = await runGeneration(currentModelId, prompt, options);
+            aiLog('Generation succeeded with model:', currentModelId);
             return {
                 parsed,
                 usedModelId: currentModelId,
                 attempts,
             };
         } catch (err) {
+            aiLog('Generation failed with model:', currentModelId, err?.message || 'Generation failed');
             attempts.push({ modelId: currentModelId, reason: err?.message || 'Generation failed' });
         }
     }
 
+    aiLog('All fallback attempts failed', attempts);
     throw new Error('All local models failed. Try again, reduce prompt size, or refresh the page.');
 };
 
@@ -121,6 +157,12 @@ const buildGenerationOptions = (creativity = 50) => {
 };
 
 export const generateCardConcept = async ({ modelId, userPrompt, creativity = 50 }) => {
+    aiLog('generateCardConcept start', {
+        requestedModel: modelId,
+        promptLength: String(userPrompt || '').length,
+        creativity,
+    });
+
     const prompt = `You are an assistant for a fantasy card game custom builder.
 Return ONLY JSON, no markdown.
 JSON schema:
@@ -143,6 +185,11 @@ User request: ${userPrompt}`;
         },
     });
 
+    aiLog('generateCardConcept complete', {
+        usedModelId: result.usedModelId,
+        fallbackCount: result.attempts.length,
+    });
+
     return {
         concept: result.parsed,
         usedModelId: result.usedModelId,
@@ -157,6 +204,14 @@ export const generateCardDraft = async ({
     officialAbilityNames,
     creativity = 50,
 }) => {
+    aiLog('generateCardDraft start', {
+        requestedModel: modelId,
+        promptLength: String(userPrompt || '').length,
+        hasConcept: !!concept,
+        officialAbilityCount: Array.isArray(officialAbilityNames) ? officialAbilityNames.length : 0,
+        creativity,
+    });
+
     const conceptText = concept ? JSON.stringify(concept) : '{}';
     const abilitiesList = (officialAbilityNames || []).join(', ');
     const clampedCreativity = Math.max(0, Math.min(100, Number(creativity) || 0));
@@ -191,6 +246,11 @@ Concept: ${conceptText}`;
             ...buildGenerationOptions(clampedCreativity),
             maxNewTokens: 420,
         },
+    });
+
+    aiLog('generateCardDraft complete', {
+        usedModelId: result.usedModelId,
+        fallbackCount: result.attempts.length,
     });
 
     return {

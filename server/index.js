@@ -1615,8 +1615,10 @@ app.get('/api/messages/dm-list', requireAuth, async (req, res) => {
 // ── Push notification API ─────────────────────────────────────────────────────
 
 app.get('/api/push/vapid-public-key', (req, res) => {
-    if (!VAPID_PUSH_ENABLED) return res.status(503).json({ error: 'Push not configured' });
-    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+    if (!VAPID_PUSH_ENABLED) {
+        return res.json({ enabled: false, publicKey: null });
+    }
+    res.json({ enabled: true, publicKey: process.env.VAPID_PUBLIC_KEY });
 });
 
 app.post('/api/push/subscribe', requireAuth, async (req, res) => {
