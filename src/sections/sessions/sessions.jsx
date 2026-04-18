@@ -13,7 +13,6 @@ import {
     removeCpu,
     leaveSessionLobby,
     deleteSession,
-    clearCompletedSessions,
     submitDeck,
     setActiveSession,
     clearSessionError,
@@ -419,7 +418,6 @@ const Sessions = () => {
     const [showCustomCards, setShowCustomCards] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
-    const clearableCompletedCount = list.filter((s) => s.status === 'finished' && s.host?.username === username).length;
 
     useEffect(() => {
         dispatch(fetchSessions());
@@ -705,14 +703,6 @@ const Sessions = () => {
                     </button>
                     <button className="sessions-action-btn" onClick={() => setShowCustomCards(true)}>
                         🧪 Create Card
-                    </button>
-                    <button
-                        className="sessions-action-btn danger"
-                        onClick={() => dispatch(clearCompletedSessions())}
-                        disabled={loading || clearableCompletedCount === 0}
-                        title={clearableCompletedCount === 0 ? 'No completed sessions to clear' : 'Delete completed sessions you host'}
-                    >
-                        🧹 Clear Completed ({clearableCompletedCount})
                     </button>
                 </div>
 
