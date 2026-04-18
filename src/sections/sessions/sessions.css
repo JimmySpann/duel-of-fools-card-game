@@ -1,7 +1,7 @@
 /* ── Shared backdrop ─────────────────────────────────────────────────────── */
 .sessions-backdrop {
     min-height: 100vh;
-    background: #0f1117;
+    background: radial-gradient(ellipse at 50% 0%, rgba(120, 40, 200, 0.15) 0%, #0f1117 60%);
     color: #dde0f0;
 }
 
@@ -19,10 +19,18 @@
     margin-bottom: 2rem;
 }
 
+.sessions-logo {
+    width: 140px;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.5));
+    flex-shrink: 0;
+}
+
 .sessions-title {
     font-size: 1.6rem;
     font-weight: 700;
-    color: #e2c97e;
+    color: #a855f7;
     letter-spacing: 2px;
     text-transform: uppercase;
     margin: 0;
@@ -121,9 +129,10 @@
 }
 
 .sessions-action-btn.primary {
-    background: #e2c97e;
-    color: #0f1117;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    color: #fff;
     border-color: transparent;
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
 }
 
 .sessions-action-btn.primary:hover {
@@ -185,8 +194,8 @@
 }
 
 .session-card-status.waiting {
-    color: #e2c97e;
-    background: rgba(226, 201, 126, 0.12);
+    color: #c084fc;
+    background: rgba(168, 85, 247, 0.12);
 }
 
 .session-card-status.in-progress {
@@ -227,8 +236,8 @@
 /* ── Unread lobby chat badge ─────────────────────────────────────────────── */
 .session-card-chat-badge {
     display: inline-block;
-    background: rgba(230, 190, 60, 0.18);
-    color: #e2c97e;
+    background: rgba(168, 85, 247, 0.18);
+    color: #c084fc;
     font-size: 0.72rem;
     font-weight: 700;
     padding: 2px 9px;
@@ -239,19 +248,19 @@
 }
 
 .session-card--unread-chat {
-    border-color: rgba(230, 190, 60, 0.45);
-    box-shadow: 0 0 10px 1px rgba(230, 190, 60, 0.2);
+    border-color: rgba(168, 85, 247, 0.45);
+    box-shadow: 0 0 10px 1px rgba(168, 85, 247, 0.2);
 }
 
 @keyframes chat-badge-pulse {
 
     0%,
     100% {
-        box-shadow: 0 0 4px rgba(230, 190, 60, 0.4);
+        box-shadow: 0 0 4px rgba(168, 85, 247, 0.4);
     }
 
     50% {
-        box-shadow: 0 0 10px rgba(230, 190, 60, 0.8);
+        box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
     }
 }
 
@@ -311,15 +320,28 @@
     max-width: 420px;
     margin: 6rem auto 0;
     background: #1a1d27;
-    border: 1px solid #2e3148;
+    border: 1px solid rgba(168, 85, 247, 0.3);
     border-radius: 12px;
     padding: 2rem;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(120, 40, 200, 0.1);
+}
+
+.sessions-card-logo-wrap {
+    text-align: center;
+    margin-bottom: 0.75rem;
+}
+
+.sessions-card-logo {
+    width: 140px;
+    height: auto;
+    filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.5));
 }
 
 .sessions-card-title {
     margin: 0 0 1.5rem;
     font-size: 1.2rem;
-    color: #e2c97e;
+    color: #c084fc;
+    text-align: center;
 }
 
 .sessions-back-btn {
@@ -365,7 +387,8 @@
 }
 
 .sessions-input:focus {
-    border-color: #e2c97e;
+    border-color: #a855f7;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.18);
 }
 
 .sessions-input--code {
@@ -377,14 +400,15 @@
 
 .sessions-submit {
     padding: 0.7rem;
-    background: #e2c97e;
-    color: #0f1117;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    color: #fff;
     border: none;
     border-radius: 8px;
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
     transition: opacity 0.2s;
+    box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35);
 }
 
 .sessions-submit:disabled {
@@ -416,7 +440,7 @@
 
 .lobby-title {
     font-size: 1.5rem;
-    color: #e2c97e;
+    color: #c084fc;
     margin: 0 0 0.5rem;
 }
 

@@ -34,7 +34,9 @@ const Auth = () => {
     return (
         <div className="auth-backdrop">
             <div className="auth-card">
-                <h1 className="auth-title">Card Game</h1>
+                <div className="auth-logo-wrap">
+                    <img src="/img/Logo.png" alt="Duel of Fools" className="auth-logo-img" />
+                </div>
 
                 <div className="auth-tabs">
                     <button

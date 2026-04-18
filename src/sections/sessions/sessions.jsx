@@ -315,6 +315,7 @@ const Sessions = () => {
             <div className="sessions-backdrop">
                 <div className="sessions-card">
                     <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
+                    <div className="sessions-card-logo-wrap"><img src="/img/Logo.png" alt="Duel of Fools" className="sessions-card-logo" /></div>
                     <h2 className="sessions-card-title">{ps.name}</h2>
                     <p className="lobby-code-label">Invite code</p>
                     <div className="lobby-code">{ps.joinCode}</div>
@@ -393,6 +394,7 @@ const Sessions = () => {
             <div className="sessions-backdrop">
                 <div className="sessions-card">
                     <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
+                    <div className="sessions-card-logo-wrap"><img src="/img/Logo.png" alt="Duel of Fools" className="sessions-card-logo" /></div>
                     <h2 className="sessions-card-title">New Session</h2>
                     <form className="sessions-form" onSubmit={handleCreate}>
                         <label className="sessions-label">
@@ -424,6 +426,7 @@ const Sessions = () => {
             <div className="sessions-backdrop">
                 <div className="sessions-card">
                     <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
+                    <div className="sessions-card-logo-wrap"><img src="/img/Logo.png" alt="Duel of Fools" className="sessions-card-logo" /></div>
                     <h2 className="sessions-card-title">Join a Session</h2>
                     <form className="sessions-form" onSubmit={handleJoin}>
                         <label className="sessions-label">
@@ -455,7 +458,7 @@ const Sessions = () => {
         <div className="sessions-backdrop">
             <div className="sessions-page">
                 <header className="sessions-header">
-                    <h1 className="sessions-title">Card Game</h1>
+                    <img src="/img/Logo.png" alt="Duel of Fools" className="sessions-logo" />
                     <div className="sessions-header-right">
                         <DMPanel anchor="header" />
                         <button className="sessions-profile-btn" onClick={() => setShowProfile(true)}>
