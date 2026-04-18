@@ -324,6 +324,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
     const [danceTrackProgress, setDanceTrackProgress] = useState(0);
     const danceSmoothRef = useRef(0);
     const rafRef = useRef(null);
+    const ySpinRef = useRef({});
 
     useEffect(() => {
         if (!lastHitEvents?.length) return;
@@ -444,7 +445,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const offBeat = beatEnvelope(trackBeats + 0.5 + phase / TWO_PI, 0.2);
                             const barline = beatEnvelope(trackBeats / 4 + phase / TWO_PI, 0.09);
 
-                            const intensity = cardDanceIntensity;
+                            const intensity = Math.pow(cardDanceIntensity, 2) * 0.40;
                             const motionEnergy = Math.pow(gated, 1.45);
                             const peakBoost = 1 + Math.pow(gated, 1.2) * (DANCE_PEAK_BOOST - 1);
                             const effectiveEnergy = motionEnergy * peakBoost;
@@ -485,14 +486,20 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const spinDirection = ((Math.floor(trackBeats) + index) % 2 === 0 ? 1 : -1);
                             const spinDeg = spinPulse * profile.spinDeg * 0.56 * spinDirection * (0.56 + barline * 0.44 + patternMotion.spinBoost) * intensity;
 
-                            // Slow Y-axis pirouette: fires at rare high-energy moments, ~once every 8 bars
+                            // Y-axis pirouette — one smooth full spin every ~8 bars; cumulative angle prevents snap-back glitch
                             const ySpinBeat = trackBeats + phase / TWO_PI;
                             const ySpinSlot = Math.floor(ySpinBeat / DANCE_Y_SPIN_INTERVAL);
                             const ySpinOffset = ySpinBeat - ySpinSlot * DANCE_Y_SPIN_INTERVAL;
-                            const ySpinDirection = (ySpinSlot + index) % 2 === 0 ? 1 : -1;
-                            const rotateYDeg = (effectiveEnergy >= DANCE_Y_SPIN_THRESHOLD && ySpinOffset < DANCE_Y_SPIN_DURATION)
-                                ? (ySpinOffset / DANCE_Y_SPIN_DURATION) * 360 * ySpinDirection
-                                : 0;
+                            const ySpinDir = (ySpinSlot + index) % 2 === 0 ? 1 : -1;
+                            const isSpinActive = effectiveEnergy >= DANCE_Y_SPIN_THRESHOLD && ySpinOffset < DANCE_Y_SPIN_DURATION;
+                            const ySpinKey = card.id ?? index;
+                            if (!ySpinRef.current[ySpinKey]) ySpinRef.current[ySpinKey] = { slot: -1, baseAngle: 0, prevSpinning: false, dir: 1 };
+                            const ys = ySpinRef.current[ySpinKey];
+                            if (ySpinSlot !== ys.slot) { ys.slot = ySpinSlot; ys.dir = ySpinDir; }
+                            if (!isSpinActive && ys.prevSpinning) { ys.baseAngle += 360 * ys.dir; }
+                            ys.prevSpinning = isSpinActive;
+                            const spinEase = (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+                            const rotateYDeg = isSpinActive ? ys.baseAngle + spinEase(ySpinOffset / DANCE_Y_SPIN_DURATION) * 360 * ys.dir : ys.baseAngle;
 
                             const baseRotateDeg =
                                 ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick) + (stepShape * profile.leanDeg) + (patternMotion.extraRot * 0.72)) *
