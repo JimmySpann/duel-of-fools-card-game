@@ -351,13 +351,13 @@ const CardGame = () => {
             )}
 
             {/* ── Chat panel ──────────────────────────────────────────── */}
-            {showChat && activeSession && (
-                <div className="game-chat-panel">
+            {activeSession && (
+                <div className="game-chat-panel" style={showChat ? undefined : { display: 'none' }}>
                     <div className="game-panel-header">
                         <h3 className="game-panel-title">Lobby Chat</h3>
                         <button className="game-panel-close" onClick={() => setShowChat(false)}>✕</button>
                     </div>
-                    <LobbyChat sessionId={activeSession._id} isWatching={true} />
+                    <LobbyChat sessionId={activeSession._id} isWatching={showChat} />
                 </div>
             )}
 
