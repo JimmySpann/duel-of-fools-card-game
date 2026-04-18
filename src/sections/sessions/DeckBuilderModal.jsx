@@ -116,6 +116,15 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
         setSelected(new Set());
     };
 
+    // Deck presets
+    const officialDefaultDeck = useMemo(() => cards.filter(c => c.category === 'official v1').map(c => c.id), [cards]);
+    const dripwartsDeck = useMemo(() => cards.filter(c => c.category === 'dripwarts').map(c => c.id), [cards]);
+
+    const handlePreset = (preset) => {
+        if (preset === 'official') setSelected(new Set(officialDefaultDeck));
+        if (preset === 'dripwarts') setSelected(new Set(dripwartsDeck));
+    };
+
     return (
         <div className="db-overlay" onClick={onClose}>
             <div className="db-modal" onClick={(e) => e.stopPropagation()}>
@@ -129,6 +138,8 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                         {selectedCount} / 10 selected · min 3
                     </span>
                     <div className="db-toolbar-right">
+                        <button onClick={() => handlePreset('official')} className="db-preset-btn">Official Default</button>
+                        <button onClick={() => handlePreset('dripwarts')} className="db-preset-btn">Dripwarts</button>
                         <button
                             className="db-select-all-btn"
                             onClick={handleSelectAll}

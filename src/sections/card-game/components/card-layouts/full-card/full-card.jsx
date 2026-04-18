@@ -146,6 +146,12 @@ const Card = ({
                         </div>
                     )}
                     <div className="card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
+                    <div className="card-creator">
+                        {card.category === 'dripwarts' && 'by Acinder'}
+                        {card.category === 'official v1' && 'by Official'}
+                        {card.category === 'unknown' && 'by Unknown'}
+                        {!['dripwarts', 'official v1', 'unknown'].includes(card.category) && card.createdBy && `by ${card.createdBy}`}
+                    </div>
                 </div>
 
                 <div className="card-info-container">

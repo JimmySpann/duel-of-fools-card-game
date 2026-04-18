@@ -188,7 +188,24 @@ const cards = [
             { name: 'Crack Attack', actionInfo: 'High Priority Melee', description: 'Makes a bee line for enemy jugular.', limit: 10, usesRemaining: 10, microevent: { type: 'mash', outcome: 'scaled' } },
             { name: 'Smoke Break', actionInfo: 'Invulnerable for 1 turn', description: 'Becomes unattackable for 1 turn', limit: 5, usesRemaining: 5 },
         ],
-        defense: 5, agility: 5, attack: 5, evasion: 6, health: 9, category: 'official v1',
+        defense: 5, agility: 5, attack: 5, evasion: 6, health: 9, category: 'unknown', createdBy: 'unknown',
+    },
+    {
+        id: 'vanguardKnight',
+        name: 'Vanguard Knight',
+        elements: { normal: 3, earth: 2 },
+        type: 'Battler',
+        image: 'https://www.reddit.com/media?url=https%3A%2F%2Fi.redd.it%2Flxfdzgc2ein81.jpg',
+        description: 'A steadfast defender who excels at holding the line and supporting allies.',
+        passives: [
+            { name: 'Shield Wall', effect: 'Allies DEF +1', description: 'Bolsters the defense of all allies.' },
+            { name: 'Unbreakable', effect: 'Takes -1 damage from all sources', description: 'Reduces all incoming damage.' },
+        ],
+        actions: [
+            { name: 'Guardian Strike', actionInfo: 'Physical Damage', description: 'A reliable melee attack.', limit: 10, usesRemaining: 10 },
+            { name: 'Fortify', actionInfo: 'DEF +2 (Self)', description: 'Raises own defense for 2 turns.', limit: 5, usesRemaining: 5 },
+        ],
+        defense: 7, agility: 5, attack: 6, evasion: 5, health: 11, category: 'official v1',
     },
     {
         id: 'coldKilla',

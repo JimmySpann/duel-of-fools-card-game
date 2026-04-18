@@ -174,21 +174,21 @@ const cards = [
         defense: 6, agility: 5, attack: 7, evasion: 4, health: 12, category: 'dripwarts',
     },
     {
-        id: 'hoodNigga',
-        name: 'Hood Nigga',
-        elements: { fire: 3, normal: 2 },
+        id: 'vanguardKnight',
+        name: 'Vanguard Knight',
+        elements: { normal: 3, earth: 2 },
         type: 'Battler',
-        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4i0P_aTGgvJSkN3qxz-tsscYgxAqLNAMoMA&s',
-        description: "The hood nigga will attack immediately if crack is seen. He hasn't slept in 3 days",
+        image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
+        description: 'A steadfast defender who excels at holding the line and supporting allies.',
         passives: [
-            { name: 'Flying High', effect: 'Evasion increased by 2', description: 'This nigga flying high!' },
-            { name: 'Pain Immunity', effect: 'Defense +3 next turn if hit', description: 'Adrenaline masks the pain.' }
+            { name: 'Shield Wall', effect: 'Allies DEF +1', description: 'Bolsters the defense of all allies.' },
+            { name: 'Unbreakable', effect: 'Takes -1 damage from all sources', description: 'Reduces all incoming damage.' },
         ],
         actions: [
-            { name: 'Crack Attack', actionInfo: 'High Priority Melee', description: 'Makes a bee line for enemys jugula.', limit: 10, usesRemaining: 10, microevent: { type: 'mash', outcome: 'scaled' } },
-            { name: 'Smoke Break', actionInfo: 'Invulnerable for 1 turn', description: 'Becomes unattackable for 1 turn', limit: 5, usesRemaining: 5 }
+            { name: 'Guardian Strike', actionInfo: 'Physical Damage', description: 'A reliable melee attack.', limit: 10, usesRemaining: 10 },
+            { name: 'Fortify', actionInfo: 'DEF +2 (Self)', description: 'Raises own defense for 2 turns.', limit: 5, usesRemaining: 5 },
         ],
-        defense: 5, agility: 5, attack: 5, evasion: 6, health: 9, category: 'official v1'
+        defense: 7, agility: 5, attack: 6, evasion: 5, health: 11, category: 'official v1',
     },
     {
         id: 'coldKilla',
@@ -351,8 +351,31 @@ const cards = [
             { name: 'Noxious Cloud', actionInfo: 'AOE Poison', description: 'Covers the field in toxic gas', limit: 2, usesRemaining: 2, microevent: { type: 'rhythm', outcome: 'scaled', beats: 4 } }
         ],
         defense: 4, agility: 6, attack: 7, evasion: 4, health: 10, category: 'official v1'
-    }
+    },
+    {
+        id: 'hoodNigga',
+        name: 'Hood Nigga',
+        elements: { fire: 3, normal: 2 },
+        type: 'Battler',
+        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4i0P_aTGgvJSkN3qxz-tsscYgxAqLNAMoMA&s',
+        description: "The hood nigga will attack immediately if crack is seen. He hasn't slept in 3 days",
+        passives: [
+            { name: 'Flying High', effect: 'Evasion increased by 2', description: 'This nigga flying high!' },
+            { name: 'Pain Immunity', effect: 'Defense +3 next turn if hit', description: 'Adrenaline masks the pain.' },
+        ],
+        actions: [
+            { name: 'Crack Attack', actionInfo: 'High Priority Melee', description: 'Makes a bee line for enemys jugula.', limit: 10, usesRemaining: 10, microevent: { type: 'mash', outcome: 'scaled' } },
+            { name: 'Smoke Break', actionInfo: 'Invulnerable for 1 turn', description: 'Becomes unattackable for 1 turn', limit: 5, usesRemaining: 5 },
+        ],
+        defense: 5, agility: 5, attack: 5, evasion: 6, health: 9, category: 'unknown', createdBy: 'unknown',
+    },
 ];
 
 
 export default cards;
+
+// Deck presets for deck builder
+export const DECK_PRESETS = {
+    'official default': cards.filter(c => c.category === 'official v1').map(c => c.id),
+    'dripwarts': cards.filter(c => c.category === 'dripwarts').map(c => c.id),
+};
