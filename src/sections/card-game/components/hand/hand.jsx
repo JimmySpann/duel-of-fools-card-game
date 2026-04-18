@@ -51,10 +51,15 @@ const HandCard = ({ card, index, locked, dimmed, onCardClick }) => {
 };
 
 /* ── Desktop mini-card hand entry ──────────────────────────────────────── */
-const DesktopHandCard = ({ card, index, locked, dimmed, onCardClick }) => {
+const DesktopHandCard = ({ card, index, locked, dimmed, onCardClick, rotation, droop, zIndex }) => {
     return (
         <div
             className={`desktop-hand-entry${locked ? ' hand-card-locked' : ''}${dimmed ? ' hand-card-dimmed' : ''}`}
+            style={{
+                '--card-rotation': `${rotation}deg`,
+                '--card-droop': `${droop}px`,
+                zIndex,
+            }}
             onClick={() => !locked && onCardClick && onCardClick(index)}
             role="button"
             tabIndex={locked ? -1 : 0}
@@ -75,20 +80,32 @@ const Hand = ({ _hand, onCardClick, locked = false, dimmed = false }) => {
         );
     }
 
+    const count = _hand.length;
+    const maxSpread = Math.min(28, count * 5); // total arc degrees, capped
+    const angleStep = count > 1 ? maxSpread / (count - 1) : 0;
+
     return (
         <>
             {/* Wide-screen: full mini-card layout */}
             <div className="hand-container hand-container--desktop">
-                {_hand.map((card, index) => (
-                    <DesktopHandCard
-                        key={card.id ?? index}
-                        card={card}
-                        index={index}
-                        locked={locked}
-                        dimmed={dimmed}
-                        onCardClick={onCardClick}
-                    />
-                ))}
+                {_hand.map((card, index) => {
+                    const rotation = count > 1 ? (index - (count - 1) / 2) * angleStep : 0;
+                    const droop = Math.abs(rotation) * 1.8;
+                    const zIndex = count - Math.round(Math.abs(index - (count - 1) / 2));
+                    return (
+                        <DesktopHandCard
+                            key={card.id ?? index}
+                            card={card}
+                            index={index}
+                            locked={locked}
+                            dimmed={dimmed}
+                            onCardClick={onCardClick}
+                            rotation={rotation}
+                            droop={droop}
+                            zIndex={zIndex}
+                        />
+                    );
+                })}
             </div>
 
             {/* Small-screen: thumbnail layout */}

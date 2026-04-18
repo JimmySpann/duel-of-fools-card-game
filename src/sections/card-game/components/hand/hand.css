@@ -53,7 +53,11 @@
     .hand-container--desktop {
         display: flex;
         align-items: flex-end;
-        padding-top: 20px;
+        padding-top: 80px;
+        /* room for rotated cards to arc upward */
+        padding-bottom: 8px;
+        gap: -8px;
+        /* slight overlap for a tighter fan */
     }
 
     .hand-container--mobile {
@@ -66,24 +70,29 @@
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    /* Fan rotation + droop, driven by CSS custom properties set inline */
+    transform: rotate(var(--card-rotation, 0deg)) translateY(var(--card-droop, 0px));
+    transform-origin: bottom center;
     transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.18s ease;
-    /* override the bottom margin on mini-card-container */
+    position: relative;
 }
 
 .desktop-hand-entry:hover,
 .desktop-hand-entry:focus-visible {
-    transform: translateY(-16px);
+    /* Keep rotation, just lift the card */
+    transform: rotate(var(--card-rotation, 0deg)) translateY(-28px);
     outline: none;
-    z-index: 10;
+    z-index: 50 !important;
 }
 
 .desktop-hand-entry:active {
-    transform: translateY(-8px) scale(0.97);
+    transform: rotate(var(--card-rotation, 0deg)) translateY(-14px) scale(0.97);
 }
 
-/* override the large bottom margin from mini-card-container inside the hand */
+/* Scale cards down ~35% and remove the large bottom margin */
 .desktop-hand-entry .mini-card-container {
-    margin-bottom: 12px;
+    zoom: 0.62;
+    margin: 0;
 }
 
 /* ── Individual hand card thumbnail ─────────────────────────────────────── */
