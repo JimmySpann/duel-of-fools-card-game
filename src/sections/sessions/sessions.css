@@ -2119,6 +2119,50 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.custom-card-image-preview-wrap {
+    border: 1px solid #2e3452;
+    border-radius: 10px;
+    background: #151a2d;
+    padding: 0.5rem;
+}
+
+.custom-card-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
+    color: #c9d0ea;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.custom-card-image-preview {
+    width: 100%;
+    height: 170px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #394068;
+    background: #0d1120;
+}
+
+.custom-card-image-preview-fallback {
+    width: 100%;
+    min-height: 170px;
+    border-radius: 8px;
+    border: 1px dashed #4a527d;
+    background: #121629;
+    color: #9aa4cd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.78rem;
+    padding: 0.65rem;
+}
+
 .custom-card-points {
     font-size: 0.84rem;
     color: #88dcbf;

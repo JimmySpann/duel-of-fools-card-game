@@ -1016,6 +1016,10 @@ const actions = {
                     state.log.unshift(`[${typeLabel}] ${casterName} failed! No effect.`);
                 }
             }
+
+            if (ability.name === 'Gale Shot' && type === 'arrow' && score <= 0) {
+                state.log.unshift('Arrow missed, Gale Shot fails.');
+            }
         }
         // ─────────────────────────────────────────────────────────────────────
 
