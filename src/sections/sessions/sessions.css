@@ -2179,6 +2179,21 @@
     flex-wrap: wrap;
 }
 
+.custom-card-ai-scale {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #9fb0dd;
+    font-size: 0.72rem;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.custom-card-ai-status {
+    color: #9dd6b8;
+    font-size: 0.78rem;
+}
+
 .custom-card-ai-error {
     color: #ff9ca7;
     font-size: 0.78rem;
@@ -2198,6 +2213,44 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: 0.25rem;
+}
+
+.custom-card-ai-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+}
+
+.custom-card-ai-summary-grid p {
+    margin: 0.15rem 0 0;
+    color: #aac0eb;
+    font-size: 0.75rem;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.custom-card-ai-key {
+    color: #d0dcff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.custom-card-ai-list-wrap {
+    margin-top: 0.25rem;
+}
+
+.custom-card-ai-list-wrap ul {
+    margin: 0.2rem 0 0;
+    padding-left: 1rem;
+}
+
+.custom-card-ai-list-wrap li {
+    color: #a7bae3;
+    font-size: 0.74rem;
+    margin-bottom: 0.14rem;
 }
 
 .custom-card-ai-concept pre {

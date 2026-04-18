@@ -263,6 +263,139 @@ const DESCRIPTION_TEMPLATES = [
     'A randomized contender that thrives on momentum.',
 ];
 
+const CUSTOM_ABILITY_NAME_PREFIXES = ['Arc', 'Rift', 'Ember', 'Tidal', 'Volt', 'Iron', 'Frost', 'Solar', 'Grave', 'Gale'];
+const CUSTOM_ABILITY_NAME_CORES = ['Strike', 'Ward', 'Surge', 'Lance', 'Pulse', 'Shroud', 'Burst', 'Hook', 'Veil', 'Cascade'];
+
+const pickOne = (arr, fallback = null) => {
+    if (!Array.isArray(arr) || arr.length === 0) return fallback;
+    return arr[Math.floor(Math.random() * arr.length)];
+};
+
+const sampleMany = (arr, count) => {
+    if (!Array.isArray(arr) || arr.length === 0 || count <= 0) return [];
+    return shuffle(arr).slice(0, Math.min(count, arr.length));
+};
+
+const createRandomEffect = () => {
+    const roll = Math.random();
+    if (roll < 0.45) {
+        return {
+            type: 'damage',
+            multiplier: Number((0.8 + Math.random() * 1.5).toFixed(1)),
+            flatBonus: randomInt(0, 5),
+            defPiercing: randomInt(0, 4),
+            repeat: randomInt(1, Math.random() < 0.7 ? 2 : 3),
+            ignoreDef: Math.random() < 0.2,
+            ignoreEvasion: Math.random() < 0.15,
+            lifesteal: Math.random() < 0.18,
+            randomTarget: Math.random() < 0.2,
+            useBasicAttack: Math.random() < 0.3,
+        };
+    }
+    if (roll < 0.68) {
+        return {
+            type: 'status',
+            status: pickOne(STATUS_TYPES, 'burned'),
+            value: randomInt(1, 4),
+            duration: randomInt(1, 3),
+        };
+    }
+    if (roll < 0.82) {
+        return {
+            type: Math.random() < 0.6 ? 'heal' : 'healSelf',
+            amount: randomInt(2, 8),
+        };
+    }
+    if (roll < 0.93) {
+        return {
+            type: 'cleanse',
+            debuffs: sampleMany(CLEANSE_DEBUFFS, randomInt(1, 3)),
+        };
+    }
+    return { type: Math.random() < 0.7 ? 'resetCooldowns' : 'selfDestruct' };
+};
+
+const createUniqueRandomAbilityName = (usedNames) => {
+    const taken = usedNames instanceof Set ? usedNames : new Set();
+    for (let i = 0; i < 30; i += 1) {
+        const candidate = `${pickOne(CUSTOM_ABILITY_NAME_PREFIXES, 'Arc')} ${pickOne(CUSTOM_ABILITY_NAME_CORES, 'Strike')}`.trim();
+        const key = candidate.toLowerCase();
+        if (!taken.has(key)) return candidate;
+    }
+    let idx = 2;
+    while (taken.has(`wild technique ${idx}`)) idx += 1;
+    return `Wild Technique ${idx}`;
+};
+
+const createRandomCustomAbility = (usedNames) => {
+    const targetType = pickOne(TARGET_TYPES, 'enemyCard');
+    const effectsCountRoll = Math.random();
+    const effectsCount = effectsCountRoll < 0.62 ? 1 : effectsCountRoll < 0.92 ? 2 : 3;
+    const effects = Array.from({ length: effectsCount }, () => createRandomEffect());
+
+    const includeMicrogame = Math.random() < 0.45;
+    const microType = includeMicrogame ? pickOne(MICROGAME_TYPES, 'qte') : '';
+    const microevent = microType
+        ? {
+            type: microType,
+            outcome: Math.random() < 0.45 ? 'binary' : 'scaled',
+        }
+        : null;
+
+    return {
+        name: createUniqueRandomAbilityName(usedNames),
+        targetType,
+        limit: randomInt(1, 4),
+        effects,
+        microevent,
+    };
+};
+
+const randomizeCustomAbilitiesWithinBudget = ({ slots, officialNames }) => {
+    const maxCount = Math.max(0, Math.min(3, slots));
+    if (maxCount < 1) return [];
+
+    const usedNameKeys = new Set((officialNames || []).map((name) => String(name || '').trim().toLowerCase()).filter(Boolean));
+
+    for (let attempt = 0; attempt < 220; attempt += 1) {
+        const count = randomInt(1, maxCount);
+        const next = [];
+        const draftUsed = new Set(usedNameKeys);
+        let valid = true;
+
+        for (let i = 0; i < count; i += 1) {
+            let chosen = null;
+            for (let inner = 0; inner < 80; inner += 1) {
+                const candidate = createRandomCustomAbility(draftUsed);
+                const err = validateCustomAbilityLocal(candidate, i);
+                const power = estimateCustomAbilityPower(candidate);
+                if (!err && power <= MAX_CUSTOM_ABILITY_POWER) {
+                    chosen = candidate;
+                    break;
+                }
+            }
+            if (!chosen) {
+                valid = false;
+                break;
+            }
+            next.push(chosen);
+            draftUsed.add(String(chosen.name || '').trim().toLowerCase());
+        }
+
+        if (!valid) continue;
+        const total = next.reduce((sum, ability) => sum + estimateCustomAbilityPower(ability), 0);
+        if (total <= MAX_TOTAL_CUSTOM_ABILITY_POWER) return next;
+    }
+
+    return [{
+        name: createUniqueRandomAbilityName(usedNameKeys),
+        targetType: 'enemyCard',
+        limit: 2,
+        effects: [{ type: 'damage', multiplier: 1.2, flatBonus: 2, defPiercing: 1, repeat: 1 }],
+        microevent: { type: 'qte', outcome: 'scaled' },
+    }];
+};
+
 const CustomCardModal = ({ onClose }) => {
     const token = useSelector((s) => s.auth.token);
     const username = useSelector((s) => s.auth.username);
@@ -295,6 +428,8 @@ const CustomCardModal = ({ onClose }) => {
     const [aiLoadingConcept, setAiLoadingConcept] = useState(false);
     const [aiLoadingDraft, setAiLoadingDraft] = useState(false);
     const [aiError, setAiError] = useState('');
+    const [aiStatus, setAiStatus] = useState('');
+    const [aiCreativity, setAiCreativity] = useState(45);
 
     const maxPoints = 48;
     const usedPoints = computePoints(stats);
@@ -616,6 +751,22 @@ const CustomCardModal = ({ onClose }) => {
         setError('');
     };
 
+    const handleRandomizeCustomAbilities = () => {
+        const slots = Math.max(0, 3 - abilityNames.length);
+        if (slots < 1) {
+            setError('No custom ability slots left. Remove one selected official ability first.');
+            return;
+        }
+
+        const generated = randomizeCustomAbilitiesWithinBudget({
+            slots,
+            officialNames: abilityNames,
+        });
+
+        setCustomAbilities(generated.slice(0, slots));
+        setError('');
+    };
+
     const handleGenerateConcept = async () => {
         if (!aiPrompt.trim()) {
             setAiError('Describe your card idea first.');
@@ -623,13 +774,19 @@ const CustomCardModal = ({ onClose }) => {
         }
 
         setAiError('');
+        setAiStatus('');
         setAiLoadingConcept(true);
         try {
-            const concept = await generateCardConcept({
+            const result = await generateCardConcept({
                 modelId: aiModelId,
                 userPrompt: aiPrompt.trim(),
+                creativity: aiCreativity,
             });
-            setAiConcept(concept);
+            setAiConcept(result.concept);
+            if (result.usedModelId && result.usedModelId !== aiModelId) {
+                const fallback = AI_MODEL_PRESETS.find((m) => m.id === result.usedModelId);
+                setAiStatus(`Primary model failed. Used fallback: ${fallback?.label || result.usedModelId}`);
+            }
         } catch (err) {
             setAiError(err.message || 'Failed to generate concept. Try another model.');
         } finally {
@@ -644,14 +801,17 @@ const CustomCardModal = ({ onClose }) => {
         }
 
         setAiError('');
+        setAiStatus('');
         setAiLoadingDraft(true);
         try {
-            const draft = await generateCardDraft({
+            const result = await generateCardDraft({
                 modelId: aiModelId,
                 userPrompt: aiPrompt.trim(),
                 concept: aiConcept,
                 officialAbilityNames,
+                creativity: aiCreativity,
             });
+            const draft = result.draft;
 
             const safeStats = fitStatsToBudget(draft?.stats || {}, maxPoints);
             const safeElements = normalizeElements(draft?.elements || {});
@@ -663,6 +823,10 @@ const CustomCardModal = ({ onClose }) => {
             setElements(safeElements);
             setAbilityNames(safeAbilities);
             setCustomAbilities([]);
+            if (result.usedModelId && result.usedModelId !== aiModelId) {
+                const fallback = AI_MODEL_PRESETS.find((m) => m.id === result.usedModelId);
+                setAiStatus(`Primary model failed. Used fallback: ${fallback?.label || result.usedModelId}`);
+            }
         } catch (err) {
             setAiError(err.message || 'Failed to generate draft. Try again.');
         } finally {
@@ -833,6 +997,23 @@ const CustomCardModal = ({ onClose }) => {
                                     ))}
                                 </select>
                             </label>
+                            <label className="custom-card-label">
+                                Creativity vs Balance
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={aiCreativity}
+                                    onChange={(e) => setAiCreativity(clampInt(e.target.value, 0, 100))}
+                                    title="Lower values enforce stricter balance. Higher values allow more creative variance."
+                                />
+                                <div className="custom-card-ai-scale">
+                                    <span>Balance</span>
+                                    <strong>{aiCreativity <= 45 ? 'Strict' : aiCreativity >= 70 ? 'Creative' : 'Balanced'}</strong>
+                                    <span>Creativity</span>
+                                </div>
+                            </label>
                             <div className="custom-card-ai-actions">
                                 <button
                                     type="button"
@@ -853,11 +1034,49 @@ const CustomCardModal = ({ onClose }) => {
                                     {aiLoadingDraft ? 'Generating Draft…' : 'Generate Full Draft'}
                                 </button>
                             </div>
+                            {aiStatus && <div className="custom-card-ai-status">{aiStatus}</div>}
                             {aiError && <div className="custom-card-ai-error">{aiError}</div>}
                             {aiConcept && (
                                 <div className="custom-card-ai-concept">
                                     <div className="custom-card-ai-concept-title">Concept Preview</div>
-                                    <pre>{JSON.stringify(aiConcept, null, 2)}</pre>
+                                    <div className="custom-card-ai-summary-grid">
+                                        <div>
+                                            <span className="custom-card-ai-key">Title</span>
+                                            <p>{String(aiConcept.title || 'Untitled concept')}</p>
+                                        </div>
+                                        <div>
+                                            <span className="custom-card-ai-key">Theme</span>
+                                            <p>{String(aiConcept.theme || 'No theme provided')}</p>
+                                        </div>
+                                        <div>
+                                            <span className="custom-card-ai-key">Playstyle</span>
+                                            <p>{String(aiConcept.playstyle || 'No playstyle provided')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="custom-card-ai-list-wrap">
+                                        <span className="custom-card-ai-key">Strengths</span>
+                                        <ul>
+                                            {(Array.isArray(aiConcept.strengths) ? aiConcept.strengths : []).slice(0, 4).map((item, idx) => (
+                                                <li key={`str-${idx}`}>{String(item)}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="custom-card-ai-list-wrap">
+                                        <span className="custom-card-ai-key">Weaknesses</span>
+                                        <ul>
+                                            {(Array.isArray(aiConcept.weaknesses) ? aiConcept.weaknesses : []).slice(0, 3).map((item, idx) => (
+                                                <li key={`weak-${idx}`}>{String(item)}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="custom-card-ai-list-wrap">
+                                        <span className="custom-card-ai-key">Ability Ideas</span>
+                                        <ul>
+                                            {(Array.isArray(aiConcept.abilityIdeas) ? aiConcept.abilityIdeas : []).slice(0, 4).map((item, idx) => (
+                                                <li key={`idea-${idx}`}>{String(item)}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -943,6 +1162,17 @@ const CustomCardModal = ({ onClose }) => {
                                 ))}
                             </div>
                             <div className="custom-card-subtitle" style={{ marginTop: '0.6rem' }} title="Compose your own effects and targets. Power budget must stay within limits.">Build Custom Abilities</div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-0.1rem' }}>
+                                <button
+                                    type="button"
+                                    className="custom-card-row-btn"
+                                    onClick={handleRandomizeCustomAbilities}
+                                    disabled={totalAbilityCount >= 3 && customAbilities.length === 0}
+                                    title="Generate randomized custom abilities that stay within custom ability power limits."
+                                >
+                                    Randomize Custom Abilities
+                                </button>
+                            </div>
                             <div className={`custom-card-power-box${isPowerOverBudget ? ' over' : ''}`}>
                                 <div className="custom-card-power-row">
                                     <span>Total custom power</span>

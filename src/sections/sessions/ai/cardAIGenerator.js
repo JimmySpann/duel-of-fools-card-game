@@ -20,6 +20,12 @@ export const AI_MODEL_PRESETS = [
 
 const generatorCache = new Map();
 
+const getFallbackModelOrder = (primaryModelId) => {
+    const all = AI_MODEL_PRESETS.map((m) => m.id);
+    const ordered = [primaryModelId, ...all.filter((id) => id !== primaryModelId)];
+    return ordered.filter(Boolean);
+};
+
 const getGenerator = async (modelId) => {
     if (generatorCache.has(modelId)) return generatorCache.get(modelId);
 
@@ -56,14 +62,21 @@ const normalizeOutputText = (result) => {
     return '';
 };
 
-const runGeneration = async (modelId, prompt, maxNewTokens = 360) => {
+const runGeneration = async (modelId, prompt, options = {}) => {
+    const {
+        maxNewTokens = 360,
+        temperature = 0.7,
+        topP = 0.92,
+        repetitionPenalty = 1.08,
+    } = options;
+
     const generator = await getGenerator(modelId);
     const output = await generator(prompt, {
         max_new_tokens: maxNewTokens,
-        temperature: 0.7,
-        top_p: 0.92,
+        temperature,
+        top_p: topP,
         do_sample: true,
-        repetition_penalty: 1.08,
+        repetition_penalty: repetitionPenalty,
         return_full_text: false,
     });
 
@@ -71,13 +84,43 @@ const runGeneration = async (modelId, prompt, maxNewTokens = 360) => {
     const parsed = extractJsonObject(text);
 
     if (!parsed) {
-        throw new Error('Model returned malformed JSON. Try again or switch models.');
+        throw new Error('Model returned malformed JSON.');
     }
 
     return parsed;
 };
 
-export const generateCardConcept = async ({ modelId, userPrompt }) => {
+const runGenerationWithFallback = async ({ modelId, prompt, options }) => {
+    const order = getFallbackModelOrder(modelId);
+    const attempts = [];
+
+    for (const currentModelId of order) {
+        try {
+            const parsed = await runGeneration(currentModelId, prompt, options);
+            return {
+                parsed,
+                usedModelId: currentModelId,
+                attempts,
+            };
+        } catch (err) {
+            attempts.push({ modelId: currentModelId, reason: err?.message || 'Generation failed' });
+        }
+    }
+
+    throw new Error('All local models failed. Try again, reduce prompt size, or refresh the page.');
+};
+
+const buildGenerationOptions = (creativity = 50) => {
+    const c = Math.max(0, Math.min(100, Number(creativity) || 0));
+    return {
+        maxNewTokens: 380,
+        temperature: Number((0.35 + (c / 100) * 0.65).toFixed(2)),
+        topP: Number((0.78 + (c / 100) * 0.2).toFixed(2)),
+        repetitionPenalty: Number((1.12 - (c / 100) * 0.12).toFixed(2)),
+    };
+};
+
+export const generateCardConcept = async ({ modelId, userPrompt, creativity = 50 }) => {
     const prompt = `You are an assistant for a fantasy card game custom builder.
 Return ONLY JSON, no markdown.
 JSON schema:
@@ -91,12 +134,35 @@ JSON schema:
 }
 User request: ${userPrompt}`;
 
-    return runGeneration(modelId, prompt, 280);
+    const result = await runGenerationWithFallback({
+        modelId,
+        prompt,
+        options: {
+            ...buildGenerationOptions(creativity),
+            maxNewTokens: 280,
+        },
+    });
+
+    return {
+        concept: result.parsed,
+        usedModelId: result.usedModelId,
+        attempts: result.attempts,
+    };
 };
 
-export const generateCardDraft = async ({ modelId, userPrompt, concept, officialAbilityNames }) => {
+export const generateCardDraft = async ({
+    modelId,
+    userPrompt,
+    concept,
+    officialAbilityNames,
+    creativity = 50,
+}) => {
     const conceptText = concept ? JSON.stringify(concept) : '{}';
     const abilitiesList = (officialAbilityNames || []).join(', ');
+    const clampedCreativity = Math.max(0, Math.min(100, Number(creativity) || 0));
+    const strictBudgetRule = clampedCreativity <= 45
+        ? 'Be strict: keep total stat budget conservative and close to balanced, avoid extreme values.'
+        : 'Creativity mode: flavorful variance is allowed, but still obey hard numeric constraints.';
 
     const prompt = `You are an assistant for a fantasy card game custom builder.
 Create a full draft card from user request + concept.
@@ -106,6 +172,7 @@ Follow these constraints:
 - health is integer from 1 to 30
 - elements keys must include: fire, ice, electric, earth, death, water, air, normal (values 0..5)
 - abilityNames: choose 1-3 names from this list only: ${abilitiesList}
+${strictBudgetRule}
 JSON schema:
 {
   "name": "card name",
@@ -117,5 +184,18 @@ JSON schema:
 User request: ${userPrompt}
 Concept: ${conceptText}`;
 
-    return runGeneration(modelId, prompt, 420);
+    const result = await runGenerationWithFallback({
+        modelId,
+        prompt,
+        options: {
+            ...buildGenerationOptions(clampedCreativity),
+            maxNewTokens: 420,
+        },
+    });
+
+    return {
+        draft: result.parsed,
+        usedModelId: result.usedModelId,
+        attempts: result.attempts,
+    };
 };
