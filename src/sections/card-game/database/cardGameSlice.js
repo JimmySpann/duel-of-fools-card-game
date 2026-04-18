@@ -430,8 +430,8 @@ export const cardGameSlice = createSlice({
       if (hasStatus(card, 'frozen')) { state.log.unshift(`${card.name} is Frozen and cannot act!`); return; }
       if (card.acted) { state.log.unshift(`${card.name} has already acted this turn!`); return; }
       if (card.justPlayed) { state.log.unshift(`${card.name} was just played and needs a turn to prepare!`); return; }
-      // No enemy cards — attack the player directly
-      if (enemy.inPlay.length === 0) {
+      // No enemy cards — attack the player directly (ignore dying cards not yet cleaned up)
+      if (enemy.inPlay.filter((c) => !c.dying).length === 0) {
         state.lastHitEvents = [];
         const damage = Math.max(1, card.attack || 5);
         card.acted = true;
@@ -473,8 +473,8 @@ export const cardGameSlice = createSlice({
         state.lastHitEvents = [];
         executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, null);
       } else if (targetType === 'enemyCard') {
-        // No enemy cards — hit the player directly instead
-        if (enemy.inPlay.length === 0) {
+        // No enemy cards — hit the player directly instead (ignore dying cards not yet cleaned up)
+        if (enemy.inPlay.filter((c) => !c.dying).length === 0) {
           state.lastHitEvents = [];
           ability.usesRemaining -= 1;
           card.acted = true;
@@ -538,7 +538,7 @@ export const cardGameSlice = createSlice({
       if (state.phase !== 'selectingTarget' || state.gameOver) return;
       const attackerPlayer = state.players.find((p) => p.id === state.currentTurn);
       const defenderPlayer = state.players.find((p) => p.id !== state.currentTurn);
-      if (defenderPlayer.inPlay.length > 0) return;
+      if (defenderPlayer.inPlay.some((c) => !c.dying)) return;
       const attacker = attackerPlayer.inPlay[state.pendingAction?.casterCardIndex];
       if (!attacker) return;
 

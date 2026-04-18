@@ -30,29 +30,30 @@ const HPBar = ({ current, max }) => {
     );
 };
 
-const RecapEvent = ({ event, index, playerNames }) => {
+const RecapEvent = ({ event, index, playerNames, currentPlayerId }) => {
     const cfg = EVENT_CONFIG[event.type] ?? { icon: '❓', label: event.type, className: '' };
+    const targetName = playerNames?.[event.targetPlayerId] ?? 'Player';
+    const isYou = event.targetPlayerId === currentPlayerId;
+    const targetLabel = isYou ? 'your' : `${targetName}'s`;
 
     const buildMessage = () => {
         switch (event.type) {
             case 'hit':
-                return `${event.cardName} took ${event.damage} damage`;
+                return `${event.cardName} took ${event.damage} damage (${targetLabel} side)`;
             case 'defeat':
-                return `${event.cardName} was defeated!`;
+                return `${event.cardName} was defeated! (${targetLabel} side)`;
             case 'miss':
-                return `An attack missed ${event.cardName}`;
+                return `An attack missed ${event.cardName} (${targetLabel} side)`;
             case 'blocked':
-                return `${event.cardName} was untouchable — attack blocked!`;
-            case 'directHit': {
-                const pName = playerNames?.[event.targetPlayerId] ?? 'Player';
-                return `${event.cardName} struck ${pName} directly for ${event.damage} damage`;
-            }
+                return `${event.cardName} was untouchable — attack blocked! (${targetLabel} side)`;
+            case 'directHit':
+                return `${event.cardName} struck ${targetName} directly for ${event.damage} damage`;
             case 'dot': {
                 const dotLabel = DOT_LABEL[event.dotType] ?? event.dotType;
-                return `${event.cardName} suffered ${dotLabel} (${event.damage} dmg)`;
+                return `${event.cardName} suffered ${dotLabel} (${event.damage} dmg, ${targetLabel} side)`;
             }
             case 'dotDefeat':
-                return `${event.cardName} was defeated by status effects!`;
+                return `${event.cardName} was defeated by status effects! (${targetLabel} side)`;
             default:
                 return JSON.stringify(event);
         }
@@ -82,34 +83,30 @@ const TurnRecap = ({ currentPlayer, players }) => {
 
     if (!turnSummary?.length) return null;
 
-    // Only show events that affected the current player
-    const events = turnSummary.filter((e) => e.targetPlayerId === currentPlayer.id);
-    if (!events.length) {
-        dispatch(dismissRecap());
-        return null;
-    }
-
     const playerNames = Object.fromEntries((players ?? []).map((p) => [p.id, p.name]));
-    const totalDamage = events.reduce((sum, e) => sum + (e.damage || 0), 0);
-    const defeats = events.filter((e) => e.type === 'defeat' || e.type === 'dotDefeat').length;
+
+    // Stats specific to the current player (damage they took)
+    const myEvents = turnSummary.filter((e) => e.targetPlayerId === currentPlayer.id);
+    const damageTaken = myEvents.reduce((sum, e) => sum + (e.damage || 0), 0);
+    const cardsLost = myEvents.filter((e) => e.type === 'defeat' || e.type === 'dotDefeat').length;
 
     return (
         <div className="recap-overlay" onClick={() => dispatch(dismissRecap())}>
             <div className="recap-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="recap-header">
-                    <h2 className="recap-title">⚔️ Last Turn Recap</h2>
+                    <h2 className="recap-title">⚔️ Turn Recap</h2>
                     <p className="recap-subtitle">
-                        Here's what happened to <strong>{currentPlayer.name}</strong>'s side
+                        Here's everything that happened while you were away
                     </p>
                 </div>
 
                 <div className="recap-summary-row">
                     <div className="recap-stat">
-                        <span className="recap-stat-value recap-stat-damage">{totalDamage}</span>
-                        <span className="recap-stat-label">Total Damage</span>
+                        <span className="recap-stat-value recap-stat-damage">{damageTaken}</span>
+                        <span className="recap-stat-label">Damage Taken</span>
                     </div>
                     <div className="recap-stat">
-                        <span className="recap-stat-value recap-stat-defeats">{defeats}</span>
+                        <span className="recap-stat-value recap-stat-defeats">{cardsLost}</span>
                         <span className="recap-stat-label">Cards Lost</span>
                     </div>
                     <div className="recap-stat">
@@ -119,8 +116,8 @@ const TurnRecap = ({ currentPlayer, players }) => {
                 </div>
 
                 <div className="recap-events">
-                    {events.map((e, i) => (
-                        <RecapEvent key={i} event={e} index={i} playerNames={playerNames} />
+                    {turnSummary.map((e, i) => (
+                        <RecapEvent key={i} event={e} index={i} playerNames={playerNames} currentPlayerId={currentPlayer.id} />
                     ))}
                 </div>
 
