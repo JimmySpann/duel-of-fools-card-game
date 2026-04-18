@@ -54,6 +54,7 @@ const cardSchema = new mongoose.Schema(
         adultOnly: { type: Boolean, default: false, index: true },
         visibility: { type: String, enum: ['public'], default: 'public' },
         createdBy: { type: String, required: true, index: true },
+        category: { type: String, default: 'unknown', index: true },
         sourceCardId: { type: String, default: null },
         reports: {
             count: { type: Number, default: 0 },

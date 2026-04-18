@@ -1353,6 +1353,51 @@
     margin-bottom: 0.25rem;
 }
 
+.gallery-card-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.25rem;
+}
+
+.gallery-category-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.gallery-pack-section {
+    margin-bottom: 0.5rem;
+}
+
+.gallery-pack-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 0.4rem 0.75rem;
+    border-left: 3px solid;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 0.25rem;
+}
+
+.gallery-pack-count {
+    font-size: 0.68rem;
+    font-weight: 600;
+    opacity: 0.65;
+    margin-left: auto;
+}
+
 .gallery-card-elements {
     display: flex;
     flex-wrap: wrap;

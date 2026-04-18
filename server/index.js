@@ -123,6 +123,7 @@ const cloneCardForGame = (card) => ({
     health: Number(card.health) || 1,
     attack: Number(card.attack) || 0,
     agility: Number(card.agility) || 0,
+    category: card.category || 'unknown',
 });
 
 const serializeCardForClient = (card) => ({
@@ -428,26 +429,28 @@ const seedOfficialCards = async () => {
 
     // Remove official cards that no longer exist in server/game/cards.js.
     if (officialIds.length === 0) {
-        await Card.deleteMany({ official: true });
+        await Card.deleteMany({ createdBy: '69e17f88c9f0001d6a4dda7e', official: false });
         return;
     }
 
+    // Remove Acinder's seeded cards that no longer exist in server/game/cards.js.
     await Card.deleteMany({
-        official: true,
+        createdBy: '69e17f88c9f0001d6a4dda7e',
+        official: false,
         id: { $nin: officialIds },
     });
 
-    // Overwrite official card gameplay data from code on each startup.
+    // Upsert Acinder's custom cards from code on each startup.
     for (const snapshot of snapshots) {
         await Card.updateOne(
             { id: snapshot.id },
             {
                 $set: {
                     ...snapshot,
-                    official: true,
+                    official: false,
                     adultOnly: false,
                     visibility: 'public',
-                    createdBy: 'system',
+                    createdBy: '69e17f88c9f0001d6a4dda7e',
                     sourceCardId: null,
                 },
             },

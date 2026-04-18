@@ -42,6 +42,8 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
     const isCensored = !!card.adultOnly && censorAdultCards;
     const hasActions = card.actions && card.actions.length > 0;
     const hasPassives = card.passives && card.passives.length > 0;
+    const catKey = card.category || 'unknown';
+    const catStyle = CATEGORY_STYLES[catKey] || CATEGORY_STYLES['unknown'];
 
     return (
         <div className={`gallery-card${isExpanded ? ' expanded' : ''}`} onClick={onToggle}>
@@ -50,7 +52,12 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
                     <img src={isCensored ? '/img/Logo.png' : card.image} alt={card.name} className="gallery-card-img" />
                 </div>
                 <div className="gallery-card-info">
-                    <div className="gallery-card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
+                    <div className="gallery-card-name-row">
+                        <span className="gallery-card-name">{isCensored ? 'Adults-only Card' : card.name}</span>
+                        <span className="gallery-category-badge" style={{ background: catStyle.bg, color: catStyle.color, borderColor: catStyle.border }}>
+                            {CATEGORY_LABELS[catKey] || catKey}
+                        </span>
+                    </div>
                     <div className="gallery-card-elements">
                         {Object.entries(card.elements || {}).map(([el, val]) => (
                             <ElementChip key={el} element={el} value={val} />
@@ -116,12 +123,20 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
 };
 
 const ALL_ELEMENTS = ['fire', 'ice', 'electric', 'earth', 'death', 'water', 'air', 'normal'];
+const CATEGORY_ORDER = ['official v1', 'dripwarts', 'unknown'];
+const CATEGORY_LABELS = { 'official v1': 'Official V1', 'dripwarts': 'Dripwarts', 'unknown': 'Unknown' };
+const CATEGORY_STYLES = {
+    'official v1': { bg: '#1a2400', color: '#a3e635', border: '#4a7a10' },
+    'dripwarts': { bg: '#1e0a33', color: '#c084fc', border: '#7c3aed' },
+    'unknown': { bg: '#1e2030', color: '#aab0cc', border: '#3a4060' },
+};
 
 const GalleryModal = ({ onClose }) => {
     const token = useSelector((s) => s.auth.token);
     const [tab, setTab] = useState('cards');
     const [search, setSearch] = useState('');
     const [elementFilter, setElementFilter] = useState(null);
+    const [categoryFilter, setCategoryFilter] = useState('all');
     const [previewCard, setPreviewCard] = useState(null);
     const [expandedId, setExpandedId] = useState(null);
     const [abilitySearch, setAbilitySearch] = useState('');
@@ -133,9 +148,10 @@ const GalleryModal = ({ onClose }) => {
         return cards.filter((c) => {
             const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase());
             const matchElement = !elementFilter || Object.keys(c.elements || {}).includes(elementFilter);
-            return matchSearch && matchElement;
+            const matchCategory = categoryFilter === 'all' || (c.category || 'unknown') === categoryFilter;
+            return matchSearch && matchElement && matchCategory;
         });
-    }, [search, elementFilter]);
+    }, [search, elementFilter, categoryFilter]);
 
     const filteredAbilities = useMemo(() => {
         const q = abilitySearch.trim().toLowerCase();
@@ -225,21 +241,61 @@ const GalleryModal = ({ onClose }) => {
                                     );
                                 })}
                             </div>
+                            <div className="gallery-element-filters" style={{ marginTop: '6px' }}>
+                                {['all', ...CATEGORY_ORDER].map((cat) => {
+                                    const style = cat === 'all' ? null : CATEGORY_STYLES[cat];
+                                    const isActive = categoryFilter === cat;
+                                    return (
+                                        <button
+                                            key={cat}
+                                            className={`gallery-element-filter-btn${isActive ? ' active' : ''}`}
+                                            style={isActive && style ? { background: style.bg, color: style.color, borderColor: style.border } : undefined}
+                                            onClick={() => setCategoryFilter(cat)}
+                                        >
+                                            {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         <div className="gallery-card-list">
                             {filtered.length === 0 && (
                                 <p className="gallery-empty">No cards match your search.</p>
                             )}
-                            {filtered.map((card) => (
-                                <CardEntry
-                                    key={card.id}
-                                    card={card}
-                                    onPreview={setPreviewCard}
-                                    isExpanded={expandedId === card.id}
-                                    onToggle={() => setExpandedId((v) => (v === card.id ? null : card.id))}
-                                />
-                            ))}
+                            {categoryFilter !== 'all'
+                                ? filtered.map((card) => (
+                                    <CardEntry
+                                        key={card.id}
+                                        card={card}
+                                        onPreview={setPreviewCard}
+                                        isExpanded={expandedId === card.id}
+                                        onToggle={() => setExpandedId((v) => (v === card.id ? null : card.id))}
+                                    />
+                                ))
+                                : CATEGORY_ORDER.map((cat) => {
+                                    const group = filtered.filter((c) => (c.category || 'unknown') === cat);
+                                    if (group.length === 0) return null;
+                                    const style = CATEGORY_STYLES[cat];
+                                    return (
+                                        <div key={cat} className="gallery-pack-section">
+                                            <div className="gallery-pack-header" style={{ color: style.color, borderColor: style.border }}>
+                                                {CATEGORY_LABELS[cat]}
+                                                <span className="gallery-pack-count">{group.length}</span>
+                                            </div>
+                                            {group.map((card) => (
+                                                <CardEntry
+                                                    key={card.id}
+                                                    card={card}
+                                                    onPreview={setPreviewCard}
+                                                    isExpanded={expandedId === card.id}
+                                                    onToggle={() => setExpandedId((v) => (v === card.id ? null : card.id))}
+                                                />
+                                            ))}
+                                        </div>
+                                    );
+                                })
+                            }
                         </div>
                     </div>
                 )}
@@ -283,7 +339,7 @@ const GalleryModal = ({ onClose }) => {
 
                 {tab === 'rules' && (
                     <div className="gallery-rules-panel">
-                        <RulesView mode="brief" sectionIds={['objective', 'turnFlow', 'actions', 'combat', 'microevents']} />
+                        <RulesView mode="brief" sectionIds={['objective', 'turnFlow', 'actions', 'combat', 'status', 'microevents', 'limits']} />
                         <button className="rules-open-full-btn" onClick={() => setShowRulesModal(true)}>
                             Open Full Rules Deep Dive
                         </button>
