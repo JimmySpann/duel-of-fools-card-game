@@ -6,6 +6,8 @@ import musicManager from '../../../../features/sound/musicManager';
 import './battler-board.css'
 
 const ANIM_DURATION = 900;
+const DANCE_MOTION_THRESHOLD = 0.3;
+const DANCE_PEAK_BOOST = 1.55;
 
 const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = true }) => {
     const dispatch = useDispatch();
@@ -114,16 +116,21 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                         className={`card-dance-layer${cardDanceEnabled ? ' card-dance-enabled' : ''}`}
                         style={(() => {
                             if (!cardDanceEnabled || danceEnergy <= 0.001) return undefined;
+                            const gated = Math.max(0, (danceEnergy - DANCE_MOTION_THRESHOLD) / (1 - DANCE_MOTION_THRESHOLD));
+                            if (gated <= 0.001) return undefined;
                             const phase = phaseFrom(card.id, index);
                             const wobble = Math.sin(danceClock * 0.008 + phase);
                             const pulse = Math.sin(danceClock * 0.013 + phase * 0.7);
                             const intensity = cardDanceIntensity;
-                            const rotateDeg = wobble * 1.8 * danceEnergy * intensity;
-                            const liftPx = Math.max(0, pulse) * 7 * danceEnergy * intensity;
-                            const scale = 1 + Math.max(0, pulse) * 0.035 * danceEnergy * intensity;
+                            const motionEnergy = Math.pow(gated, 1.45);
+                            const peakBoost = 1 + Math.pow(gated, 1.2) * (DANCE_PEAK_BOOST - 1);
+                            const effectiveEnergy = motionEnergy * peakBoost;
+                            const rotateDeg = wobble * 2.2 * effectiveEnergy * intensity;
+                            const liftPx = Math.max(0, pulse) * 9 * effectiveEnergy * intensity;
+                            const scale = 1 + Math.max(0, pulse) * 0.048 * effectiveEnergy * intensity;
                             return {
                                 transform: `translateY(${-liftPx.toFixed(2)}px) rotate(${rotateDeg.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
-                                filter: `saturate(${(1 + danceEnergy * 0.18 * intensity).toFixed(3)}) brightness(${(1 + danceEnergy * 0.1 * intensity).toFixed(3)})`,
+                                filter: `saturate(${(1 + effectiveEnergy * 0.2 * intensity).toFixed(3)}) brightness(${(1 + effectiveEnergy * 0.13 * intensity).toFixed(3)})`,
                             };
                         })()}
                     >
