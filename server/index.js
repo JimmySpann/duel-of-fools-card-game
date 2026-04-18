@@ -1004,6 +1004,28 @@ app.get('/api/sessions', requireAuth, async (req, res) => {
 });
 
 /**
+ * DELETE /api/sessions/completed
+ * Deletes finished sessions hosted by the authenticated user.
+ */
+app.delete('/api/sessions/completed', requireAuth, async (req, res) => {
+    try {
+        const ownedCompleted = await Session.find({
+            status: 'finished',
+            'host.userId': req.user.id,
+        }).select('_id').lean();
+
+        const deletedIds = ownedCompleted.map((s) => String(s._id));
+        if (deletedIds.length === 0) return res.json({ deletedCount: 0, deletedIds: [] });
+
+        await Session.deleteMany({ _id: { $in: deletedIds } });
+        res.json({ deletedCount: deletedIds.length, deletedIds });
+    } catch (err) {
+        console.error('DELETE /api/sessions/completed error:', err);
+        res.status(500).json({ error: 'Failed to clear completed sessions' });
+    }
+});
+
+/**
  * POST /api/sessions
  * Body: { name, settings?: { startingHp, maxBattlers, teamMode } }
  * Creates a new lobby session; the creator is automatically player1.

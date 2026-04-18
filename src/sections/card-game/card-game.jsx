@@ -197,14 +197,20 @@ const CardGame = () => {
         // winner is a player id in FFA, or a team letter in team mode
         const winnerPlayer = gamePlayers.find((p) => p.id === winner);
         const winnerLabel = winnerPlayer
-            ? winnerPlayer.id === myPlayerId ? 'You Win!' : `${winnerPlayer.name} Wins!`
+            ? winnerPlayer.id === myPlayerId ? 'You Win!' : 'You Lose!'
             : `Team ${winner} Wins!`;
         return (
             <div className="card-game-container">
                 <div className="game-over-screen">
                     <h1 className="game-over-title">{winnerLabel}</h1>
-                    <button className="game-over-btn" onClick={() => dispatch(resetGame())}>
-                        Play Again
+                    <button
+                        className="game-over-btn"
+                        onClick={() => {
+                            dispatch(resetGame());
+                            dispatch(leaveSession());
+                        }}
+                    >
+                        Back
                     </button>
                 </div>
             </div>

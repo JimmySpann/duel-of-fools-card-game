@@ -154,6 +154,17 @@ export const deleteSession = createAsyncThunk('sessions/delete', async ({ sessio
     return sessionId;
 });
 
+export const clearCompletedSessions = createAsyncThunk('sessions/clearCompleted', async (_, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/completed`, {
+        method: 'DELETE',
+        headers: authHeader(token),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.deletedIds || [];
+});
+
 export const submitDeck = createAsyncThunk('sessions/submitDeck', async ({ sessionId, deck }, { getState, rejectWithValue }) => {
     const token = getState().auth.token;
     const res = await fetch(`${API}/${sessionId}/deck`, {
@@ -290,6 +301,18 @@ const sessionsSlice = createSlice({
                 state.list = state.list.filter((s) => s._id !== action.payload);
             })
             .addCase(deleteSession.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+
+            .addCase(clearCompletedSessions.pending, (state) => { state.loading = true; state.error = null; })
+            .addCase(clearCompletedSessions.fulfilled, (state, action) => {
+                state.loading = false;
+                const removed = new Set(action.payload || []);
+                state.list = state.list.filter((s) => !removed.has(s._id));
+                if (state.activeSession && removed.has(state.activeSession._id)) {
+                    state.activeSession = null;
+                    state.activeGameId = null;
+                }
+            })
+            .addCase(clearCompletedSessions.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
 
             .addCase(submitDeck.pending, (state) => { state.loading = true; state.error = null; })
             .addCase(submitDeck.fulfilled, (state, action) => {

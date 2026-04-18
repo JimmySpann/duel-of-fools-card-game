@@ -284,6 +284,21 @@
     background: #252942;
 }
 
+.sessions-action-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.sessions-action-btn.danger {
+    border-color: rgba(224, 90, 90, 0.45);
+    color: #ffc5c5;
+    background: rgba(145, 40, 40, 0.24);
+}
+
+.sessions-action-btn.danger:hover:not(:disabled) {
+    background: rgba(170, 50, 50, 0.32);
+}
+
 .sessions-action-btn.primary {
     background: linear-gradient(135deg, #a855f7, #7c3aed);
     color: #fff;
