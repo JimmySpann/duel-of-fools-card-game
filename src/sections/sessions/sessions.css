@@ -2432,32 +2432,6 @@
     cursor: pointer;
 }
 
-.custom-card-submit-actions {
-    display: flex;
-    gap: 0.5rem;
-    width: 100%;
-}
-
-.custom-card-build-deck-btn {
-    flex: 1;
-    min-width: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.42rem;
-    border: 1px solid #2f4f74;
-    border-radius: 8px;
-    background: #1d2b3f;
-    color: #d9e9ff;
-    padding: 0.55rem 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.custom-card-build-deck-btn:hover {
-    background: #263a57;
-}
-
 .custom-card-btn-icon {
     width: 0.78rem;
     height: 0.78rem;

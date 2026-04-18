@@ -415,6 +415,7 @@ const Sessions = () => {
     const [previewSession, setPreviewSession] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
     const [showGallery, setShowGallery] = useState(false);
+    const [showDeckBuilder, setShowDeckBuilder] = useState(false);
     const [showCustomCards, setShowCustomCards] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
@@ -701,8 +702,11 @@ const Sessions = () => {
                     <button className="sessions-action-btn" onClick={() => setShowGallery(true)}>
                         📖 Gallery
                     </button>
+                    <button className="sessions-action-btn" onClick={() => setShowDeckBuilder(true)}>
+                        🃏 Deck Builder
+                    </button>
                     <button className="sessions-action-btn" onClick={() => setShowCustomCards(true)}>
-                        🧪 Create Card
+                        🧪 Create Cards
                     </button>
                 </div>
 
@@ -744,6 +748,15 @@ const Sessions = () => {
             </div>
             {showProfile && <Profile onClose={() => setShowProfile(false)} />}
             {showGallery && <GalleryModal onClose={() => setShowGallery(false)} />}
+            {showDeckBuilder && (
+                <DeckBuilderModal
+                    onClose={() => setShowDeckBuilder(false)}
+                    onConfirm={() => setShowDeckBuilder(false)}
+                    initialDeck={[]}
+                    loading={false}
+                    error={null}
+                />
+            )}
             {showCustomCards && <CustomCardModal onClose={() => setShowCustomCards(false)} />}
             <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
         </div>
