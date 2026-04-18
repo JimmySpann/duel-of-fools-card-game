@@ -88,44 +88,28 @@ const PlayerHUD = ({ player, isCurrentUser }) => {
                 </div>
             </div>
             <div className="hud-card">
-                <img
-                    className="profile-image"
-                    src={player.image || fallbackAvatar}
-                    alt={`${player.name} avatar`}
-                    onError={(e) => { e.currentTarget.src = fallbackAvatar; }}
-                />
                 <div className="hud-main">
                     <div className="hud-top-row">
+                        <img
+                            className="profile-image"
+                            src={player.image || fallbackAvatar}
+                            alt={`${player.name} avatar`}
+                            onError={(e) => { e.currentTarget.src = fallbackAvatar; }}
+                        />
                         <div className="name">{player.name} {isCurrentUser ? '(You)' : ''}</div>
                         <div className="battler-count" title="Battlers in play">⚔ {player.inPlay?.length ?? 0}</div>
                     </div>
 
-                    <div className="hud-health-crest-wrap">
-                        <div className="hud-rail hud-rail-left">
-                            <div
-                                className="hud-rail-fill hud-rail-fill-left"
-                                style={{
-                                    width: `${hpPercent}%`,
-                                    background: palette.railBackground,
-                                    boxShadow: palette.railGlow,
-                                }}
-                            />
-                        </div>
-
-                        <div className="hud-crest" style={{ borderColor: palette.crestBorder, boxShadow: palette.railGlow }}>
-                            <div className="hud-crest-hp">HP {player.health}/{player.maxHealth}</div>
-                        </div>
-
-                        <div className="hud-rail hud-rail-right">
-                            <div
-                                className="hud-rail-fill hud-rail-fill-right"
-                                style={{
-                                    width: `${hpPercent}%`,
-                                    background: palette.railBackground,
-                                    boxShadow: palette.railGlow,
-                                }}
-                            />
-                        </div>
+                    <div className="hud-health-bar-wrap">
+                        <div
+                            className="hud-health-bar-fill"
+                            style={{
+                                width: `${hpPercent}%`,
+                                background: palette.railBackground,
+                                boxShadow: palette.railGlow,
+                            }}
+                        />
+                        <span className="hud-health-bar-text">HP {player.health}/{player.maxHealth}</span>
                     </div>
                 </div>
             </div>
