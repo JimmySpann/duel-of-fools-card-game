@@ -616,7 +616,10 @@ const Sessions = () => {
         <div className="sessions-backdrop">
             <div className="sessions-page">
                 <header className="sessions-header">
-                    <img src="/img/Logo.png" alt="Duel of Fools" className="sessions-logo" />
+                    <button className="sessions-brand-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                        <img src="/img/Jester.png" alt="jester" className="sessions-brand-jester" />
+                        <span className="sessions-brand-title">Duel of Fools</span>
+                    </button>
                     <div className="sessions-header-right">
                         <DMPanel anchor="header" />
                         <button className="sessions-gallery-btn" onClick={() => setShowGallery(true)} title="View all cards and game rules">

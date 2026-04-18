@@ -42,6 +42,29 @@
     }
 }
 
+.header-brand-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.header-brand-jester {
+    height: 30px;
+    width: auto;
+    filter: drop-shadow(0 0 6px rgba(187, 16, 187, 0.55));
+    flex-shrink: 0;
+    transition: filter 0.2s;
+}
+
+.header-brand-btn:hover .header-brand-jester {
+    filter: drop-shadow(0 0 10px rgba(220, 80, 220, 0.8));
+}
+
 .header-title {
     color: rgb(187, 16, 187) !important;
     margin-left: 10px;

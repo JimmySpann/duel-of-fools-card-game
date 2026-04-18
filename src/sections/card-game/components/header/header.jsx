@@ -58,9 +58,10 @@ const Header = ({
 
     return (
         <div className="header-container">
-            <h2 className="header-title header-title--clickable" onClick={onLobbies}>
-                Duel of Fools
-            </h2>
+            <button className="header-brand-btn" onClick={onLobbies}>
+                <img src="/img/Jester.png" alt="jester" className="header-brand-jester" />
+                <span className="header-title header-title--clickable">Duel of Fools</span>
+            </button>
             <div className="account-buttons-container">
                 <button className="account-button" onClick={onLobbies}>Lobbies</button>
                 <div className="header-profile-wrap">

@@ -48,6 +48,44 @@
     margin: 0;
 }
 
+.sessions-brand-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+.sessions-brand-jester {
+    height: 36px;
+    width: auto;
+    filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.55));
+    flex-shrink: 0;
+    transition: filter 0.2s;
+}
+
+.sessions-brand-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #a855f7;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: color 0.15s;
+}
+
+.sessions-brand-btn:hover .sessions-brand-jester {
+    filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.8));
+}
+
+.sessions-brand-btn:hover .sessions-brand-title {
+    color: #c084fc;
+}
+
 .sessions-header-right {
     display: flex;
     align-items: center;
