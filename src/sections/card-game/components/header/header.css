@@ -290,3 +290,87 @@
     margin-left: 6px;
     flex-shrink: 0;
 }
+
+@media (max-width: 900px) {
+    .header-container {
+        padding: 6px 10px;
+    }
+
+    .header-title {
+        font-size: 16px;
+        margin-left: 6px;
+    }
+
+    .header-profile-name {
+        max-width: 78px;
+    }
+
+    .player-container {
+        top: 58px;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .player-buttons-container {
+        pointer-events: auto;
+    }
+
+    .player-name-card {
+        min-width: 220px;
+        max-width: 72vw;
+        height: 28px;
+    }
+
+    .player-name-title {
+        font-size: 15px;
+        line-height: 28px;
+    }
+
+    .player-button {
+        height: 28px;
+        padding: 0 10px;
+        font-size: 0.74rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .header-container {
+        height: 54px;
+        padding: 5px 8px;
+    }
+
+    .header-title {
+        display: none;
+    }
+
+    .header-brand-jester {
+        height: 26px;
+    }
+
+    .header-profile-name {
+        display: none;
+    }
+
+    .header-profile-btn {
+        padding: 2px 8px 2px 3px;
+    }
+
+    .player-container {
+        top: 53px;
+    }
+
+    .player-name-card {
+        min-width: 170px;
+        max-width: 64vw;
+        height: 24px;
+    }
+
+    .player-name-title {
+        font-size: 13px;
+        line-height: 24px;
+    }
+
+    .turn-countdown {
+        font-size: 10px;
+    }
+}

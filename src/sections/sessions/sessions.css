@@ -257,10 +257,18 @@
 .sessions-actions {
     display: flex;
     gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.sessions-secondary-actions {
+    display: flex;
+    gap: 0.75rem;
     margin-bottom: 2rem;
 }
 
 .sessions-action-btn {
+    flex: 1;
+    min-height: 42px;
     padding: 0.6rem 1.2rem;
     border-radius: 8px;
     font-size: 0.95rem;
@@ -285,6 +293,59 @@
 
 .sessions-action-btn.primary:hover {
     opacity: 0.85;
+}
+
+@media (max-width: 760px) {
+    .sessions-page {
+        padding: 5.35rem 0.75rem 3rem;
+    }
+
+    .sessions-header {
+        padding: 0 0.65rem;
+        height: 58px;
+    }
+
+    .sessions-brand-title {
+        font-size: 1.05rem;
+        letter-spacing: 1px;
+    }
+
+    .sessions-header-right {
+        gap: 0.4rem;
+    }
+
+    .sessions-username {
+        max-width: 82px;
+    }
+
+    .sessions-actions,
+    .sessions-secondary-actions {
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+}
+
+@media (max-width: 560px) {
+    .sessions-header {
+        padding: 0 0.45rem;
+    }
+
+    .sessions-brand-jester {
+        height: 30px;
+    }
+
+    .sessions-brand-title {
+        font-size: 0.92rem;
+        letter-spacing: 0.4px;
+    }
+
+    .sessions-username {
+        display: none;
+    }
+
+    .sessions-profile-btn {
+        padding-right: 0.45rem;
+    }
 }
 
 /* ── Sessions list ───────────────────────────────────────────────────────── */

@@ -54,7 +54,6 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
     const unreadLobby = useSelector((s) => s.chat.unreadLobby[session._id] || 0);
     const [showChat, setShowChat] = useState(false);
     const [showDeckBuilder, setShowDeckBuilder] = useState(false);
-    const [showCustomCards, setShowCustomCards] = useState(false);
 
     // My player entry (null for observers)
     const myPlayer = session.players.find((p) => p.username === username);
@@ -311,10 +310,6 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
             </button>
             {showChat && <LobbyChat sessionId={session._id} isWatching={true} />}
 
-            <button className="lobby-custom-cards-btn" onClick={() => setShowCustomCards(true)}>
-                🧪 Create Custom Card
-            </button>
-
             {/* Deck builder modal */}
             {showDeckBuilder && (
                 <DeckBuilderModal
@@ -326,7 +321,6 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                 />
             )}
 
-            {showCustomCards && <CustomCardModal onClose={() => setShowCustomCards(false)} />}
         </div>
     );
 };
@@ -421,6 +415,7 @@ const Sessions = () => {
     const [previewSession, setPreviewSession] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
     const [showGallery, setShowGallery] = useState(false);
+    const [showCustomCards, setShowCustomCards] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
 
@@ -643,9 +638,6 @@ const Sessions = () => {
                         <span className="sessions-brand-title">Duel of Fools</span>
                     </button>
                     <div className="sessions-header-right">
-                        <button className="sessions-gallery-btn" onClick={() => setShowGallery(true)} title="View all cards and game rules">
-                            📖 Gallery
-                        </button>
                         <div className="sessions-profile-wrap">
                             <button
                                 className="sessions-profile-btn"
@@ -667,12 +659,6 @@ const Sessions = () => {
                             </button>
                             {showProfileMenu && (
                                 <div className="sessions-profile-dropdown">
-                                    <button
-                                        className="sessions-profile-dropdown-item"
-                                        onClick={() => { setShowProfileMenu(false); setView('list'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                                    >
-                                        🏠 Lobbies
-                                    </button>
                                     <button
                                         className="sessions-profile-dropdown-item"
                                         onClick={() => { setShowProfileMenu(false); setShowMessages(true); }}
@@ -709,6 +695,14 @@ const Sessions = () => {
                     </button>
                     <button className="sessions-action-btn" onClick={() => { dispatch(clearSessionError()); setView('join'); }}>
                         Join by Code
+                    </button>
+                </div>
+                <div className="sessions-secondary-actions">
+                    <button className="sessions-action-btn" onClick={() => setShowGallery(true)}>
+                        📖 Gallery
+                    </button>
+                    <button className="sessions-action-btn" onClick={() => setShowCustomCards(true)}>
+                        🧪 Create Card
                     </button>
                 </div>
 
@@ -750,6 +744,7 @@ const Sessions = () => {
             </div>
             {showProfile && <Profile onClose={() => setShowProfile(false)} />}
             {showGallery && <GalleryModal onClose={() => setShowGallery(false)} />}
+            {showCustomCards && <CustomCardModal onClose={() => setShowCustomCards(false)} />}
             <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
         </div>
     );
