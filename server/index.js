@@ -423,12 +423,26 @@ const validateCustomCardPayload = (payload) => {
 };
 
 const seedOfficialCards = async () => {
-    for (const card of officialCards) {
-        const snapshot = cloneCardForGame(card);
+    const snapshots = officialCards.map((card) => cloneCardForGame(card));
+    const officialIds = snapshots.map((c) => c.id);
+
+    // Remove official cards that no longer exist in server/game/cards.js.
+    if (officialIds.length === 0) {
+        await Card.deleteMany({ official: true });
+        return;
+    }
+
+    await Card.deleteMany({
+        official: true,
+        id: { $nin: officialIds },
+    });
+
+    // Overwrite official card gameplay data from code on each startup.
+    for (const snapshot of snapshots) {
         await Card.updateOne(
             { id: snapshot.id },
             {
-                $setOnInsert: {
+                $set: {
                     ...snapshot,
                     official: true,
                     adultOnly: false,
