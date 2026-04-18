@@ -3,11 +3,13 @@ import { useDispatch } from 'react-redux';
 import BattlerBoard from '../../battler-board/battler-board.jsx';
 import PlayerHUD from '../../player-hud/player-hud.jsx';
 import SelectedCard from '../../selected-card/selected-card.jsx';
-import { resolveOnEnemyCard } from '../../../database/cardGameSlice';
+import { resolveOnEnemyCard, attackPlayer } from '../../../database/cardGameSlice';
 
 const EnemyLayout = ({ player, isTargetable, isActiveTurn }) => {
     const dispatch = useDispatch();
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
+
+    const hasNoBattlers = player.inPlay.filter((c) => !c.dying).length === 0;
 
     const onCardClick = (index) => {
         if (isTargetable) {
@@ -26,13 +28,24 @@ const EnemyLayout = ({ player, isTargetable, isActiveTurn }) => {
     return (
         <div>
             <PlayerHUD player={player} />
-            <BattlerBoard
-                cards={player.inPlay}
-                onCardClick={onCardClick}
-                highlight={isTargetable}
-                playerId={player.id}
-                showExhausted={isActiveTurn}
-            />
+            {isTargetable && hasNoBattlers ? (
+                <div className="enemy-direct-attack-area">
+                    <button
+                        className="enemy-direct-attack-btn"
+                        onClick={() => dispatch(attackPlayer({ targetPlayerId: player.id }))}
+                    >
+                        ⚔ Attack {player.name} Directly
+                    </button>
+                </div>
+            ) : (
+                <BattlerBoard
+                    cards={player.inPlay}
+                    onCardClick={onCardClick}
+                    highlight={isTargetable}
+                    playerId={player.id}
+                    showExhausted={isActiveTurn}
+                />
+            )}
             {selectedCardIndex !== null && !isTargetable && (
                 <SelectedCard
                     card={player.inPlay[selectedCardIndex]}

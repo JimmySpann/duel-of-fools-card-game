@@ -308,9 +308,12 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
   }
 };
 
-const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, targetCardIdx) => {
+const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, targetCardIdx, targetPlayerId) => {
   const casterPlayer = state.players.find((p) => p.id === casterPlayerId);
-  const enemyPlayer = state.players.find((p) => p.id !== casterPlayerId);
+  const singleEnemyPlayer = targetPlayerId
+    ? state.players.find((p) => p.id === targetPlayerId)
+    : state.players.find((p) => p.id !== casterPlayerId);
+  const allEnemyPlayers = state.players.filter((p) => p.id !== casterPlayerId && !p.eliminated && p.health > 0);
   const caster = casterPlayer.inPlay[casterCardIdx];
   if (!caster) return;
 
@@ -339,9 +342,9 @@ const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, target
       applySingleEffect(effect, caster, casterPlayer, casterCardIdx, caster, casterPlayer, casterCardIdx, state, ability.name);
 
     } else if (targetType === 'enemyCard') {
-      const t = enemyPlayer.inPlay[targetCardIdx];
+      const t = singleEnemyPlayer?.inPlay[targetCardIdx];
       if (!t || isUntouchable(t, state)) continue;
-      applySingleEffect(effect, caster, casterPlayer, casterCardIdx, t, enemyPlayer, targetCardIdx, state, ability.name);
+      applySingleEffect(effect, caster, casterPlayer, casterCardIdx, t, singleEnemyPlayer, targetCardIdx, state, ability.name);
 
     } else if (targetType === 'allyCard') {
       const t = casterPlayer.inPlay[targetCardIdx];
@@ -350,23 +353,28 @@ const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, target
 
     } else if (targetType === 'allEnemies') {
       if (effect.type === 'damage' && effect.randomTarget) {
-        if (enemyPlayer.inPlay.length === 0) { state.log.unshift(`No targets for ${ability.name}!`); continue; }
+        const allCards = allEnemyPlayers.flatMap((ep) => ep.inPlay.map((_, ci) => ({ ep, ci })));
+        if (allCards.length === 0) { state.log.unshift(`No targets for ${ability.name}!`); continue; }
         const hits = effect.repeat ?? 1;
         for (let v = 0; v < hits; v++) {
-          const i = Math.floor(Math.random() * enemyPlayer.inPlay.length);
-          if (!enemyPlayer.inPlay[i] || enemyPlayer.inPlay[i].dying) continue;
+          const { ep, ci } = allCards[Math.floor(Math.random() * allCards.length)];
+          if (!ep.inPlay[ci] || ep.inPlay[ci].dying) continue;
           applySingleEffect(
             { ...effect, repeat: undefined, randomTarget: false },
-            caster, casterPlayer, casterCardIdx, enemyPlayer.inPlay[i], enemyPlayer, i, state, ability.name
+            caster, casterPlayer, casterCardIdx, ep.inPlay[ci], ep, ci, state, ability.name
           );
         }
       } else if (effect.type === 'damage') {
-        for (let i = enemyPlayer.inPlay.length - 1; i >= 0; i--) {
-          if (enemyPlayer.inPlay[i]?.dying) continue;
-          applySingleEffect(effect, caster, casterPlayer, casterCardIdx, enemyPlayer.inPlay[i], enemyPlayer, i, state, ability.name);
+        for (const ep of allEnemyPlayers) {
+          for (let i = ep.inPlay.length - 1; i >= 0; i--) {
+            if (ep.inPlay[i]?.dying) continue;
+            applySingleEffect(effect, caster, casterPlayer, casterCardIdx, ep.inPlay[i], ep, i, state, ability.name);
+          }
         }
       } else if (effect.type === 'status') {
-        for (const c of enemyPlayer.inPlay) addStatus(c, effect.status, effect.value, effect.duration);
+        for (const ep of allEnemyPlayers) {
+          for (const c of ep.inPlay) addStatus(c, effect.status, effect.value, effect.duration);
+        }
         state.log.unshift(`${ability.name} applies ${effect.status} to all enemies!`);
       }
 
@@ -424,27 +432,11 @@ export const cardGameSlice = createSlice({
     selectAttacker: (state, action) => {
       if (state.phase !== 'main' || state.gameOver) return;
       const player = state.players.find((p) => p.id === state.currentTurn);
-      const enemy = state.players.find((p) => p.id !== state.currentTurn);
       const card = player?.inPlay[action.payload];
       if (!card) return;
       if (hasStatus(card, 'frozen')) { state.log.unshift(`${card.name} is Frozen and cannot act!`); return; }
       if (card.acted) { state.log.unshift(`${card.name} has already acted this turn!`); return; }
       if (card.justPlayed) { state.log.unshift(`${card.name} was just played and needs a turn to prepare!`); return; }
-      // No enemy cards — attack the player directly (ignore dying cards not yet cleaned up)
-      if (enemy.inPlay.filter((c) => !c.dying).length === 0) {
-        state.lastHitEvents = [];
-        const damage = Math.max(1, card.attack || 5);
-        card.acted = true;
-        enemy.health = Math.max(0, enemy.health - damage);
-        pushRecapEvent(state, { type: 'directHit', cardName: card.name, targetPlayerId: enemy.id, damage, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
-        state.log.unshift(`${card.name} attacks ${enemy.name} directly for ${damage} damage!`);
-        if (enemy.health <= 0) {
-          state.gameOver = true;
-          state.winner = player.id;
-          state.log.unshift(`${player.name} wins!`);
-        }
-        return;
-      }
       state.pendingAction = { isAbility: false, casterCardIndex: action.payload };
       state.phase = 'selectingTarget';
     },
@@ -467,28 +459,11 @@ export const cardGameSlice = createSlice({
       if (!ability || ability.usesRemaining <= 0) { state.log.unshift(`${ability?.name ?? 'Ability'} has no uses left!`); return; }
 
       const targetType = ABILITY_TARGETS[ability.name] ?? 'enemyCard';
-      const enemy = state.players.find((p) => p.id !== state.currentTurn);
 
       if (targetType === 'self' || targetType === 'allEnemies' || targetType === 'allAllies') {
         state.lastHitEvents = [];
-        executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, null);
+        executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, null, null);
       } else if (targetType === 'enemyCard') {
-        // No enemy cards — hit the player directly instead (ignore dying cards not yet cleaned up)
-        if (enemy.inPlay.filter((c) => !c.dying).length === 0) {
-          state.lastHitEvents = [];
-          ability.usesRemaining -= 1;
-          card.acted = true;
-          const dmg = Math.max(1, (card.attack || 5));
-          enemy.health = Math.max(0, enemy.health - dmg);
-          pushRecapEvent(state, { type: 'directHit', cardName: card.name, targetPlayerId: enemy.id, damage: dmg, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
-          state.log.unshift(`${card.name} uses ${ability.name} on ${enemy.name} directly for ${dmg} damage!`);
-          if (enemy.health <= 0) {
-            state.gameOver = true;
-            state.winner = player.id;
-            state.log.unshift(`${player.name} wins!`);
-          }
-          return;
-        }
         state.pendingAction = { isAbility: true, casterCardIndex, abilityIndex };
         state.phase = 'selectingTarget';
       } else if (targetType === 'allyCard') {
@@ -499,14 +474,15 @@ export const cardGameSlice = createSlice({
 
     resolveOnEnemyCard: (state, action) => {
       if (state.phase !== 'selectingTarget' || state.gameOver) return;
-      const { targetCardIndex } = action.payload;
+      const { targetCardIndex, targetPlayerId } = action.payload;
       const attackerPlayer = state.players.find((p) => p.id === state.currentTurn);
-      const defenderPlayer = state.players.find((p) => p.id !== state.currentTurn);
+      const defenderPlayer = state.players.find((p) => p.id === targetPlayerId)
+        ?? state.players.find((p) => p.id !== state.currentTurn);
       state.lastHitEvents = [];
 
       if (state.pendingAction.isAbility) {
         const { casterCardIndex, abilityIndex } = state.pendingAction;
-        executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, targetCardIndex);
+        executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId);
       } else {
         const { casterCardIndex } = state.pendingAction;
         const attacker = attackerPlayer.inPlay[casterCardIndex];
@@ -534,21 +510,36 @@ export const cardGameSlice = createSlice({
       state.phase = 'main';
     },
 
-    attackPlayer: (state) => {
+    attackPlayer: (state, action) => {
       if (state.phase !== 'selectingTarget' || state.gameOver) return;
       const attackerPlayer = state.players.find((p) => p.id === state.currentTurn);
-      const defenderPlayer = state.players.find((p) => p.id !== state.currentTurn);
-      if (defenderPlayer.inPlay.some((c) => !c.dying)) return;
+      const { targetPlayerId } = action.payload ?? {};
+      const defenderPlayer = targetPlayerId
+        ? state.players.find((p) => p.id === targetPlayerId)
+        : state.players.find((p) => p.id !== state.currentTurn);
+      if (!defenderPlayer || defenderPlayer.inPlay.some((c) => !c.dying)) return;
       const attacker = attackerPlayer.inPlay[state.pendingAction?.casterCardIndex];
       if (!attacker) return;
 
+      attacker.acted = true;
       const damage = Math.max(1, attacker.attack || 5);
       defenderPlayer.health = Math.max(0, defenderPlayer.health - damage);
+      pushRecapEvent(state, { type: 'directHit', cardName: attacker.name, targetPlayerId: defenderPlayer.id, damage, healthAfter: defenderPlayer.health, maxHealth: defenderPlayer.maxHealth });
       state.log.unshift(`${attacker.name} attacks ${defenderPlayer.name} directly for ${damage} damage!`);
       if (defenderPlayer.health <= 0) {
-        state.gameOver = true;
-        state.winner = attackerPlayer.id;
-        state.log.unshift(`${attackerPlayer.name} wins!`);
+        defenderPlayer.eliminated = true;
+        const alive = state.players.filter((p) => !p.eliminated && p.health > 0);
+        if (alive.length === 1) {
+          state.gameOver = true;
+          state.winner = alive[0].id;
+          state.log.unshift(`${alive[0].name} wins!`);
+        } else if (alive.length === 0) {
+          state.gameOver = true;
+          state.winner = null;
+          state.log.unshift('Draw — all players eliminated!');
+        } else {
+          state.log.unshift(`${defenderPlayer.name} has been eliminated!`);
+        }
       }
       state.pendingAction = null;
       state.phase = 'main';

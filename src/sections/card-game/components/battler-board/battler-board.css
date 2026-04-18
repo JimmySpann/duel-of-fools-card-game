@@ -20,6 +20,35 @@
     font-weight: 500
 }
 
+.enemy-direct-attack-area {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 30px;
+    margin-top: 12px;
+    min-height: 80px;
+}
+
+.enemy-direct-attack-btn {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #8b0000, #c0392b);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    border: 2px solid #e74c3c;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    box-shadow: 0 0 12px rgba(231, 76, 60, 0.5);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.enemy-direct-attack-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.8);
+}
+
 .card-game-card {
     zoom: 0.4;
     transition: transform 0.3s, filter 0.3s;
