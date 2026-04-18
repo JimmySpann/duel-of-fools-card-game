@@ -2233,7 +2233,8 @@
 }
 
 .custom-card-abilities {
-    max-height: 44vh;
+    min-height: 360px;
+    max-height: 56vh;
     overflow-y: auto;
     padding-right: 0.3rem;
 }

@@ -771,15 +771,6 @@ const CustomCardModal = ({ onClose }) => {
                                 </div>
                                 <small>Keep each custom ability under {MAX_CUSTOM_ABILITY_POWER} and total under {MAX_TOTAL_CUSTOM_ABILITY_POWER}.</small>
                             </div>
-                            <button
-                                type="button"
-                                className="custom-card-row-btn"
-                                onClick={addCustomAbility}
-                                disabled={totalAbilityCount >= 3}
-                                title="Add a blank custom ability. Max 3 total abilities per card."
-                            >
-                                + Add Custom Ability
-                            </button>
                             {customAbilities.map((ability, abilityIdx) => (
                                 <div key={`ca-${abilityIdx}`} className="custom-card-ability custom-card-ability-editor selected" style={{ marginTop: '0.45rem' }}>
                                     <div className={`custom-card-power-box${customAbilityPowerScores[abilityIdx] > MAX_CUSTOM_ABILITY_POWER ? ' over' : ''}`}>
@@ -1010,6 +1001,16 @@ const CustomCardModal = ({ onClose }) => {
                                     </div>
                                 </div>
                             ))}
+                            <button
+                                type="button"
+                                className="custom-card-row-btn"
+                                onClick={addCustomAbility}
+                                disabled={totalAbilityCount >= 3}
+                                title="Add a blank custom ability. Max 3 total abilities per card."
+                                style={{ marginTop: '0.55rem' }}
+                            >
+                                + Add Custom Ability
+                            </button>
                         </div>
 
                         <label className="custom-card-toggle-row">
