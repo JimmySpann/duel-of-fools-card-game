@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import defaultCards from '../card-game/database/cards';
+import { AI_MODEL_PRESETS, generateCardConcept, generateCardDraft } from './ai/cardAIGenerator';
 
 const clampInt = (value, min, max) => {
     const n = Number(value);
@@ -194,6 +195,63 @@ const randomStatsForBudget = (maxPoints) => {
     return best;
 };
 
+const fitStatsToBudget = (stats, maxPoints) => {
+    const next = {
+        attack: clampInt(stats?.attack, 0, 20),
+        defense: clampInt(stats?.defense, 0, 20),
+        evasion: clampInt(stats?.evasion, 0, 20),
+        agility: clampInt(stats?.agility, 0, 20),
+        health: clampInt(stats?.health, 1, 30),
+    };
+
+    let guard = 500;
+    while (computePoints(next) > maxPoints && guard > 0) {
+        const keys = shuffle(Object.keys(next));
+        for (const key of keys) {
+            const min = key === 'health' ? 1 : 0;
+            if (next[key] > min) {
+                next[key] -= 1;
+                break;
+            }
+        }
+        guard -= 1;
+    }
+
+    return next;
+};
+
+const normalizeElements = (raw) => {
+    const out = { ...initialElements };
+    Object.keys(out).forEach((k) => {
+        out[k] = clampInt(raw?.[k], 0, 5);
+    });
+    return out;
+};
+
+const normalizeAbilityNames = (suggested, officialAbilityNames) => {
+    const official = Array.isArray(officialAbilityNames) ? officialAbilityNames : [];
+    const officialLower = official.map((x) => String(x).toLowerCase());
+
+    const requested = (Array.isArray(suggested) ? suggested : [])
+        .map((x) => String(x || '').trim())
+        .filter(Boolean);
+
+    const matched = [];
+    for (const req of requested) {
+        const idxExact = officialLower.findIndex((name) => name === req.toLowerCase());
+        const idxContains = idxExact >= 0 ? idxExact : officialLower.findIndex((name) => name.includes(req.toLowerCase()) || req.toLowerCase().includes(name));
+        const finalIdx = idxContains;
+        if (finalIdx >= 0) {
+            const name = official[finalIdx];
+            if (!matched.includes(name)) matched.push(name);
+        }
+        if (matched.length >= 3) break;
+    }
+
+    if (matched.length > 0) return matched.slice(0, 3);
+    return official.slice(0, 1);
+};
+
 const NAME_PREFIXES = ['Storm', 'Iron', 'Arc', 'Frost', 'Shadow', 'Sun', 'Moon', 'Rune', 'Blaze', 'Echo'];
 const NAME_CORES = ['Warden', 'Ranger', 'Sage', 'Drifter', 'Knight', 'Harrier', 'Seer', 'Vanguard', 'Strider', 'Sentinel'];
 const DESCRIPTION_TEMPLATES = [
@@ -231,6 +289,12 @@ const CustomCardModal = ({ onClose }) => {
     const [abilitySearch, setAbilitySearch] = useState('');
     const [adultOnly, setAdultOnly] = useState(false);
     const [imagePreviewError, setImagePreviewError] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [aiModelId, setAiModelId] = useState(AI_MODEL_PRESETS[0]?.id || '');
+    const [aiConcept, setAiConcept] = useState(null);
+    const [aiLoadingConcept, setAiLoadingConcept] = useState(false);
+    const [aiLoadingDraft, setAiLoadingDraft] = useState(false);
+    const [aiError, setAiError] = useState('');
 
     const maxPoints = 48;
     const usedPoints = computePoints(stats);
@@ -260,6 +324,11 @@ const CustomCardModal = ({ onClose }) => {
             || (a.effectTypes || []).some((e) => String(e).toLowerCase().includes(q))
         );
     }, [abilities, abilitySearch]);
+
+    const officialAbilityNames = useMemo(
+        () => abilities.filter((a) => !a.isCustom).map((a) => a.name).filter(Boolean),
+        [abilities]
+    );
 
     const totalAbilityCount = abilityNames.length + customAbilities.length;
     const customAbilityPowerScores = useMemo(
@@ -516,6 +585,8 @@ const CustomCardModal = ({ onClose }) => {
         setAbilityNames([]);
         setCustomAbilities([]);
         setAdultOnly(false);
+        setAiConcept(null);
+        setAiError('');
     };
 
     const handleRandomizeCard = () => {
@@ -543,6 +614,60 @@ const CustomCardModal = ({ onClose }) => {
         setName(randomizedName);
         setDescription(randomizedDescription);
         setError('');
+    };
+
+    const handleGenerateConcept = async () => {
+        if (!aiPrompt.trim()) {
+            setAiError('Describe your card idea first.');
+            return;
+        }
+
+        setAiError('');
+        setAiLoadingConcept(true);
+        try {
+            const concept = await generateCardConcept({
+                modelId: aiModelId,
+                userPrompt: aiPrompt.trim(),
+            });
+            setAiConcept(concept);
+        } catch (err) {
+            setAiError(err.message || 'Failed to generate concept. Try another model.');
+        } finally {
+            setAiLoadingConcept(false);
+        }
+    };
+
+    const handleGenerateDraft = async () => {
+        if (!aiPrompt.trim()) {
+            setAiError('Describe your card idea first.');
+            return;
+        }
+
+        setAiError('');
+        setAiLoadingDraft(true);
+        try {
+            const draft = await generateCardDraft({
+                modelId: aiModelId,
+                userPrompt: aiPrompt.trim(),
+                concept: aiConcept,
+                officialAbilityNames,
+            });
+
+            const safeStats = fitStatsToBudget(draft?.stats || {}, maxPoints);
+            const safeElements = normalizeElements(draft?.elements || {});
+            const safeAbilities = normalizeAbilityNames(draft?.abilityNames, officialAbilityNames);
+
+            setName(String(draft?.name || '').slice(0, 60) || 'Generated Card');
+            setDescription(String(draft?.description || '').slice(0, 500));
+            setStats(safeStats);
+            setElements(safeElements);
+            setAbilityNames(safeAbilities);
+            setCustomAbilities([]);
+        } catch (err) {
+            setAiError(err.message || 'Failed to generate draft. Try again.');
+        } finally {
+            setAiLoadingDraft(false);
+        }
     };
 
     const handleDelete = async (cardId) => {
@@ -676,6 +801,63 @@ const CustomCardModal = ({ onClose }) => {
                             ) : (
                                 <div className="custom-card-image-preview-fallback">
                                     Preview unavailable. Check image URL.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="custom-card-ai-box">
+                            <div className="custom-card-preview-head">
+                                <span>AI Card Assistant</span>
+                            </div>
+                            <label className="custom-card-label">
+                                Describe Your Card
+                                <textarea
+                                    className="custom-card-textarea"
+                                    rows={3}
+                                    value={aiPrompt}
+                                    onChange={(e) => setAiPrompt(e.target.value)}
+                                    placeholder="Example: A wind assassin that trades defense for speed and precision strikes."
+                                    title="Describe your concept in plain language, then generate concept and draft."
+                                />
+                            </label>
+                            <label className="custom-card-label">
+                                Local Model
+                                <select
+                                    className="custom-card-input"
+                                    value={aiModelId}
+                                    onChange={(e) => setAiModelId(e.target.value)}
+                                    title="Select which browser-local model to use."
+                                >
+                                    {AI_MODEL_PRESETS.map((m) => (
+                                        <option key={m.id} value={m.id}>{m.label}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <div className="custom-card-ai-actions">
+                                <button
+                                    type="button"
+                                    className="custom-card-row-btn"
+                                    onClick={handleGenerateConcept}
+                                    disabled={aiLoadingConcept || aiLoadingDraft || !aiPrompt.trim()}
+                                    title="Step 1: Generate concept summary from your prompt."
+                                >
+                                    {aiLoadingConcept ? 'Generating Concept…' : 'Generate Concept'}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="custom-card-row-btn"
+                                    onClick={handleGenerateDraft}
+                                    disabled={aiLoadingConcept || aiLoadingDraft || !aiPrompt.trim()}
+                                    title="Step 2: Generate and apply a full draft to this form."
+                                >
+                                    {aiLoadingDraft ? 'Generating Draft…' : 'Generate Full Draft'}
+                                </button>
+                            </div>
+                            {aiError && <div className="custom-card-ai-error">{aiError}</div>}
+                            {aiConcept && (
+                                <div className="custom-card-ai-concept">
+                                    <div className="custom-card-ai-concept-title">Concept Preview</div>
+                                    <pre>{JSON.stringify(aiConcept, null, 2)}</pre>
                                 </div>
                             )}
                         </div>

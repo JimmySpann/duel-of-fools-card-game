@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@xenova/transformers": "^2.17.2",
     "@reduxjs/toolkit": "^2.11.2",
     "cra-template-redux": "2.0.0",
     "react": "^19.2.3",

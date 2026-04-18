@@ -2163,6 +2163,53 @@
     padding: 0.65rem;
 }
 
+.custom-card-ai-box {
+    border: 1px solid #2e3452;
+    border-radius: 10px;
+    background: #151a2d;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.custom-card-ai-actions {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.custom-card-ai-error {
+    color: #ff9ca7;
+    font-size: 0.78rem;
+}
+
+.custom-card-ai-concept {
+    border: 1px solid #3b4267;
+    border-radius: 8px;
+    background: #101628;
+    padding: 0.45rem;
+}
+
+.custom-card-ai-concept-title {
+    color: #b9c6ee;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+}
+
+.custom-card-ai-concept pre {
+    margin: 0;
+    color: #9db4e3;
+    font-size: 0.72rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
 .custom-card-points {
     font-size: 0.84rem;
     color: #88dcbf;
