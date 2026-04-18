@@ -22,6 +22,7 @@ import LobbyChat from '../../features/chat/LobbyChat';
 import DMPanel from '../../features/chat/DMPanel';
 import Profile from '../../features/profile/Profile';
 import { markLobbyRead } from '../../features/chat/chatSlice';
+import musicManager from '../../features/sound/musicManager';
 import './sessions.css';
 
 const POLL_INTERVAL = 3000;
@@ -247,6 +248,8 @@ const Sessions = () => {
 
     useEffect(() => {
         dispatch(fetchSessions());
+        // Resume background music when entering the lobbies screen
+        if (musicManager.getState().enabled) musicManager.play();
     }, [dispatch]);
 
     // Poll active session in lobby

@@ -14,6 +14,7 @@ import {
     setSoundVolume,
 } from './profileSlice';
 import sounds from '../sound/soundManager';
+import useMusicPlayer from '../sound/useMusicPlayer';
 import useNotifications from '../notifications/useNotifications';
 import './profile.css';
 
@@ -31,6 +32,8 @@ const Profile = ({ onClose, initialTab = 'Profile' }) => {
     const [addInput, setAddInput] = useState('');
     const [addStatus, setAddStatus] = useState(null); // { ok, msg }
     const [localVolume, setLocalVolume] = useState(soundVolume ?? 0.7);
+
+    const music = useMusicPlayer();
 
     // Keep sound manager in sync with stored volume on mount
     useEffect(() => {
@@ -323,9 +326,10 @@ const Profile = ({ onClose, initialTab = 'Profile' }) => {
                 {/* ── Options Tab ── */}
                 {tab === 'Options' && (
                     <div className="profile-section">
+                        {/* ── Sound Effects ── */}
                         <div className="profile-notif-section">
                             <div className="profile-subsection-title" style={{ marginBottom: '0.5rem' }}>
-                                Sound
+                                Sound Effects
                             </div>
 
                             {/* Mute toggle */}
@@ -381,6 +385,79 @@ const Profile = ({ onClose, initialTab = 'Profile' }) => {
                             >
                                 Test Sound
                             </button>
+                        </div>
+
+                        {/* ── Background Music ── */}
+                        <div className="profile-notif-section" style={{ marginTop: '1.25rem' }}>
+                            <div className="profile-subsection-title" style={{ marginBottom: '0.5rem' }}>
+                                Background Music
+                            </div>
+
+                            {/* Play / pause toggle */}
+                            <div className="profile-toggle-row">
+                                <span className="profile-toggle-label">
+                                    Music
+                                    <span className="profile-toggle-hint">Background playlist during gameplay</span>
+                                </span>
+                                <button
+                                    type="button"
+                                    className={`profile-toggle ${music.playing ? 'on' : 'off'}`}
+                                    onClick={() => music.toggle()}
+                                    aria-label="Toggle background music"
+                                >
+                                    <span className="profile-toggle-knob" />
+                                </button>
+                            </div>
+
+                            {/* Music volume slider */}
+                            <div className="profile-volume-row">
+                                <span className="profile-volume-label">Volume</span>
+                                <div className="profile-volume-slider-wrap">
+                                    <span className="profile-volume-icon">🔇</span>
+                                    <input
+                                        className="profile-volume-slider"
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.05"
+                                        value={music.volume}
+                                        onChange={(e) => music.setVolume(parseFloat(e.target.value))}
+                                    />
+                                    <span className="profile-volume-icon">🔊</span>
+                                </div>
+                                <span className="profile-volume-pct">{Math.round(music.volume * 100)}%</span>
+                            </div>
+
+                            {/* Playback controls */}
+                            <div className="music-controls">
+                                <button className="music-ctrl-btn" onClick={() => music.prev()} title="Previous">⏮</button>
+                                <button className="music-ctrl-btn music-ctrl-play" onClick={() => music.toggle()} title={music.playing ? 'Pause' : 'Play'}>
+                                    {music.playing ? '⏸' : '▶'}
+                                </button>
+                                <button className="music-ctrl-btn" onClick={() => music.next()} title="Next">⏭</button>
+                            </div>
+
+                            {/* Playlist */}
+                            <div className="music-track-list">
+                                {music.tracks.map((track, i) => (
+                                    <button
+                                        key={i}
+                                        className={`music-track-item${i === music.currentIndex ? ' active' : ''}`}
+                                        onClick={() => {
+                                            music.setTrack(i);
+                                            if (!music.playing) music.toggle();
+                                        }}
+                                    >
+                                        <span className="music-track-icon">
+                                            {i === music.currentIndex && music.playing ? '🎵' : '🎶'}
+                                        </span>
+                                        <span className="music-track-name">{track.name}</span>
+                                        {i === music.currentIndex && (
+                                            <span className="music-track-badge">{music.playing ? 'Now Playing' : 'Paused'}</span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}

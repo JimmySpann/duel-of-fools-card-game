@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { login, signup, clearAuthError } from '../../features/auth/authSlice';
+import musicManager from '../../features/sound/musicManager';
+import useMusicPlayer from '../../features/sound/useMusicPlayer';
 import './auth.css';
 
 const Auth = () => {
@@ -11,6 +13,16 @@ const Auth = () => {
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
     const [localError, setLocalError] = useState('');
+    const music = useMusicPlayer();
+    const triedAutoplay = useRef(false);
+
+    // Start music on first user interaction (browsers block autoplay before that)
+    const handleFirstInteraction = () => {
+        if (!triedAutoplay.current) {
+            triedAutoplay.current = true;
+            if (music.enabled) musicManager.play();
+        }
+    };
 
     const switchMode = (m) => {
         setMode(m);
@@ -32,7 +44,16 @@ const Auth = () => {
     const displayError = localError || error;
 
     return (
-        <div className="auth-backdrop">
+        <div className="auth-backdrop" onClick={handleFirstInteraction}>
+            {/* Floating mute button */}
+            <button
+                className={`auth-music-btn ${music.playing ? 'on' : 'off'}`}
+                title={music.playing ? 'Mute music' : 'Play music'}
+                onClick={(e) => { e.stopPropagation(); musicManager.toggle(); }}
+            >
+                {music.playing ? '🎵' : '🔇'}
+            </button>
+
             <div className="auth-card">
                 <div className="auth-logo-wrap">
                     <img src="/img/Logo.png" alt="Duel of Fools" className="auth-logo-img" />
