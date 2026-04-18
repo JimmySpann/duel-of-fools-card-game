@@ -22,21 +22,10 @@ const CATEGORY_STYLES = {
     'unknown': { bg: '#1e2030', color: '#aab0cc', border: '#3a4060' },
 };
 
-const SAVED_DECKS_KEY = 'cg_saved_decks';
-
-const loadSavedDecks = () => {
-    try {
-        return JSON.parse(localStorage.getItem(SAVED_DECKS_KEY) || '{}');
-    } catch {
-        return {};
-    }
-};
-
-const saveDeck = (name, deck) => {
-    const existing = loadSavedDecks();
-    existing[name] = deck;
-    localStorage.setItem(SAVED_DECKS_KEY, JSON.stringify(existing));
-};
+const PRESET_OPTIONS = [
+    { value: '__official', label: 'Official Default' },
+    { value: '__dripwarts', label: 'Dripwarts' },
+];
 
 /**
  * DeckBuilderModal
@@ -51,12 +40,13 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
     const token = useSelector((s) => s.auth.token);
     const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
     const [selected, setSelected] = useState(() => new Set(initialDeck || []));
-    const [savedDecks, setSavedDecks] = useState(loadSavedDecks);
-    const [loadValue, setLoadValue] = useState('');
+    const [savedDecks, setSavedDecks] = useState([]); // [{ name, cardIds }]
+    const [deckSelectValue, setDeckSelectValue] = useState('');
     const [saveNameInput, setSaveNameInput] = useState('');
     const [showSaveInput, setShowSaveInput] = useState(false);
     const [previewCard, setPreviewCard] = useState(null);
     const [confirmDeleteDeck, setConfirmDeleteDeck] = useState(null);
+    const [deckSaving, setDeckSaving] = useState(false);
     const [cards, setCards] = useState(defaultCards);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
@@ -81,6 +71,20 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
         return () => { mounted = false; };
     }, [token]);
 
+    // Load saved decks from DB
+    useEffect(() => {
+        let mounted = true;
+        const loadDecks = async () => {
+            try {
+                const res = await fetch('/api/decks', { headers: { Authorization: `Bearer ${token}` } });
+                const data = await res.json();
+                if (res.ok && mounted && Array.isArray(data.decks)) setSavedDecks(data.decks);
+            } catch { /* ignore */ }
+        };
+        if (token) loadDecks();
+        return () => { mounted = false; };
+    }, [token]);
+
     const toggle = (id) => {
         setSelected((prev) => {
             const next = new Set(prev);
@@ -90,41 +94,57 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
         });
     };
 
-    const handleSave = () => {
+    // Preset decks derived from loaded cards
+    const officialDefaultDeck = useMemo(() => cards.filter(c => c.category === 'official v1').map(c => c.id), [cards]);
+    const dripwartsDeck = useMemo(() => cards.filter(c => c.category === 'dripwarts').map(c => c.id), [cards]);
+
+    const handleDeckSelect = (value) => {
+        setDeckSelectValue(value);
+        if (value === '__official') { setSelected(new Set(officialDefaultDeck)); return; }
+        if (value === '__dripwarts') { setSelected(new Set(dripwartsDeck)); return; }
+        const deck = savedDecks.find((d) => d.name === value);
+        if (deck) setSelected(new Set(deck.cardIds));
+    };
+
+    const handleSave = async () => {
         const name = saveNameInput.trim();
-        if (!name) return;
-        saveDeck(name, [...selected]);
-        setSavedDecks(loadSavedDecks());
+        if (!name || selected.size === 0) return;
+        setDeckSaving(true);
+        try {
+            const res = await fetch('/api/decks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ name, cardIds: [...selected] }),
+            });
+            const data = await res.json();
+            if (res.ok && Array.isArray(data.decks)) {
+                setSavedDecks(data.decks);
+                setDeckSelectValue(name);
+            }
+        } catch { /* ignore */ }
+        setDeckSaving(false);
         setSaveNameInput('');
         setShowSaveInput(false);
     };
 
-    const handleLoad = (name) => {
-        if (!name || !savedDecks[name]) return;
-        setSelected(new Set(savedDecks[name]));
-        setLoadValue('');
-    };
-
-    const deleteSavedDeck = (name) => {
-        const existing = loadSavedDecks();
-        delete existing[name];
-        localStorage.setItem(SAVED_DECKS_KEY, JSON.stringify(existing));
-        setSavedDecks(loadSavedDecks());
+    const handleDeleteDeck = async (name) => {
+        try {
+            const res = await fetch(`/api/decks/${encodeURIComponent(name)}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (res.ok && Array.isArray(data.decks)) {
+                setSavedDecks(data.decks);
+                if (deckSelectValue === name) setDeckSelectValue('');
+            }
+        } catch { /* ignore */ }
         setConfirmDeleteDeck(null);
     };
 
-    const deckNames = Object.keys(savedDecks);
     const canConfirm = selected.size >= 3 && !loading;
     const selectedCount = selected.size;
     const allCardIds = useMemo(() => cards.map((card) => card.id), [cards]);
-
-    const handleSelectAll = () => {
-        setSelected(new Set(allCardIds));
-    };
-
-    const handleClearAll = () => {
-        setSelected(new Set());
-    };
 
     const filteredCards = useMemo(() => {
         return cards.filter((c) => {
@@ -134,14 +154,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
         });
     }, [cards, search, categoryFilter]);
 
-    // Deck presets
-    const officialDefaultDeck = useMemo(() => cards.filter(c => c.category === 'official v1').map(c => c.id), [cards]);
-    const dripwartsDeck = useMemo(() => cards.filter(c => c.category === 'dripwarts').map(c => c.id), [cards]);
-
-    const handlePreset = (preset) => {
-        if (preset === 'official') setSelected(new Set(officialDefaultDeck));
-        if (preset === 'dripwarts') setSelected(new Set(dripwartsDeck));
-    };
+    const selectedDeckIsCustom = !!savedDecks.find((d) => d.name === deckSelectValue);
 
     return (
         <div className="db-overlay" onClick={onClose}>
@@ -156,33 +169,35 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                         {selectedCount} / 10 selected · min 3
                     </span>
                     <div className="db-toolbar-right">
-                        <button onClick={() => handlePreset('official')} className="db-preset-btn">Official Default</button>
-                        <button onClick={() => handlePreset('dripwarts')} className="db-preset-btn">Dripwarts</button>
-                        <button
-                            className="db-select-all-btn"
-                            onClick={handleSelectAll}
-                            disabled={allCardIds.length === 0 || selectedCount === allCardIds.length}
-                        >
-                            Select All
-                        </button>
-                        <button
-                            className="db-clear-all-btn"
-                            onClick={handleClearAll}
-                            disabled={selectedCount === 0}
-                        >
-                            Clear
-                        </button>
-                        {deckNames.length > 0 && (
-                            <div className="db-saved-decks-list">
-                                {deckNames.map((n) => (
-                                    <div key={n} className="db-saved-deck-row">
-                                        <span className="db-saved-deck-name" title={n}>{n}</span>
-                                        <button className="db-load-btn" onClick={() => handleLoad(n)}>Load</button>
-                                        <button className="db-delete-deck-btn" onClick={() => setConfirmDeleteDeck(n)} title="Delete deck">🗑</button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        <div className="db-deck-select-row">
+                            <select
+                                className="db-deck-select"
+                                value={deckSelectValue}
+                                onChange={(e) => handleDeckSelect(e.target.value)}
+                            >
+                                <option value="">— Load a deck —</option>
+                                <optgroup label="Presets">
+                                    {PRESET_OPTIONS.map((o) => (
+                                        <option key={o.value} value={o.value}>{o.label}</option>
+                                    ))}
+                                </optgroup>
+                                {savedDecks.length > 0 && (
+                                    <optgroup label="My Decks">
+                                        {savedDecks.map((d) => (
+                                            <option key={d.name} value={d.name}>{d.name}</option>
+                                        ))}
+                                    </optgroup>
+                                )}
+                            </select>
+                            {selectedDeckIsCustom && (
+                                <button
+                                    className="db-delete-deck-btn"
+                                    onClick={() => setConfirmDeleteDeck(deckSelectValue)}
+                                    title="Delete this deck"
+                                >🗑</button>
+                            )}
+                        </div>
+
                         {showSaveInput ? (
                             <div className="db-save-row">
                                 <input
@@ -193,9 +208,11 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                                     onChange={(e) => setSaveNameInput(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') { setShowSaveInput(false); setSaveNameInput(''); } }}
                                     autoFocus
-                                    maxLength={30}
+                                    maxLength={40}
                                 />
-                                <button className="db-save-confirm-btn" onClick={handleSave} disabled={!saveNameInput.trim()}>Save</button>
+                                <button className="db-save-confirm-btn" onClick={handleSave} disabled={!saveNameInput.trim() || deckSaving}>
+                                    {deckSaving ? '…' : 'Save'}
+                                </button>
                                 <button className="db-save-cancel-btn" onClick={() => { setShowSaveInput(false); setSaveNameInput(''); }}>✕</button>
                             </div>
                         ) : (
@@ -203,6 +220,13 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                                 Save Deck
                             </button>
                         )}
+                        <button
+                            className="db-clear-all-btn"
+                            onClick={() => setSelected(new Set())}
+                            disabled={selectedCount === 0}
+                        >
+                            Clear
+                        </button>
                     </div>
                 </div>
 
@@ -296,7 +320,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                     <div className="db-delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
                         <p className="db-delete-confirm-msg">Delete deck <strong>"{confirmDeleteDeck}"</strong>?</p>
                         <div className="db-delete-confirm-btns">
-                            <button className="db-delete-confirm-yes" onClick={() => deleteSavedDeck(confirmDeleteDeck)}>Delete</button>
+                            <button className="db-delete-confirm-yes" onClick={() => handleDeleteDeck(confirmDeleteDeck)}>Delete</button>
                             <button className="fc-preview-close-btn" onClick={() => setConfirmDeleteDeck(null)}>Cancel</button>
                         </div>
                     </div>

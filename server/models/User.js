@@ -29,6 +29,10 @@ const userSchema = new mongoose.Schema(
                 auth: { type: String, required: true },
             },
         }],
+        savedDecks: [{
+            name: { type: String, required: true, trim: true, maxlength: 40 },
+            cardIds: [{ type: String }],
+        }],
     },
     { timestamps: true }
 );

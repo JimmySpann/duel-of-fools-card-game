@@ -1733,6 +1733,28 @@
     transition: background 0.15s;
 }
 
+.db-deck-select-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.db-deck-select {
+    background: #1a1e2e;
+    border: 1px solid #3a4060;
+    color: #d8dced;
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+    min-width: 160px;
+}
+
+.db-deck-select:focus {
+    outline: none;
+    border-color: #7c3aed;
+}
+
 .db-save-btn:hover:not(:disabled) {
     background: #25305a;
 }
