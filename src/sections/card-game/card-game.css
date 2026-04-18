@@ -240,6 +240,35 @@ body {
     padding: 0 4px 4px;
 }
 
+.status-badges--image {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    margin-top: 0;
+    padding: 0;
+}
+
+.status-badges--image .status-badge {
+    font-size: 14px;
+    padding: 3px 7px;
+    border-radius: 7px;
+    background-clip: padding-box;
+    backdrop-filter: blur(2px);
+}
+
+.status-badges--image .status-badge-value {
+    font-size: 15px;
+}
+
+.status-badges--image .status-badge-dur {
+    font-size: 12px;
+}
+
 .status-badge {
     display: inline-flex;
     align-items: baseline;

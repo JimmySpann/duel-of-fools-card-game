@@ -45,10 +45,10 @@ const StatMod = ({ mod }) => {
     );
 };
 
-const StatusBadges = ({ statusEffects }) => {
+const StatusBadges = ({ statusEffects, imageStack = false }) => {
     if (!statusEffects || statusEffects.length === 0) return null;
     return (
-        <div className="status-badges">
+        <div className={`status-badges${imageStack ? ' status-badges--image' : ''}`}>
             {statusEffects.map((s, i) => {
                 const cfg = STATUS_BADGE_CONFIG[s.type];
                 if (!cfg) return null;
@@ -150,6 +150,7 @@ const Card = ({
                         src={card.image}
                         alt="Card Visual"
                     />
+                    <StatusBadges statusEffects={card.statusEffects} imageStack />
                     <div className="mini-card-name">{card.name}</div>
                 </div>
 
@@ -168,10 +169,6 @@ const Card = ({
                             <div className="mini-health-text">HP</div>
                         </div>
                     </div>
-                </div>
-
-                <div className="mini-card-footer">
-                    <StatusBadges statusEffects={card.statusEffects} />
                 </div>
 
                 {showExhausted && (card.acted || card.justPlayed) && (

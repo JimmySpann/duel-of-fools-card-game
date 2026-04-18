@@ -113,90 +113,90 @@ const DMPanel = ({ anchor, open: controlledOpen, onOpenChange, hideToggle = fals
                 <>
                     {isModal && <div className="dm-modal-overlay" onClick={() => setOpen(false)} />}
                     <div className={`dm-panel${isModal ? ' dm-panel--modal' : ''}`}>
-                    {activeDm ? (
-                        /* ── Active conversation ── */
-                        <div className="dm-conversation">
-                            <div className="dm-conv-header">
-                                <button className="dm-back-btn" onClick={() => dispatch(closeDm())}>←</button>
-                                <span className="dm-conv-title">{activeDm}</span>
-                                {hideToggle && <button className="dm-back-btn" onClick={() => setOpen(false)}>✕</button>}
-                            </div>
-                            <div className="chat-messages">
-                                {messages.length === 0 && (
-                                    <p className="chat-empty">Start the conversation!</p>
-                                )}
-                                {messages.map((m) => (
-                                    <div
-                                        key={m._id}
-                                        className={`chat-msg ${m.fromUsername === myUsername ? 'mine' : 'theirs'}`}
-                                    >
-                                        <span className="chat-msg-text">{m.text}</span>
-                                        <span className="chat-msg-time">
-                                            {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
-                                ))}
-                                <div ref={bottomRef} />
-                            </div>
-                            <form className="chat-input-row" onSubmit={handleSend}>
-                                <input
-                                    className="chat-input"
-                                    type="text"
-                                    value={text}
-                                    onChange={(e) => setText(e.target.value)}
-                                    placeholder={`Message ${activeDm}…`}
-                                    maxLength={1000}
-                                    autoFocus
-                                />
-                                <button className="chat-send-btn" type="submit" disabled={!text.trim()}>
-                                    Send
-                                </button>
-                            </form>
-                        </div>
-                    ) : (
-                        /* ── Inbox / thread list ── */
-                        <div className="dm-inbox">
-                            <div className="dm-inbox-header">
-                                <span>Direct Messages</span>
-                                {hideToggle && <button className="dm-back-btn" onClick={() => setOpen(false)}>✕</button>}
-                            </div>
-
-                            {/* Start a new DM */}
-                            <form className="dm-new-form" onSubmit={handleNewDm}>
-                                <input
-                                    className="chat-input"
-                                    type="text"
-                                    value={newRecipient}
-                                    onChange={(e) => setNewRecipient(e.target.value)}
-                                    placeholder="Username…"
-                                    maxLength={40}
-                                />
-                                <button className="chat-send-btn" type="submit">+</button>
-                            </form>
-
-                            {/* Thread list */}
-                            {dmList.length === 0 && (
-                                <p className="chat-empty">No conversations yet.</p>
-                            )}
-                            <div className="dm-thread-list">
-                                {dmList.map((thread) => (
-                                    <button
-                                        key={thread._id}
-                                        className="dm-thread-item"
-                                        onClick={() => handleOpenThread(thread._id)}
-                                    >
-                                        <span className="dm-thread-name">
-                                            {thread._id}
-                                            {unreadDm[thread._id] > 0 && (
-                                                <span className="dm-badge">{unreadDm[thread._id]}</span>
-                                            )}
-                                        </span>
-                                        <span className="dm-thread-preview">{thread.lastText}</span>
+                        {activeDm ? (
+                            /* ── Active conversation ── */
+                            <div className="dm-conversation">
+                                <div className="dm-conv-header">
+                                    <button className="dm-back-btn" onClick={() => dispatch(closeDm())}>←</button>
+                                    <span className="dm-conv-title">{activeDm}</span>
+                                    {hideToggle && <button className="dm-back-btn" onClick={() => setOpen(false)}>✕</button>}
+                                </div>
+                                <div className="chat-messages">
+                                    {messages.length === 0 && (
+                                        <p className="chat-empty">Start the conversation!</p>
+                                    )}
+                                    {messages.map((m) => (
+                                        <div
+                                            key={m._id}
+                                            className={`chat-msg ${m.fromUsername === myUsername ? 'mine' : 'theirs'}`}
+                                        >
+                                            <span className="chat-msg-text">{m.text}</span>
+                                            <span className="chat-msg-time">
+                                                {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <div ref={bottomRef} />
+                                </div>
+                                <form className="chat-input-row" onSubmit={handleSend}>
+                                    <input
+                                        className="chat-input"
+                                        type="text"
+                                        value={text}
+                                        onChange={(e) => setText(e.target.value)}
+                                        placeholder={`Message ${activeDm}…`}
+                                        maxLength={1000}
+                                        autoFocus
+                                    />
+                                    <button className="chat-send-btn" type="submit" disabled={!text.trim()}>
+                                        Send
                                     </button>
-                                ))}
+                                </form>
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            /* ── Inbox / thread list ── */
+                            <div className="dm-inbox">
+                                <div className="dm-inbox-header">
+                                    <span>Direct Messages</span>
+                                    {hideToggle && <button className="dm-back-btn" onClick={() => setOpen(false)}>✕</button>}
+                                </div>
+
+                                {/* Start a new DM */}
+                                <form className="dm-new-form" onSubmit={handleNewDm}>
+                                    <input
+                                        className="chat-input"
+                                        type="text"
+                                        value={newRecipient}
+                                        onChange={(e) => setNewRecipient(e.target.value)}
+                                        placeholder="Username…"
+                                        maxLength={40}
+                                    />
+                                    <button className="chat-send-btn" type="submit">+</button>
+                                </form>
+
+                                {/* Thread list */}
+                                {dmList.length === 0 && (
+                                    <p className="chat-empty">No conversations yet.</p>
+                                )}
+                                <div className="dm-thread-list">
+                                    {dmList.map((thread) => (
+                                        <button
+                                            key={thread._id}
+                                            className="dm-thread-item"
+                                            onClick={() => handleOpenThread(thread._id)}
+                                        >
+                                            <span className="dm-thread-name">
+                                                {thread._id}
+                                                {unreadDm[thread._id] > 0 && (
+                                                    <span className="dm-badge">{unreadDm[thread._id]}</span>
+                                                )}
+                                            </span>
+                                            <span className="dm-thread-preview">{thread.lastText}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </>
             )}

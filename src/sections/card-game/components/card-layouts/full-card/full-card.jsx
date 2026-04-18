@@ -119,6 +119,28 @@ const Card = ({
                         src={card.image}
                         alt="Card Visual"
                     />
+                    {card.statusEffects && card.statusEffects.length > 0 && (
+                        <div className="card-status-overlay">
+                            <div className="card-status-list card-status-list--image">
+                                {card.statusEffects.map((s, i) => {
+                                    const info = STATUS_INFO[s.type] || { label: s.type, buff: true };
+                                    return (
+                                        <div key={i} className={`card-status-pill${info.buff ? ' buff' : ' debuff'}`}>
+                                            <span className="card-status-name">{info.label}</span>
+                                            {s.value != null && s.value !== 1 && (
+                                                <span className="card-status-value">
+                                                    {info.buff ? '+' : '-'}{Math.abs(s.value)}
+                                                </span>
+                                            )}
+                                            {s.duration != null && s.duration < 999 && (
+                                                <span className="card-status-duration">{s.duration}t</span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                     <div className="card-name">{card.name}</div>
                 </div>
 
@@ -182,29 +204,6 @@ const Card = ({
                         ))}
                     </div>}
 
-                    {card.statusEffects && card.statusEffects.length > 0 && (
-                        <div className="card-status-effects">
-                            <div className="card-info-title">Status</div>
-                            <div className="card-status-list">
-                                {card.statusEffects.map((s, i) => {
-                                    const info = STATUS_INFO[s.type] || { label: s.type, buff: true };
-                                    return (
-                                        <div key={i} className={`card-status-pill${info.buff ? ' buff' : ' debuff'}`}>
-                                            <span className="card-status-name">{info.label}</span>
-                                            {s.value != null && s.value !== 1 && (
-                                                <span className="card-status-value">
-                                                    {info.buff ? '+' : '-'}{Math.abs(s.value)}
-                                                </span>
-                                            )}
-                                            {s.duration != null && s.duration < 999 && (
-                                                <span className="card-status-duration">{s.duration}t</span>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 <div className="card-footer">
