@@ -17,8 +17,10 @@ const RhythmEvent = ({ context, isSpectator, liveInputs, onComplete, onInput }) 
     const { bpm = 120, beats: totalBeats = 4, beatStartTime, difficulty = 0 } = context;
     const beatIntervalMs = (60 / bpm) * 1000;
 
-    // Hit window shrinks with difficulty
-    const HIT_WINDOW_MS = Math.max(100, 180 - difficulty * 20);
+    // Two-tier windows: Perfect and Good.
+    // This makes Rhythm less binary and more forgiving while still skill-based.
+    const PERFECT_WINDOW_MS = Math.max(65, 140 - difficulty * 12);
+    const GOOD_WINDOW_MS = Math.max(120, 250 - difficulty * 15);
 
     // Countdown state: show "3 2 1 GO!" before the first beat arrives at hit zone
     const [countdown, setCountdown] = useState(null); // null | 3 | 2 | 1 | 'GO!'
@@ -35,9 +37,11 @@ const RhythmEvent = ({ context, isSpectator, liveInputs, onComplete, onInput }) 
 
     const [notes, setNotes] = useState([]);
     const [feedback, setFeedback] = useState('');
+    const [scoreBoard, setScoreBoard] = useState({ perfect: 0, good: 0, miss: 0 });
     const [done, setDone] = useState(false);
     const rafRef = useRef(null);
-    const hitsRef = useRef(0);
+    const pointsRef = useRef(0);
+    const scoreRef = useRef({ perfect: 0, good: 0, miss: 0 });
     const notesRef = useRef([]);
     const startedRef = useRef(false);
     const prevSpectatorTaps = useRef(0);
@@ -87,21 +91,25 @@ const RhythmEvent = ({ context, isSpectator, liveInputs, onComplete, onInput }) 
             // Auto-miss any notes past window
             let changed = false;
             notesRef.current = notesRef.current.map((n) => {
-                if (n.result === null && currentMs > n.beatTime + HIT_WINDOW_MS) {
+                if (n.result === null && currentMs > n.beatTime + GOOD_WINDOW_MS) {
                     changed = true;
+                    scoreRef.current = { ...scoreRef.current, miss: scoreRef.current.miss + 1 };
                     return { ...n, result: 'miss' };
                 }
                 return n;
             });
-            if (changed) setNotes([...notesRef.current]);
+            if (changed) {
+                setNotes([...notesRef.current]);
+                setScoreBoard(scoreRef.current);
+            }
 
             // Check if all notes resolved
             const allDone = notesRef.current.every((n) => n.result !== null);
             if (allDone) {
                 if (!startedRef.current) { rafRef.current = requestAnimationFrame(tick); return; }
-                const score = hitsRef.current / totalBeats;
+                const score = pointsRef.current / totalBeats;
                 setDone(true);
-                onComplete({ success: hitsRef.current > 0, score });
+                onComplete({ success: score >= 0.5, score });
                 return;
             }
 
@@ -118,30 +126,39 @@ const RhythmEvent = ({ context, isSpectator, liveInputs, onComplete, onInput }) 
         const tapTime = Date.now();
         onInput({ inputType: 'rhythmTap', timestamp: tapTime });
 
-        // Find nearest unhit note within window
+        // Find nearest unhit note within the Good window
         let bestIdx = -1;
         let bestDelta = Infinity;
         notesRef.current.forEach((n, i) => {
             if (n.result !== null) return;
             const delta = Math.abs(n.beatTime - tapTime);
-            if (delta <= HIT_WINDOW_MS && delta < bestDelta) {
+            if (delta <= GOOD_WINDOW_MS && delta < bestDelta) {
                 bestDelta = delta;
                 bestIdx = i;
             }
         });
 
         if (bestIdx >= 0) {
+            const isPerfect = bestDelta <= PERFECT_WINDOW_MS;
+            const judgement = isPerfect ? 'perfect' : 'good';
             notesRef.current = notesRef.current.map((n, i) =>
-                i === bestIdx ? { ...n, result: 'hit' } : n
+                i === bestIdx ? { ...n, result: judgement } : n
             );
-            hitsRef.current += 1;
-            setFeedback('HIT!');
+            pointsRef.current += isPerfect ? 1 : 0.6;
+            scoreRef.current = {
+                ...scoreRef.current,
+                perfect: scoreRef.current.perfect + (isPerfect ? 1 : 0),
+                good: scoreRef.current.good + (isPerfect ? 0 : 1),
+            };
+            setFeedback(isPerfect ? 'PERFECT' : 'GOOD');
         } else {
+            scoreRef.current = { ...scoreRef.current, miss: scoreRef.current.miss + 1 };
             setFeedback('MISS');
         }
         setTimeout(() => setFeedback(''), 350);
         setNotes([...notesRef.current]);
-    }, [done, isSpectator, HIT_WINDOW_MS, onInput]);
+        setScoreBoard(scoreRef.current);
+    }, [done, isSpectator, GOOD_WINDOW_MS, PERFECT_WINDOW_MS, onInput]);
 
     // Space-bar support
     useEffect(() => {
@@ -160,7 +177,13 @@ const RhythmEvent = ({ context, isSpectator, liveInputs, onComplete, onInput }) 
 
     return (
         <div className="me-rhythm-container">
-            <div className="me-rhythm-info">BPM {bpm} · {totalBeats} beats · window ±{HIT_WINDOW_MS}ms</div>
+            <div className="me-rhythm-info">BPM {bpm} · {totalBeats} beats · perfect ±{PERFECT_WINDOW_MS}ms · good ±{GOOD_WINDOW_MS}ms</div>
+
+            <div className="me-rhythm-scoreboard">
+                <span className="me-rhythm-stat perfect">Perfect {scoreBoard.perfect}</span>
+                <span className="me-rhythm-stat good">Good {scoreBoard.good}</span>
+                <span className="me-rhythm-stat miss">Miss {scoreBoard.miss}</span>
+            </div>
 
             <div className="me-rhythm-lane">
                 <div className={`me-rhythm-hit-zone${countdown === 'GO!' ? ' pulse' : ''}`} />
@@ -179,7 +202,10 @@ const RhythmEvent = ({ context, isSpectator, liveInputs, onComplete, onInput }) 
                 )}
             </div>
 
-            <div className={`me-rhythm-feedback${feedback ? ` ${feedback === 'HIT!' ? 'hit' : 'miss'}` : ''}`}>
+            <div
+                className={`me-rhythm-feedback${feedback ? ` ${feedback === 'PERFECT' ? 'hit' : feedback === 'GOOD' ? 'good' : 'miss'
+                    }` : ''}`}
+            >
                 {feedback}
             </div>
 

@@ -369,6 +369,35 @@
     letter-spacing: 0.06em;
 }
 
+.me-rhythm-scoreboard {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+}
+
+.me-rhythm-stat {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #ddd;
+    font-weight: 700;
+}
+
+.me-rhythm-stat.perfect {
+    color: #6de79c;
+}
+
+.me-rhythm-stat.good {
+    color: #f8cf7a;
+}
+
+.me-rhythm-stat.miss {
+    color: #f08d8d;
+}
+
 .me-rhythm-lane {
     position: relative;
     width: 120px;
@@ -403,9 +432,15 @@
     box-shadow: 0 0 12px rgba(155, 89, 182, 0.6);
 }
 
-.me-rhythm-note.hit {
+.me-rhythm-note.hit,
+.me-rhythm-note.perfect {
     background: #27ae60;
     box-shadow: 0 0 18px #27ae60;
+}
+
+.me-rhythm-note.good {
+    background: #d79c34;
+    box-shadow: 0 0 14px #d79c34;
 }
 
 .me-rhythm-note.miss {
@@ -449,6 +484,10 @@
 
 .me-rhythm-feedback.hit {
     color: #2ecc71;
+}
+
+.me-rhythm-feedback.good {
+    color: #f5c16c;
 }
 
 .me-rhythm-feedback.miss {
@@ -604,4 +643,163 @@
     font-size: 0.85rem;
     text-align: center;
     min-height: 1.2em;
+}
+
+/* ── Parry Chain ────────────────────────────────────────────────────────── */
+
+.me-parry-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.me-parry-info {
+    color: #d5d7de;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+}
+
+.me-parry-ring-wrap {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.me-parry-ring {
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 3px solid #e0a23c;
+    box-shadow: 0 0 26px rgba(224, 162, 60, 0.45);
+    transition: transform 0.1s linear;
+}
+
+.me-parry-core {
+    font-size: 2.2rem;
+    color: #f7d18b;
+    text-shadow: 0 0 14px rgba(247, 209, 139, 0.6);
+}
+
+.me-parry-btn {
+    width: 170px;
+    height: 48px;
+    border-radius: 24px;
+    border: none;
+    background: linear-gradient(135deg, #ce8f2e, #915315);
+    color: #fff;
+    font-size: 0.96rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+}
+
+.me-parry-btn:disabled {
+    cursor: default;
+    filter: grayscale(0.45);
+}
+
+/* ── Mana Route ─────────────────────────────────────────────────────────── */
+
+.me-route-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.me-route-status {
+    color: #d5e0f0;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+}
+
+.me-route-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 60px);
+    gap: 10px;
+}
+
+.me-route-node {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    background: linear-gradient(150deg, #1e3558, #223d66);
+    cursor: pointer;
+    transition: transform 0.08s, filter 0.12s;
+}
+
+.me-route-node:hover:not(:disabled) {
+    transform: scale(1.04);
+}
+
+.me-route-node:disabled {
+    cursor: default;
+}
+
+.me-route-node.lit {
+    background: linear-gradient(150deg, #46a4d9, #6fd0ff);
+    box-shadow: 0 0 14px rgba(111, 208, 255, 0.75);
+}
+
+.me-route-node.wrong {
+    background: linear-gradient(150deg, #7e2f2f, #d14a4a);
+    box-shadow: 0 0 14px rgba(209, 74, 74, 0.8);
+}
+
+.me-route-progress {
+    color: #aac6e8;
+    font-size: 0.82rem;
+}
+
+/* ── Sigil Recall ───────────────────────────────────────────────────────── */
+
+.me-sigil-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.me-sigil-status {
+    color: #e0dff1;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+}
+
+.me-sigil-row {
+    display: grid;
+    grid-template-columns: repeat(4, 58px);
+    gap: 10px;
+}
+
+.me-sigil-btn {
+    width: 58px;
+    height: 58px;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(140deg, #382f54, #242141);
+    color: #efe8ff;
+    font-size: 1.55rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.me-sigil-btn.lit {
+    background: linear-gradient(140deg, #8556c8, #b07cff);
+    box-shadow: 0 0 14px rgba(176, 124, 255, 0.8);
+}
+
+.me-sigil-btn:disabled {
+    cursor: default;
+}
+
+.me-sigil-progress {
+    color: #bda5eb;
+    font-size: 0.82rem;
 }

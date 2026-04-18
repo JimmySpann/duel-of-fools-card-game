@@ -1072,7 +1072,16 @@ const generateMathProblem = (difficulty) => {
 // gameId → { timeoutHandle }
 const pendingMicroevents = new Map();
 
-const MICROEVENT_TIMEOUT_MS = { qte: 4000, pattern: 22000, quiz: 28000, rhythm: 35000, mash: 6000 };
+const MICROEVENT_TIMEOUT_MS = {
+    qte: 4000,
+    pattern: 22000,
+    quiz: 28000,
+    rhythm: 26000,
+    mash: 6000,
+    parry: 12000,
+    route: 16000,
+    sigil: 14000,
+};
 
 const TRACK_BPMS = [120, 80, 135, 95, 128]; // matches TRACKS order in musicManager.js
 
@@ -1148,13 +1157,59 @@ const triggerMicroevent = async (gameId, game, context, ability, socket) => {
         const currentTrackIndex = heldState._currentTrackIndex ?? 0;
         const baseBpm = TRACK_BPMS[currentTrackIndex] ?? 120;
         const baseBeats = me.beats ?? 4;
-        const scaledBeats = baseBeats + [0, 0, 2, 3, 4][effectiveDifficulty];
+        // Softer scaling: keeps rhythm readable and fun at higher difficulties.
+        const scaledBeats = baseBeats + [0, 0, 1, 1, 2][effectiveDifficulty];
         const beatIntervalMs = (60 / baseBpm) * 1000;
         const leadIn = 3000; // countdown window
         startPayload.bpm = baseBpm;
         startPayload.beats = scaledBeats;
         startPayload.beatStartTime = Date.now() + leadIn;
-        startPayload.timeoutMs = leadIn + scaledBeats * beatIntervalMs + 2000;
+        startPayload.timeoutMs = leadIn + scaledBeats * beatIntervalMs + 1500;
+    }
+
+    if (me.type === 'parry') {
+        const strikes = me.strikes ?? (5 + Math.min(2, effectiveDifficulty));
+        const leadIn = 1300;
+        const now = Date.now();
+        const minGap = [900, 800, 740, 680, 620][effectiveDifficulty];
+        const maxGap = [1300, 1180, 1060, 980, 900][effectiveDifficulty];
+        let t = now + leadIn;
+        const strikeTimes = [];
+        for (let i = 0; i < strikes; i++) {
+            t += Math.floor(minGap + Math.random() * (maxGap - minGap));
+            strikeTimes.push(t);
+        }
+        startPayload.strikeTimes = strikeTimes;
+        startPayload.timeoutMs = (strikeTimes[strikeTimes.length - 1] - now) + 1600;
+    }
+
+    if (me.type === 'route') {
+        const len = me.routeLen ?? (effectiveDifficulty <= 1 ? 4 : effectiveDifficulty <= 3 ? 5 : 6);
+        const route = [];
+        const neighbors = (idx) => {
+            const x = idx % 3;
+            const y = Math.floor(idx / 3);
+            const out = [];
+            if (x > 0) out.push(idx - 1);
+            if (x < 2) out.push(idx + 1);
+            if (y > 0) out.push(idx - 3);
+            if (y < 2) out.push(idx + 3);
+            return out;
+        };
+        route.push(Math.floor(Math.random() * 9));
+        while (route.length < len) {
+            const last = route[route.length - 1];
+            const options = neighbors(last).filter((n) => n !== route[route.length - 2]);
+            route.push(options[Math.floor(Math.random() * options.length)]);
+        }
+        startPayload.route = route;
+        startPayload.timeoutMs = 16000;
+    }
+
+    if (me.type === 'sigil') {
+        const len = me.seqLen ?? (effectiveDifficulty <= 1 ? 4 : effectiveDifficulty <= 3 ? 5 : 6);
+        startPayload.sequence = Array.from({ length: len }, () => Math.floor(Math.random() * 4));
+        startPayload.timeoutMs = 14000;
     }
 
     if (me.type === 'pattern') {

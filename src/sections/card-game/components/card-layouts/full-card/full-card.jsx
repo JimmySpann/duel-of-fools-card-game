@@ -12,7 +12,14 @@ import deathIcon from '../../../../../assets/elements/death-icon.png';
 import './full-card.css';
 
 const MICROEVENT_LABELS = {
-    qte: 'QTE', mash: 'Mash', pattern: 'Pattern', rhythm: 'Rhythm', quiz: 'Quiz',
+    qte: 'QTE',
+    mash: 'Mash',
+    pattern: 'Pattern',
+    rhythm: 'Rhythm',
+    quiz: 'Quiz',
+    parry: 'Parry',
+    route: 'Route',
+    sigil: 'Sigil',
 };
 
 const STATUS_INFO = {

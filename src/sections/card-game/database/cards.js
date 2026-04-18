@@ -66,7 +66,7 @@ const cards = [
         actions: [
             { name: 'Quick Bolt', actionInfo: 'Priority Strike', description: 'A low damage, high priority strike', limit: 15, usesRemaining: 15, microevent: { type: 'qte', outcome: 'binary' } },
             { name: 'Thunder Dash', actionInfo: 'Evasion +4 for 2 turns', description: 'Moves like a flash of light', limit: 5, usesRemaining: 5 },
-            { name: 'Short Circuit', actionInfo: 'Enemy DEF to 0', description: 'Disables enemy armor for 1 turn', limit: 3, usesRemaining: 3, microevent: { type: 'pattern', outcome: 'scaled' } }
+            { name: 'Short Circuit', actionInfo: 'Enemy DEF to 0', description: 'Disables enemy armor for 1 turn', limit: 3, usesRemaining: 3, microevent: { type: 'route', outcome: 'scaled' } }
         ],
         defense: 3, agility: 10, attack: 7, evasion: 9, health: 6
     },
@@ -83,7 +83,7 @@ const cards = [
         ],
         actions: [
             { name: 'Quake', actionInfo: 'AOE Damage', description: 'Deals damage to all grounded enemies', limit: 5, usesRemaining: 5, microevent: { type: 'pattern', outcome: 'scaled' } },
-            { name: 'Rock Toss', actionInfo: 'Ranged Damage', description: 'A heavy ranged projectile', limit: 10, usesRemaining: 10 },
+            { name: 'Rock Toss', actionInfo: 'Ranged Damage', description: 'A heavy ranged projectile', limit: 10, usesRemaining: 10, microevent: { type: 'route', outcome: 'scaled' } },
             { name: 'Fossilize', actionInfo: 'Heal 5 HP / DEF +2', description: 'Turns to stone to recover', limit: 3, usesRemaining: 3, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'easy', questionType: 'boolean' } }
         ],
         defense: 9, agility: 2, attack: 6, evasion: 1, health: 12
@@ -100,7 +100,7 @@ const cards = [
             { name: 'Fear Monger', effect: 'Enemy ATK -1', description: 'Enemies tremble in his presence.' }
         ],
         actions: [
-            { name: 'Backstab', actionInfo: '2x Damage from Behind', description: 'Lethal strike to the spine', limit: 8, usesRemaining: 8, microevent: { type: 'qte', outcome: 'binary' } },
+            { name: 'Backstab', actionInfo: '2x Damage from Behind', description: 'Lethal strike to the spine', limit: 8, usesRemaining: 8, microevent: { type: 'parry', outcome: 'binary' } },
             { name: 'Vanish', actionInfo: 'Invisibility for 1 turn', description: 'Becomes invisible for 1 turn', limit: 4, usesRemaining: 4 },
             { name: 'Soul Reap', actionInfo: 'Lifesteal', description: 'Heals based on damage dealt', limit: 6, usesRemaining: 6, microevent: { type: 'rhythm', outcome: 'scaled', beats: 4 } }
         ],
@@ -120,7 +120,7 @@ const cards = [
         actions: [
             { name: 'Healing Tide', actionInfo: 'Heal 4 HP', description: 'Heals a target ally for 4 HP', limit: 8, usesRemaining: 8, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'easy', questionType: 'multiple' } },
             { name: 'Bubble Shield', actionInfo: '3 DMG Shield', description: 'Grants an ally a 3-damage shield', limit: 10, usesRemaining: 10 },
-            { name: 'Mind Wash', actionInfo: 'Reset Cooldowns', description: 'Resets all cooldowns for an ally', limit: 2, usesRemaining: 2, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'hard', questionType: 'multiple' } }
+            { name: 'Mind Wash', actionInfo: 'Reset Cooldowns', description: 'Resets all cooldowns for an ally', limit: 2, usesRemaining: 2, microevent: { type: 'sigil', outcome: 'binary' } }
         ],
         defense: 6, agility: 5, attack: 3, evasion: 5, health: 8
     },
@@ -136,8 +136,8 @@ const cards = [
             { name: 'Magnetic Pull', effect: 'Taunt Projectiles', description: 'Draws fire away from allies.' }
         ],
         actions: [
-            { name: 'Scepter Smash', actionInfo: 'Heavy Physical', description: 'A heavy physical blow', limit: 12, usesRemaining: 12, microevent: { type: 'qte', outcome: 'binary' } },
-            { name: 'Fortify', actionInfo: 'Allies DEF +2', description: 'Increases the defense of all allies', limit: 5, usesRemaining: 5, microevent: { type: 'quiz', outcome: 'binary', mathProblem: true } },
+            { name: 'Scepter Smash', actionInfo: 'Heavy Physical', description: 'A heavy physical blow', limit: 12, usesRemaining: 12, microevent: { type: 'parry', outcome: 'binary' } },
+            { name: 'Fortify', actionInfo: 'Allies DEF +2', description: 'Increases the defense of all allies', limit: 5, usesRemaining: 5, microevent: { type: 'sigil', outcome: 'binary' } },
             { name: 'Rallying Cry', actionInfo: 'Cleanse Debuffs', description: 'Removes all debuffs from the team', limit: 3, usesRemaining: 3 }
         ],
         defense: 8, agility: 4, attack: 7, evasion: 3, health: 11

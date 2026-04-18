@@ -3,6 +3,9 @@ import PatternMatchEvent from './PatternMatchEvent';
 import QuizEvent from './QuizEvent';
 import RhythmEvent from './RhythmEvent';
 import MashEvent from './MashEvent';
+import ParryChainEvent from './ParryChainEvent';
+import ManaRouteEvent from './ManaRouteEvent';
+import SigilRecallEvent from './SigilRecallEvent';
 import './micro-events.css';
 
 /**
@@ -33,6 +36,9 @@ const MicroEventOverlay = ({ context, liveInputs, isSpectator, onComplete, onInp
             {context.type === 'quiz' && <QuizEvent          {...eventProps} />}
             {context.type === 'rhythm' && <RhythmEvent        {...eventProps} />}
             {context.type === 'mash' && <MashEvent           {...eventProps} />}
+            {context.type === 'parry' && <ParryChainEvent    {...eventProps} />}
+            {context.type === 'route' && <ManaRouteEvent     {...eventProps} />}
+            {context.type === 'sigil' && <SigilRecallEvent   {...eventProps} />}
         </div>
     );
 };

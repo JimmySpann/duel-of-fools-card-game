@@ -19,6 +19,9 @@ const MICROEVENT_LABELS = {
     pattern: 'Pattern',
     rhythm: 'Rhythm',
     quiz: 'Quiz',
+    parry: 'Parry',
+    route: 'Route',
+    sigil: 'Sigil',
 };
 
 const ElementChip = ({ element, value }) => {
