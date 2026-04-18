@@ -23,9 +23,12 @@ const Header = ({
     onLobbies,
     onBriefToggle,
     onChatToggle,
+    onMessagesToggle,
     showBrief,
     showChat,
+    showMessages,
     hasUnreadChat = false,
+    hasUnreadMessages = false,
     displayName,
     avatarUrl,
     username,
@@ -80,19 +83,26 @@ const Header = ({
                                 className="header-profile-dropdown-item lobbies-mobile"
                                 onClick={() => { setShowProfileMenu(false); onLobbies(); }}
                             >
-                                Lobbies
+                                🏠 Lobbies
+                            </button>
+                            <button
+                                className="header-profile-dropdown-item"
+                                onClick={() => { setShowProfileMenu(false); onMessagesToggle?.(); }}
+                            >
+                                💬 Messages{hasUnreadMessages ? <span className="header-dropdown-badge" /> : null}
                             </button>
                             <button
                                 className="header-profile-dropdown-item"
                                 onClick={() => { setShowProfileMenu(false); onProfileOpen?.(); }}
                             >
-                                Profile
+                                👤 Profile
                             </button>
+                            <div className="header-profile-dropdown-divider" />
                             <button
                                 className="header-profile-dropdown-item signout"
                                 onClick={() => { setShowProfileMenu(false); onSignOut(); }}
                             >
-                                Sign Out
+                                🚪 Sign Out
                             </button>
                         </div>
                     )}
@@ -101,16 +111,18 @@ const Header = ({
             <div className="player-container">
                 <div className="player-buttons-container">
                     <button
-                        className={`player-button${showBrief ? ' player-button--active' : ''}`}
+                        className={`player-button player-button--brief${showBrief ? ' player-button--active' : ''}`}
                         onClick={onBriefToggle}
+                        title="Game Brief & Rules"
                     >
-                        Brief
+                        📋 Brief
                     </button>
                     <button
-                        className={`player-button${showChat ? ' player-button--active' : ''}${(!showChat && hasUnreadChat) ? ' player-button--unread' : ''}`}
+                        className={`player-button player-button--chat${showChat ? ' player-button--active' : ''}${(!showChat && hasUnreadChat) ? ' player-button--unread' : ''}`}
                         onClick={onChatToggle}
+                        title="Lobby Chat"
                     >
-                        Chat{!showChat && hasUnreadChat ? ' •' : ''}
+                        💬 Chat{!showChat && hasUnreadChat ? <span className="player-button-dot" /> : null}
                     </button>
                 </div>
                 <div className="player-card-container">

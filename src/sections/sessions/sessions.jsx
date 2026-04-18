@@ -400,6 +400,7 @@ const Sessions = () => {
     const [previewSession, setPreviewSession] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
     const [showGallery, setShowGallery] = useState(false);
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
 
     useEffect(() => {
         dispatch(fetchSessions());
@@ -621,21 +622,41 @@ const Sessions = () => {
                         <button className="sessions-gallery-btn" onClick={() => setShowGallery(true)} title="View all cards and game rules">
                             📖 Gallery
                         </button>
-                        <button className="sessions-profile-btn" onClick={() => setShowProfile(true)}>
-                            <img
-                                className="sessions-profile-avatar"
-                                src={avatarUrl || `https://i.pravatar.cc/40?u=${username}`}
-                                alt="avatar"
-                                onError={(e) => { e.target.src = `https://i.pravatar.cc/40?u=${username}`; }}
-                            />
-                            <span className="sessions-username">{displayName || username}</span>
-                            {friendRequests.length > 0 && (
-                                <span className="sessions-profile-badge">{friendRequests.length}</span>
+                        <div className="sessions-profile-wrap">
+                            <button
+                                className="sessions-profile-btn"
+                                onClick={() => setShowProfileMenu((v) => !v)}
+                            >
+                                <img
+                                    className="sessions-profile-avatar"
+                                    src={avatarUrl || `https://i.pravatar.cc/40?u=${username}`}
+                                    alt="avatar"
+                                    onError={(e) => { e.target.src = `https://i.pravatar.cc/40?u=${username}`; }}
+                                />
+                                <span className="sessions-username">{displayName || username}</span>
+                                <span className="sessions-profile-caret">▾</span>
+                                {friendRequests.length > 0 && (
+                                    <span className="sessions-profile-badge">{friendRequests.length}</span>
+                                )}
+                            </button>
+                            {showProfileMenu && (
+                                <div className="sessions-profile-dropdown">
+                                    <button
+                                        className="sessions-profile-dropdown-item"
+                                        onClick={() => { setShowProfileMenu(false); setShowProfile(true); }}
+                                    >
+                                        👤 Profile
+                                    </button>
+                                    <div className="sessions-profile-dropdown-divider" />
+                                    <button
+                                        className="sessions-profile-dropdown-item signout"
+                                        onClick={() => { setShowProfileMenu(false); dispatch(logout()); }}
+                                    >
+                                        🚪 Log Out
+                                    </button>
+                                </div>
                             )}
-                        </button>
-                        <button className="sessions-logout-btn" onClick={() => dispatch(logout())}>
-                            Log Out
-                        </button>
+                        </div>
                     </div>
                 </header>
 

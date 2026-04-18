@@ -7,6 +7,7 @@ import { logout } from '../../features/auth/authSlice';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import useNotifications from '../../features/notifications/useNotifications';
 import LobbyChat from '../../features/chat/LobbyChat';
+import DMPanel from '../../features/chat/DMPanel';
 import Profile from '../../features/profile/Profile';
 import Header from './components/header/header.jsx';
 import EnemyLayout from './components/layouts/enemy-layout/enemy-layout.jsx';
@@ -30,6 +31,8 @@ const CardGame = () => {
     const unreadLobby = useSelector((s) =>
         activeSession ? (s.chat.unreadLobby[activeSession._id] || 0) : 0
     );
+    const unreadDm = useSelector((s) => s.chat.unreadDm);
+    const hasUnreadMessages = Object.values(unreadDm).some((v) => v > 0);
 
     // Microevent state
     const [microeventContext, setMicroeventContext] = useState(null);
@@ -41,6 +44,7 @@ const CardGame = () => {
     const [briefSearch, setBriefSearch] = useState('');
     const [showChat, setShowChat] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
+    const [showMessages, setShowMessages] = useState(false);
 
     // Per-game notification override (defaults to global setting)
     const [notifyThisGame, setNotifyThisGame] = useState(notifyTurnGlobal);
@@ -213,9 +217,12 @@ const CardGame = () => {
                 onSignOut={() => dispatch(logout())}
                 onBriefToggle={() => { setShowBrief((v) => !v); setShowChat(false); }}
                 onChatToggle={() => { setShowChat((v) => !v); setShowBrief(false); }}
+                onMessagesToggle={() => setShowMessages((v) => !v)}
                 showBrief={showBrief}
                 showChat={showChat}
+                showMessages={showMessages}
                 hasUnreadChat={unreadLobby > 0}
+                hasUnreadMessages={hasUnreadMessages}
                 displayName={displayName}
                 avatarUrl={avatarUrl}
                 username={username}
@@ -445,6 +452,9 @@ const CardGame = () => {
 
             {/* ── Profile modal ────────────────────────────────────────── */}
             {showProfile && <Profile onClose={() => setShowProfile(false)} initialTab="Options" />}
+
+            {/* ── Messages (DM Panel) ──────────────────────────────────── */}
+            {showMessages && <DMPanel anchor="header" />}
         </div>
     );
 };

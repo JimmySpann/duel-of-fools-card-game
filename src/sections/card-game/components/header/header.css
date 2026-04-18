@@ -3,16 +3,18 @@
     top: 0;
     left: 0;
     right: 0;
-    background-color: black;
+    background: rgba(8, 8, 16, 0.97);
+    backdrop-filter: blur(10px);
     color: white;
     z-index: 1000;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     width: 100%;
     display: flex;
     justify-content: space-between;
-    border-bottom: 2px solid white;
-    padding: 10px 0px 15px 0px;
-
+    align-items: center;
+    border-bottom: 1px solid rgba(187, 16, 187, 0.3);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
+    padding: 8px 14px;
+    height: 56px;
 }
 
 .turn-countdown {
@@ -74,13 +76,27 @@
 }
 
 .player-button {
-    height: 35px;
-    width: 60px;
-    border-radius: 30px;
-    margin-left: 3px;
-    font-weight: 600;
-    background-color: rgb(125, 33, 164);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 20px;
+    margin-left: 6px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.3px;
+    border: 1px solid rgba(187, 16, 187, 0.35);
+    background: rgba(125, 33, 164, 0.25);
+    color: #dde0f0;
     cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+}
+
+.player-button:hover {
+    background: rgba(125, 33, 164, 0.45);
+    border-color: rgba(187, 16, 187, 0.6);
 }
 
 .player-card-container {
@@ -233,26 +249,55 @@
 
 /* ── Active player button ───────────────────────────────────────────────── */
 .player-button--active {
-    background-color: rgb(100, 0, 130) !important;
-    box-shadow: 0 0 8px rgba(187, 16, 187, 0.6);
+    background: rgba(100, 0, 130, 0.7) !important;
+    border-color: rgba(187, 16, 187, 0.8) !important;
+    box-shadow: 0 0 10px rgba(187, 16, 187, 0.5);
+    color: #fff;
 }
 
 /* ── Unread chat indicator ─────────────────────────────────────────────── */
 .player-button--unread {
-    background-color: rgb(125, 33, 164);
-    box-shadow: 0 0 10px 2px rgba(230, 190, 60, 0.75);
+    border-color: rgba(230, 190, 60, 0.6) !important;
+    box-shadow: 0 0 10px 2px rgba(230, 190, 60, 0.6);
     animation: chat-pulse 1.8s ease-in-out infinite;
     color: #f5e08a;
+}
+
+.player-button-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f5e08a;
+    margin-left: 3px;
+    flex-shrink: 0;
 }
 
 @keyframes chat-pulse {
 
     0%,
     100% {
-        box-shadow: 0 0 8px 2px rgba(230, 190, 60, 0.65);
+        box-shadow: 0 0 8px 2px rgba(230, 190, 60, 0.55);
     }
 
     50% {
-        box-shadow: 0 0 18px 6px rgba(230, 190, 60, 0.9);
+        box-shadow: 0 0 18px 6px rgba(230, 190, 60, 0.85);
     }
+}
+
+/* ── Dropdown divider + Messages badge ─────────────────────────────────── */
+.header-profile-dropdown-divider {
+    height: 1px;
+    background: #2e3148;
+    margin: 4px 0;
+}
+
+.header-dropdown-badge {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f5e08a;
+    margin-left: 6px;
+    flex-shrink: 0;
 }
