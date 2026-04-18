@@ -2,17 +2,17 @@ import { pipeline } from '@xenova/transformers';
 
 export const AI_MODEL_PRESETS = [
     {
-        id: 'onnx-community/Qwen2.5-0.5B-Instruct',
-        label: 'Qwen 2.5 0.5B (Small)',
-        family: 'qwen',
+        id: 'onnx-community/Bonsai-1.7B-ONNX',
+        label: 'Bonsai 1.7B (Small)',
+        family: 'bonsai',
     },
     {
-        id: 'onnx-community/Llama-3.2-1B-Instruct',
-        label: 'Llama 3.2 1B (Small)',
+        id: 'zsjTiger/Llama-3.2-3B',
+        label: 'Llama 3.2 3B (Small)',
         family: 'llama',
     },
     {
-        id: 'onnx-community/SmolLM2-360M-Instruct',
+        id: 'HuggingFaceTB/SmolLM2-360M-Instruct',
         label: 'SmolLM2 360M (Tiny)',
         family: 'small',
     },
