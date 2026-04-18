@@ -144,7 +144,7 @@ const cards = [
         name: 'Bellatrix Baddie',
         elements: { fire: 2, death: 3 },
         type: 'Battler',
-        image: 'https://postimg.cc/Sjn9tyh0',
+        image: 'https://i.postimg.cc/MZDYHT3G/image.jpg',
         description: 'Unbalanced, unhinged, and undisputed in the dark arts of fashion.',
         passives: [
             { name: 'Chaos Theory', effect: 'Random Crit Chance', description: "She's a wild card in a corset." },
@@ -195,7 +195,7 @@ const cards = [
         name: 'Vanguard Knight',
         elements: { normal: 3, earth: 2 },
         type: 'Battler',
-        image: 'https://www.reddit.com/media?url=https%3A%2F%2Fi.redd.it%2Flxfdzgc2ein81.jpg',
+        image: 'https://images.stockcake.com/public/7/1/6/7168580a-5259-4913-84e5-a60dbc3d17f2_large/medieval-knight-posing-stockcake.jpg',
         description: 'A steadfast defender who excels at holding the line and supporting allies.',
         passives: [
             { name: 'Shield Wall', effect: 'Allies DEF +1', description: 'Bolsters the defense of all allies.' },
