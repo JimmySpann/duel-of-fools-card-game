@@ -90,7 +90,7 @@
 .mini-card-back-logo {
     width: 55%;
     opacity: 0.85;
-    filter: drop-shadow(0 0 18px rgba(160, 100, 255, 0.7)) drop-shadow(0 0 6px rgba(0,0,0,0.9));
+    filter: drop-shadow(0 0 18px rgba(160, 100, 255, 0.7)) drop-shadow(0 0 6px rgba(0, 0, 0, 0.9));
 }
 
 .mini-card-header {
