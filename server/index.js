@@ -605,7 +605,7 @@ app.patch('/api/sessions/:id/settings', requireAuth, async (req, res) => {
         if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can update settings' });
         if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change settings after game starts' });
 
-        const { startingHp, maxBattlers, deckSize, teamMode, turnTimeLimit } = req.body;
+        const { startingHp, maxBattlers, deckSize, teamMode, turnTimeLimit, microgameDifficulty } = req.body;
         if (startingHp !== undefined) session.settings.startingHp = Number(startingHp);
         if (maxBattlers !== undefined) session.settings.maxBattlers = maxBattlers === null ? null : Number(maxBattlers);
         if (deckSize !== undefined) session.settings.deckSize = deckSize === null ? null : Number(deckSize);
