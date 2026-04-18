@@ -8,73 +8,165 @@ import './battler-board.css'
 const ANIM_DURATION = 900;
 const DANCE_MOTION_THRESHOLD = 0.3;
 const DANCE_PEAK_BOOST = 1.55;
+const DANCE_MAX_X_TRAVEL = 34;
+const DANCE_MAX_LIFT = 26;
+const DANCE_MAX_ROTATION = 30;
 
 const TWO_PI = Math.PI * 2;
-const DANCE_PROFILES = [
+const DANCE_CHOREOGRAPHIES = [
     {
-        // Court Jam: two-step groove with strong side travel.
-        xRange: 11.5,
-        xKick: 5.5,
-        yLift: 7.5,
-        yKick: 10,
-        rotSwing: 2.6,
-        rotKick: 2.2,
-        scalePulse: 0.05,
-        swayFreq: 1,
-        hopFreq: 2,
-        accentLag: 0.06,
+        // Court Jam: tight two-step intro, then bigger chorus spins.
+        cycleBars: 8,
+        base: {
+            xRange: 10.5,
+            xKick: 4.5,
+            yLift: 7,
+            yKick: 8.5,
+            rebound: 2.5,
+            rotSwing: 2.5,
+            rotKick: 1.8,
+            leanDeg: 1.9,
+            scalePulse: 0.045,
+            swayFreq: 1,
+            hopFreq: 2,
+            stepFreq: 1,
+            stepAmp: 4.2,
+            accentLag: 0.06,
+            spinBeatFreq: 0.5,
+            spinWidth: 0.16,
+            spinDeg: 95,
+            spinLag: 0.08,
+            spinEnergyThreshold: 0.35,
+        },
+        phases: [
+            { startBar: 0, endBar: 2, stepAmp: 3.4, yKick: 6.8, spinDeg: 0 },
+            { startBar: 2, endBar: 4, xRange: 12, stepAmp: 5.2, yKick: 9.4, spinDeg: 75 },
+            { startBar: 4, endBar: 6, xRange: 13.5, xKick: 6, yKick: 10.2, stepAmp: 5.8, spinDeg: 150 },
+            { startBar: 6, endBar: 8, hopFreq: 1, yLift: 5.6, stepAmp: 3.2, spinDeg: 45 },
+        ],
     },
     {
-        // Free Diver: fluid, lower-frequency drift and softer kicks.
-        xRange: 7,
-        xKick: 2.8,
-        yLift: 6.5,
-        yKick: 7,
-        rotSwing: 1.8,
-        rotKick: 1.2,
-        scalePulse: 0.033,
-        swayFreq: 0.5,
-        hopFreq: 1,
-        accentLag: 0.12,
+        // Free Diver: floaty drift with delayed accents and rare spins.
+        cycleBars: 10,
+        base: {
+            xRange: 7.5,
+            xKick: 2.8,
+            yLift: 6.8,
+            yKick: 6.2,
+            rebound: 1.8,
+            rotSwing: 1.6,
+            rotKick: 1.1,
+            leanDeg: 1.2,
+            scalePulse: 0.032,
+            swayFreq: 0.5,
+            hopFreq: 1,
+            stepFreq: 0.5,
+            stepAmp: 2.4,
+            accentLag: 0.13,
+            spinBeatFreq: 0.25,
+            spinWidth: 0.2,
+            spinDeg: 65,
+            spinLag: 0.15,
+            spinEnergyThreshold: 0.5,
+        },
+        phases: [
+            { startBar: 0, endBar: 4, swayFreq: 0.45, yLift: 5.8, stepAmp: 1.6, spinDeg: 0 },
+            { startBar: 4, endBar: 7, xRange: 8.6, yLift: 7.5, yKick: 7.2, stepAmp: 2.8, spinDeg: 55 },
+            { startBar: 7, endBar: 10, xRange: 9.4, stepFreq: 1, stepAmp: 3.2, spinDeg: 90, spinEnergyThreshold: 0.58 },
+        ],
     },
     {
-        // Jester on the Prowl: punchy zig-zag with aggressive accents.
-        xRange: 13,
-        xKick: 7,
-        yLift: 8,
-        yKick: 12,
-        rotSwing: 3,
-        rotKick: 2.8,
-        scalePulse: 0.06,
-        swayFreq: 2,
-        hopFreq: 2,
-        accentLag: 0.03,
+        // Jester on the Prowl: aggressive zig-zag with quick turn bursts.
+        cycleBars: 8,
+        base: {
+            xRange: 12.5,
+            xKick: 6.5,
+            yLift: 8.2,
+            yKick: 11,
+            rebound: 3.2,
+            rotSwing: 3.4,
+            rotKick: 2.8,
+            leanDeg: 2.4,
+            scalePulse: 0.06,
+            swayFreq: 2,
+            hopFreq: 2,
+            stepFreq: 2,
+            stepAmp: 5.4,
+            accentLag: 0.03,
+            spinBeatFreq: 1,
+            spinWidth: 0.14,
+            spinDeg: 135,
+            spinLag: 0.04,
+            spinEnergyThreshold: 0.32,
+        },
+        phases: [
+            { startBar: 0, endBar: 2, yKick: 8.8, stepAmp: 4.6, spinDeg: 70 },
+            { startBar: 2, endBar: 4, xRange: 14.5, xKick: 8, stepAmp: 6.5, spinDeg: 165 },
+            { startBar: 4, endBar: 6, hopFreq: 4, yLift: 7.2, yKick: 12.5, spinDeg: 180 },
+            { startBar: 6, endBar: 8, swayFreq: 1, xRange: 9.8, stepAmp: 3.6, spinDeg: 80 },
+        ],
     },
     {
-        // Steppin n Jestin: medium shuffle, balanced side steps.
-        xRange: 9,
-        xKick: 4.2,
-        yLift: 7.2,
-        yKick: 8.2,
-        rotSwing: 2.15,
-        rotKick: 1.85,
-        scalePulse: 0.042,
-        swayFreq: 1,
-        hopFreq: 2,
-        accentLag: 0.08,
+        // Steppin n Jestin: shuffle pattern with lane-cross style travel.
+        cycleBars: 12,
+        base: {
+            xRange: 9,
+            xKick: 4,
+            yLift: 6.8,
+            yKick: 8.1,
+            rebound: 2.3,
+            rotSwing: 2,
+            rotKick: 1.7,
+            leanDeg: 1.8,
+            scalePulse: 0.041,
+            swayFreq: 1,
+            hopFreq: 2,
+            stepFreq: 1,
+            stepAmp: 4.1,
+            accentLag: 0.08,
+            spinBeatFreq: 0.5,
+            spinWidth: 0.16,
+            spinDeg: 100,
+            spinLag: 0.1,
+            spinEnergyThreshold: 0.42,
+        },
+        phases: [
+            { startBar: 0, endBar: 3, stepFreq: 0.5, stepAmp: 2.5, yLift: 5.8, spinDeg: 0 },
+            { startBar: 3, endBar: 6, xRange: 10.8, xKick: 4.8, stepAmp: 4.6, spinDeg: 80 },
+            { startBar: 6, endBar: 9, hopFreq: 4, yKick: 9.6, stepFreq: 2, stepAmp: 5.3, spinDeg: 130 },
+            { startBar: 9, endBar: 12, swayFreq: 0.5, xRange: 7.8, stepAmp: 2.8, spinDeg: 55 },
+        ],
     },
     {
-        // Zesty Lester: brisk lateral dance with crisp off-beat movement.
-        xRange: 10.8,
-        xKick: 4.9,
-        yLift: 7,
-        yKick: 9,
-        rotSwing: 2.35,
-        rotKick: 2,
-        scalePulse: 0.048,
-        swayFreq: 2,
-        hopFreq: 4,
-        accentLag: 0.05,
+        // Zesty Lester: brisk footwork and quick center-out spins.
+        cycleBars: 8,
+        base: {
+            xRange: 10.8,
+            xKick: 5.1,
+            yLift: 7,
+            yKick: 9,
+            rebound: 2.7,
+            rotSwing: 2.4,
+            rotKick: 2,
+            leanDeg: 2,
+            scalePulse: 0.048,
+            swayFreq: 2,
+            hopFreq: 4,
+            stepFreq: 2,
+            stepAmp: 4.7,
+            accentLag: 0.05,
+            spinBeatFreq: 1,
+            spinWidth: 0.13,
+            spinDeg: 115,
+            spinLag: 0.05,
+            spinEnergyThreshold: 0.38,
+        },
+        phases: [
+            { startBar: 0, endBar: 2, yKick: 8.2, stepAmp: 3.7, spinDeg: 75 },
+            { startBar: 2, endBar: 4, xRange: 12.2, stepAmp: 5.4, spinDeg: 140 },
+            { startBar: 4, endBar: 6, hopFreq: 2, yLift: 8.2, yKick: 10.5, spinDeg: 165 },
+            { startBar: 6, endBar: 8, swayFreq: 1, stepFreq: 1, xRange: 8.4, stepAmp: 2.9, spinDeg: 65 },
+        ],
     },
 ];
 
@@ -85,6 +177,18 @@ const beatEnvelope = (phase, width = 0.32) => {
     const normalized = 1 - dist / width;
     return normalized * normalized;
 };
+
+const getPhaseProfile = (choreo, trackBeats) => {
+    const cycleBars = Math.max(1, choreo.cycleBars || 8);
+    const barInCycle = ((trackBeats / 4) % cycleBars + cycleBars) % cycleBars;
+    const phaseOverride = choreo.phases?.find((phase) => barInCycle >= phase.startBar && barInCycle < phase.endBar) || {};
+    return {
+        ...choreo.base,
+        ...phaseOverride,
+    };
+};
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = true }) => {
     const dispatch = useDispatch();
@@ -203,37 +307,56 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const gated = Math.max(0, (danceEnergy - DANCE_MOTION_THRESHOLD) / (1 - DANCE_MOTION_THRESHOLD));
                             if (gated <= 0.001) return undefined;
 
-                            const profile = DANCE_PROFILES[danceTrackIndex % DANCE_PROFILES.length] || DANCE_PROFILES[0];
+                            const choreo = DANCE_CHOREOGRAPHIES[danceTrackIndex % DANCE_CHOREOGRAPHIES.length] || DANCE_CHOREOGRAPHIES[0];
                             const phase = phaseFrom(card.id, index);
                             const trackBeats = danceAudioTime * (danceBpm / 60);
+                            const profile = getPhaseProfile(choreo, trackBeats);
                             const primaryWave = Math.sin(trackBeats * TWO_PI * profile.swayFreq + phase);
                             const hopWave = Math.sin(trackBeats * TWO_PI * profile.hopFreq + phase * 0.7);
                             const accentWave = Math.sin(trackBeats * TWO_PI + phase + profile.accentLag * TWO_PI);
                             const onBeat = beatEnvelope(trackBeats + phase / TWO_PI, 0.22);
                             const offBeat = beatEnvelope(trackBeats + 0.5 + phase / TWO_PI, 0.2);
+                            const barline = beatEnvelope(trackBeats / 4 + phase / TWO_PI, 0.09);
 
                             const intensity = cardDanceIntensity;
                             const motionEnergy = Math.pow(gated, 1.45);
                             const peakBoost = 1 + Math.pow(gated, 1.2) * (DANCE_PEAK_BOOST - 1);
                             const effectiveEnergy = motionEnergy * peakBoost;
 
+                            const stepWave = Math.sin(trackBeats * Math.PI * profile.stepFreq + phase * 0.9);
+                            const stepShape = Math.sign(stepWave) * Math.pow(Math.abs(stepWave), 0.68);
+
                             const lateralSwing = primaryWave * profile.xRange;
                             const lateralKick = accentWave * onBeat * profile.xKick;
-                            const slideX = (lateralSwing + lateralKick) * effectiveEnergy * intensity;
+                            const sideStepTravel = stepShape * profile.stepAmp;
+                            const slideX = (lateralSwing + lateralKick + sideStepTravel) * effectiveEnergy * intensity;
 
                             const liftBase = Math.max(0, hopWave) * profile.yLift;
                             const liftKick = (onBeat * profile.yKick) + (offBeat * profile.yKick * 0.45);
-                            const liftPx = (liftBase + liftKick) * effectiveEnergy * intensity;
+                            const reboundLift = (onBeat - offBeat * 0.55) * profile.rebound;
+                            const liftPx = (liftBase + liftKick + reboundLift) * effectiveEnergy * intensity;
 
-                            const rotateDeg =
-                                ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick)) *
+                            const spinPulse =
+                                effectiveEnergy >= profile.spinEnergyThreshold
+                                    ? beatEnvelope(trackBeats * profile.spinBeatFreq + phase / TWO_PI + profile.spinLag, profile.spinWidth)
+                                    : 0;
+                            const spinDirection = ((Math.floor(trackBeats) + index) % 2 === 0 ? 1 : -1);
+                            const spinDeg = spinPulse * profile.spinDeg * spinDirection * (0.65 + barline * 0.6) * intensity;
+
+                            const baseRotateDeg =
+                                ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick) + (stepShape * profile.leanDeg)) *
                                 effectiveEnergy *
                                 intensity;
+                            const rotateDeg = baseRotateDeg + spinDeg;
+
                             const scale = 1 + (onBeat * profile.scalePulse + Math.max(0, hopWave) * profile.scalePulse * 0.6) * effectiveEnergy * intensity;
 
+                            const safeX = clamp(slideX, -DANCE_MAX_X_TRAVEL * intensity, DANCE_MAX_X_TRAVEL * intensity);
+                            const safeLift = clamp(liftPx, 0, DANCE_MAX_LIFT * intensity);
+                            const safeRotate = clamp(rotateDeg, -DANCE_MAX_ROTATION, DANCE_MAX_ROTATION);
+
                             return {
-                                transform: `translateX(${slideX.toFixed(2)}px) translateY(${-liftPx.toFixed(2)}px) rotate(${rotateDeg.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
-                                filter: `saturate(${(1 + effectiveEnergy * 0.2 * intensity).toFixed(3)}) brightness(${(1 + effectiveEnergy * 0.13 * intensity).toFixed(3)})`,
+                                transform: `translateX(${safeX.toFixed(2)}px) translateY(${-safeLift.toFixed(2)}px) rotate(${safeRotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
                             };
                         })()}
                     >
