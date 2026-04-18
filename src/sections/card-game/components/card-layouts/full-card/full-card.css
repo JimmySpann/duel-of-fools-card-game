@@ -123,6 +123,7 @@
 
 .card-info-container {
     background: oklch(67.03% 0.023 79.03);
+    color: #1a1010;
     text-align: left;
     padding: 10px;
     margin-left: 20px;
@@ -135,6 +136,7 @@
 
 .card-description {
     font-style: italic;
+    color: #2a1f1f;
 }
 
 .card-info-title {
@@ -190,14 +192,17 @@
 
 .ability-name {
     font-weight: bold;
+    color: #1a1010;
 }
 
 .ability-effect {
     margin-left: 10px;
+    color: #2a1f1f;
 }
 
 .ability-description {
     font-style: italic;
+    color: #3a2f2f;
 }
 
 .ability-card-right-side {

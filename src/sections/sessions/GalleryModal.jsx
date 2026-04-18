@@ -30,13 +30,12 @@ const ElementChip = ({ element, value }) => {
     );
 };
 
-const CardEntry = ({ card, onPreview }) => {
-    const [expanded, setExpanded] = useState(false);
+const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
     const hasActions = card.actions && card.actions.length > 0;
     const hasPassives = card.passives && card.passives.length > 0;
 
     return (
-        <div className={`gallery-card${expanded ? ' expanded' : ''}`} onClick={() => setExpanded((v) => !v)}>
+        <div className={`gallery-card${isExpanded ? ' expanded' : ''}`} onClick={onToggle}>
             <div className="gallery-card-header">
                 <div className="gallery-card-img-wrap">
                     <img src={card.image} alt={card.name} className="gallery-card-img" />
@@ -60,11 +59,11 @@ const CardEntry = ({ card, onPreview }) => {
                     <button className="gallery-view-full-btn" onClick={() => onPreview(card)} title="View full card">
                         Full View
                     </button>
-                    <span className="gallery-card-chevron">{expanded ? '▲' : '▼'}</span>
+                    <span className="gallery-card-chevron">{isExpanded ? '▲' : '▼'}</span>
                 </div>
             </div>
 
-            {expanded && (
+            {isExpanded && (
                 <div className="gallery-card-body" onClick={(e) => e.stopPropagation()}>
                     <p className="gallery-card-desc">{card.description}</p>
 
@@ -151,6 +150,7 @@ const GalleryModal = ({ onClose }) => {
     const [search, setSearch] = useState('');
     const [elementFilter, setElementFilter] = useState(null);
     const [previewCard, setPreviewCard] = useState(null);
+    const [expandedId, setExpandedId] = useState(null);
 
     const filtered = useMemo(() => {
         return cards.filter((c) => {
@@ -216,7 +216,13 @@ const GalleryModal = ({ onClose }) => {
                                 <p className="gallery-empty">No cards match your search.</p>
                             )}
                             {filtered.map((card) => (
-                                <CardEntry key={card.id} card={card} onPreview={setPreviewCard} />
+                                <CardEntry
+                                    key={card.id}
+                                    card={card}
+                                    onPreview={setPreviewCard}
+                                    isExpanded={expandedId === card.id}
+                                    onToggle={() => setExpandedId((v) => (v === card.id ? null : card.id))}
+                                />
                             ))}
                         </div>
                     </div>

@@ -45,6 +45,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
     const [saveNameInput, setSaveNameInput] = useState('');
     const [showSaveInput, setShowSaveInput] = useState(false);
     const [previewCard, setPreviewCard] = useState(null);
+    const [confirmDeleteDeck, setConfirmDeleteDeck] = useState(null);
 
     const toggle = (id) => {
         setSelected((prev) => {
@@ -70,6 +71,14 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
         setLoadValue('');
     };
 
+    const deleteSavedDeck = (name) => {
+        const existing = loadSavedDecks();
+        delete existing[name];
+        localStorage.setItem(SAVED_DECKS_KEY, JSON.stringify(existing));
+        setSavedDecks(loadSavedDecks());
+        setConfirmDeleteDeck(null);
+    };
+
     const deckNames = Object.keys(savedDecks);
     const canConfirm = selected.size >= 3 && !loading;
     const selectedCount = selected.size;
@@ -88,16 +97,15 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                     </span>
                     <div className="db-toolbar-right">
                         {deckNames.length > 0 && (
-                            <select
-                                className="db-load-select"
-                                value={loadValue}
-                                onChange={(e) => { setLoadValue(e.target.value); handleLoad(e.target.value); }}
-                            >
-                                <option value="">Load saved deck…</option>
+                            <div className="db-saved-decks-list">
                                 {deckNames.map((n) => (
-                                    <option key={n} value={n}>{n}</option>
+                                    <div key={n} className="db-saved-deck-row">
+                                        <span className="db-saved-deck-name" title={n}>{n}</span>
+                                        <button className="db-load-btn" onClick={() => handleLoad(n)}>Load</button>
+                                        <button className="db-delete-deck-btn" onClick={() => setConfirmDeleteDeck(n)} title="Delete deck">🗑</button>
+                                    </div>
                                 ))}
-                            </select>
+                            </div>
                         )}
                         {showSaveInput ? (
                             <div className="db-save-row">
@@ -179,6 +187,18 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                     </button>
                 </div>
             </div>
+
+            {confirmDeleteDeck !== null && (
+                <div className="fc-preview-overlay" onClick={() => setConfirmDeleteDeck(null)}>
+                    <div className="db-delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <p className="db-delete-confirm-msg">Delete deck <strong>"{confirmDeleteDeck}"</strong>?</p>
+                        <div className="db-delete-confirm-btns">
+                            <button className="db-delete-confirm-yes" onClick={() => deleteSavedDeck(confirmDeleteDeck)}>Delete</button>
+                            <button className="fc-preview-close-btn" onClick={() => setConfirmDeleteDeck(null)}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {previewCard && (() => {
                 const isInDeck = selected.has(previewCard.id);
