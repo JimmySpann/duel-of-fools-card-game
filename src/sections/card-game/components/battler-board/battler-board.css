@@ -76,7 +76,7 @@
     transform: rotateY(180deg);
     backface-visibility: hidden;
     border-radius: 10px;
-    background: radial-gradient(ellipse at center, #f0e6ff 0%, #c9a0f5 50%, #a97de8 100%);
+    background: radial-gradient(circle, rgba(198, 63, 251, 1) 0%, rgba(28, 11, 22, 1) 100%);
     border: 2px solid #c4a0f0;
     box-shadow: inset 0 0 30px rgba(180, 120, 255, 0.3);
     display: flex;
