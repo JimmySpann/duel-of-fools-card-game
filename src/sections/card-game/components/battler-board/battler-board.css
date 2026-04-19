@@ -61,10 +61,33 @@
     transition: transform 0.11s cubic-bezier(0.2, 0.8, 0.2, 1);
     will-change: transform;
     transform-style: preserve-3d;
+    position: relative;
 }
 
-.card-dance-layer.card-dance-enabled {
+.card-dance-front {
     backface-visibility: hidden;
+    width: 100%;
+    height: 100%;
+}
+
+.card-dance-back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+    backface-visibility: hidden;
+    border-radius: 10px;
+    background: radial-gradient(ellipse at center, #f0e6ff 0%, #c9a0f5 50%, #a97de8 100%);
+    border: 2px solid #c4a0f0;
+    box-shadow: inset 0 0 30px rgba(180, 120, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-dance-back-logo {
+    width: 55%;
+    opacity: 0.9;
+    filter: drop-shadow(0 0 14px rgba(100, 40, 180, 0.6)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
 .card-hover {

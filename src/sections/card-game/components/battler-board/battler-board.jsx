@@ -522,11 +522,16 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             };
                         })()}
                     >
-                        <MiniCard
-                            card={card}
-                            isFlipped={flippedCards[index]}
-                            showExhausted={showExhausted}
-                        />
+                        <div className="card-dance-front">
+                            <MiniCard
+                                card={card}
+                                isFlipped={flippedCards[index]}
+                                showExhausted={showExhausted}
+                            />
+                        </div>
+                        <div className="card-dance-back">
+                            <img src="/img/Logo.png" alt="" className="card-dance-back-logo" />
+                        </div>
                     </div>
                 </div>
             ))}
