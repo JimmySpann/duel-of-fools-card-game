@@ -401,6 +401,7 @@ const CustomCardModal = ({ onClose }) => {
     const token = useSelector((s) => s.auth.token);
     const username = useSelector((s) => s.auth.username);
     const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
+    const isAdmin = username === 'Acinder';
 
     const [cards, setCards] = useState([]);
     const [abilities, setAbilities] = useState([]);
@@ -422,6 +423,7 @@ const CustomCardModal = ({ onClose }) => {
     const [customAbilities, setCustomAbilities] = useState([]);
     const [abilitySearch, setAbilitySearch] = useState('');
     const [adultOnly, setAdultOnly] = useState(false);
+    const [visibility, setVisibility] = useState('public');
     const [imagePreviewError, setImagePreviewError] = useState(false);
     const [aiPrompt, setAiPrompt] = useState('');
     const [aiModelId, setAiModelId] = useState(AI_MODEL_PRESETS[0]?.id || '');
@@ -649,6 +651,7 @@ const CustomCardModal = ({ onClose }) => {
                 abilityNames,
                 customAbilities,
                 adultOnly,
+                visibility,
             };
             const res = await fetch(editingCardId ? `/api/cards/${encodeURIComponent(editingCardId)}` : '/api/cards', {
                 method: editingCardId ? 'PATCH' : 'POST',
@@ -673,6 +676,7 @@ const CustomCardModal = ({ onClose }) => {
             setAbilityNames([]);
             setCustomAbilities([]);
             setAdultOnly(false);
+            setVisibility('public');
             setEditingCardId(null);
         } catch (err) {
             setError(err.message || 'Failed to save card');
@@ -709,6 +713,7 @@ const CustomCardModal = ({ onClose }) => {
             }))
             .slice(0, 3));
         setAdultOnly(!!card.adultOnly);
+        setVisibility(card.visibility || 'public');
     };
 
     const cancelEdit = () => {
@@ -721,6 +726,7 @@ const CustomCardModal = ({ onClose }) => {
         setAbilityNames([]);
         setCustomAbilities([]);
         setAdultOnly(false);
+        setVisibility('public');
         setAiConcept(null);
         setAiError('');
     };
@@ -867,6 +873,21 @@ const CustomCardModal = ({ onClose }) => {
             setCards((prev) => [data.card, ...prev]);
         } catch (err) {
             setError(err.message || 'Failed to fork card');
+        }
+    };
+
+    const handleVerify = async (cardId) => {
+        setError('');
+        try {
+            const res = await fetch(`/api/cards/${encodeURIComponent(cardId)}/verify`, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to update verification');
+            setCards((prev) => prev.map((c) => (c.id === cardId ? data.card : c)));
+        } catch (err) {
+            setError(err.message || 'Failed to update verification');
         }
     };
 
@@ -1433,6 +1454,19 @@ const CustomCardModal = ({ onClose }) => {
                             Adults-only card
                         </label>
 
+                        <label className="custom-card-label">
+                            Visibility
+                            <select
+                                className="custom-card-input"
+                                value={visibility}
+                                onChange={(e) => setVisibility(e.target.value)}
+                                title="Public cards appear in the gallery. Private cards are only visible to you."
+                            >
+                                <option value="public">Public</option>
+                                <option value="private">Private (only you)</option>
+                            </select>
+                        </label>
+
                         {error && <p className="custom-card-error">{error}</p>}
 
                         <button
@@ -1475,7 +1509,12 @@ const CustomCardModal = ({ onClose }) => {
                                     <div key={card.id} className="custom-card-row">
                                         <img src={card.adultOnly && censorAdultCards ? defaultCards[0]?.image : card.image} alt={card.name} className="custom-card-thumb" />
                                         <div className="custom-card-row-info">
-                                            <div className="custom-card-row-name">{card.adultOnly && censorAdultCards ? 'Adults-only Card' : card.name}</div>
+                                            <div className="custom-card-row-name">
+                                                {card.adultOnly && censorAdultCards ? 'Adults-only Card' : card.name}
+                                                {card.visibility === 'private' && <span className="custom-card-private-badge">🔒 Private</span>}
+                                                {!card.official && card.verified && <span className="custom-card-verified-badge">✓ Verified</span>}
+                                                {!card.official && !card.verified && <span className="custom-card-unverified-badge">⚠ Unverified</span>}
+                                            </div>
                                             <div className="custom-card-row-meta">
                                                 {card.official ? 'Official' : `By ${card.createdBy || 'Unknown'}`}
                                                 {card.adultOnly ? ' · Adults-only' : ''}
@@ -1493,6 +1532,15 @@ const CustomCardModal = ({ onClose }) => {
                                             )}
                                             {card.createdBy !== username && (
                                                 <button className="custom-card-row-btn" onClick={() => handleReport(card.id)} title="Report card for moderation review.">Report</button>
+                                            )}
+                                            {isAdmin && !card.official && (
+                                                <button
+                                                    className={`custom-card-row-btn${card.verified ? ' danger' : ''}`}
+                                                    onClick={() => handleVerify(card.id)}
+                                                    title={card.verified ? 'Remove verification from this card.' : 'Mark this card as verified.'}
+                                                >
+                                                    {card.verified ? 'Unverify' : 'Verify'}
+                                                </button>
                                             )}
                                             <button className="custom-card-row-btn" onClick={() => handleFork(card.id)} title="Create an editable copy under your account.">Fork</button>
                                         </div>

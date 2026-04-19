@@ -279,6 +279,17 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                                 <option value="off">Disabled</option>
                             </select>
                         </label>
+                        <label className="lobby-setting-label">
+                            Verified Cards Only
+                            <select
+                                className="lobby-setting-input"
+                                value={settings.verifiedCardsOnly ? 'on' : 'off'}
+                                onChange={(e) => handleSettingChange('verifiedCardsOnly', e.target.value === 'on')}
+                            >
+                                <option value="off">Any Card</option>
+                                <option value="on">Verified Only</option>
+                            </select>
+                        </label>
                     </div>
                 </div>
             )}
@@ -370,6 +381,7 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                     <span>Turn Limit: {settings.turnTimeLimit ? (() => { const h = Math.floor(settings.turnTimeLimit / 3600); const m = Math.floor((settings.turnTimeLimit % 3600) / 60); return h > 0 ? `${h}h` : `${m}m`; })() : 'None'}</span>
                     <span>Minigames: {['Easy', 'Normal', 'Hard', 'Expert', 'Brutal'][(settings.microgameDifficulty ?? 1) - 1]}</span>
                     <span>Custom Cards: {settings.allowCustomCards === false ? 'Off' : 'On'}</span>
+                    <span>Verified Cards: {settings.verifiedCardsOnly ? 'Required' : 'Any'}</span>
                 </div>
             )}
 
@@ -426,6 +438,7 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                     initialDeck={myPlayer?.selectedDeck || []}
                     loading={loading}
                     error={error}
+                    verifiedCardsOnly={!!settings.verifiedCardsOnly}
                 />
             )}
 

@@ -56,6 +56,9 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
                         <span className="gallery-category-badge" style={{ background: catStyle.bg, color: catStyle.color, borderColor: catStyle.border }}>
                             {CATEGORY_LABELS[catKey] || catKey}
                         </span>
+                        {!card.official && !card.verified && (
+                            <span className="gallery-unverified-badge">⚠ Unverified</span>
+                        )}
                     </div>
                     {FEATURES.showElements && (
                         <div className="gallery-card-elements">
@@ -143,14 +146,16 @@ const GalleryModal = ({ onClose }) => {
     const [abilityTypeFilter, setAbilityTypeFilter] = useState('all');
     const [abilityExamples, setAbilityExamples] = useState([]);
     const [cards, setCards] = useState(defaultCards);
+    const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
 
     const filtered = useMemo(() => {
         return cards.filter((c) => {
             const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase());
             const matchCategory = categoryFilter === 'all' || (c.category || 'unknown') === categoryFilter;
-            return matchSearch && matchCategory;
+            const matchVerified = !showVerifiedOnly || !!c.official || !!c.verified;
+            return matchSearch && matchCategory && matchVerified;
         });
-    }, [search, categoryFilter, cards]);
+    }, [search, categoryFilter, cards, showVerifiedOnly]);
 
     const filteredAbilities = useMemo(() => {
         const q = abilitySearch.trim().toLowerCase();
@@ -252,6 +257,13 @@ const GalleryModal = ({ onClose }) => {
                                         </button>
                                     );
                                 })}
+                                <button
+                                    className={`gallery-element-filter-btn${showVerifiedOnly ? ' active' : ''}`}
+                                    onClick={() => setShowVerifiedOnly((v) => !v)}
+                                    title="Show only verified and official cards"
+                                >
+                                    ✓ Verified Only
+                                </button>
                             </div>
                         </div>
 

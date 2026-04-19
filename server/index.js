@@ -109,6 +109,9 @@ const signToken = (user) =>
 const CARD_ID_PREFIX = 'cc_';
 const MAX_CARD_POINTS = 48;
 
+// ── Admin users ───────────────────────────────────────────────────────────────
+const ADMIN_USERS = new Set(['Acinder']);
+
 const cloneCardForGame = (card) => ({
     id: card.id,
     name: card.name,
@@ -130,6 +133,7 @@ const serializeCardForClient = (card) => ({
     ...cloneCardForGame(card),
     official: !!card.official,
     adultOnly: !!card.adultOnly,
+    verified: !!card.verified,
     visibility: card.visibility || 'public',
     createdBy: card.createdBy || 'system',
     sourceCardId: card.sourceCardId || null,
@@ -822,6 +826,9 @@ app.post('/api/cards', requireAuth, async (req, res) => {
             nextId = `${nextId}_${Date.now().toString(36).slice(-4)}`;
         }
 
+        const rawVisibility = String(req.body.visibility || 'public');
+        const visibility = rawVisibility === 'private' ? 'private' : 'public';
+
         const card = await Card.create({
             id: nextId,
             name: String(req.body.name).trim(),
@@ -838,7 +845,8 @@ app.post('/api/cards', requireAuth, async (req, res) => {
             agility: Number(req.body.agility),
             official: false,
             adultOnly: !!req.body.adultOnly,
-            visibility: 'public',
+            verified: false,
+            visibility,
             createdBy: req.user.username,
             versions: [],
         });
@@ -907,6 +915,9 @@ app.patch('/api/cards/:id', requireAuth, async (req, res) => {
         card.attack = Number(req.body.attack);
         card.agility = Number(req.body.agility);
         card.adultOnly = !!req.body.adultOnly;
+        if (req.body.visibility !== undefined) {
+            card.visibility = req.body.visibility === 'private' ? 'private' : 'public';
+        }
         card.markModified('elements');
         card.markModified('actions');
         card.markModified('versions');
@@ -970,6 +981,27 @@ app.post('/api/cards/:id/fork', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('POST /api/cards/:id/fork error:', err);
         res.status(500).json({ error: 'Failed to fork card' });
+    }
+});
+
+/**
+ * PATCH /api/cards/:id/verify
+ * Admin-only: toggle verified status on a card.
+ */
+app.patch('/api/cards/:id/verify', requireAuth, async (req, res) => {
+    try {
+        if (!ADMIN_USERS.has(req.user.username)) {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        const card = await Card.findOne({ id: req.params.id });
+        if (!card) return res.status(404).json({ error: 'Card not found' });
+
+        card.verified = !card.verified;
+        await card.save();
+        res.json({ card: serializeCardForClient(card.toObject()) });
+    } catch (err) {
+        console.error('PATCH /api/cards/:id/verify error:', err);
+        res.status(500).json({ error: 'Failed to update verification status' });
     }
 });
 

@@ -34,6 +34,7 @@ const settingsSchema = new mongoose.Schema(
         turnTimeLimit: { type: Number, default: 86400, min: 60 },     // seconds; null = no limit
         microgameDifficulty: { type: Number, default: 1, min: 1, max: 5 },
         allowCustomCards: { type: Boolean, default: true },
+        verifiedCardsOnly: { type: Boolean, default: false },
     },
     { _id: false }
 );

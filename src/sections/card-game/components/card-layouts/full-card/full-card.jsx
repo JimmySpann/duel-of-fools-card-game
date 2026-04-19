@@ -67,7 +67,7 @@ const getElementIcon = (element) => {
     }
 };
 
-const CardHeader = ({ type, elements }) => {
+const CardHeader = ({ category, createdBy, elements }) => {
 
     const processElements = () => {
         let elementArray = [];
@@ -82,9 +82,15 @@ const CardHeader = ({ type, elements }) => {
     }
     const { elementArray, normalCount } = processElements();
 
+    const creatorLabel =
+        category === 'dripwarts' ? 'by Acinder' :
+            category === 'official v1' ? 'by Official' :
+                category === 'unknown' ? 'by Unknown' :
+                    createdBy ? `by ${createdBy}` : '';
+
     return (
         <div className="card-header">
-            <div className="card-type">{type}</div>
+            <div className="card-type">{creatorLabel}</div>
 
 
             <div className='card-elements'>
@@ -116,7 +122,7 @@ const Card = ({
             className="card-container"
         >
             <div className={`card-front ${isFlipped ? 'rotateY-180' : ''}`}>
-                <CardHeader type={card?.type} elements={card?.elements} />
+                <CardHeader category={card?.category} createdBy={card?.createdBy} elements={card?.elements} />
 
                 <div className="card-image-container">
                     <img
@@ -147,12 +153,9 @@ const Card = ({
                         </div>
                     )}
                     <div className="card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
-                    <div className="card-creator">
-                        {card.category === 'dripwarts' && 'by Acinder'}
-                        {card.category === 'official v1' && 'by Official'}
-                        {card.category === 'unknown' && 'by Unknown'}
-                        {!['dripwarts', 'official v1', 'unknown'].includes(card.category) && card.createdBy && `by ${card.createdBy}`}
-                    </div>
+                    {!card.official && !card.verified && (
+                        <div className="card-unverified-badge">⚠ Unverified</div>
+                    )}
                 </div>
 
                 <div className="card-info-container">

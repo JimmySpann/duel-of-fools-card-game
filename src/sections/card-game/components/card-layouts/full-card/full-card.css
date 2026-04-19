@@ -133,6 +133,22 @@
         0 6px 10px rgba(0, 0, 0, .15);
 }
 
+.card-unverified-badge {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    background: rgba(180, 120, 0, 0.88);
+    color: #ffe8a0;
+    font-size: 9px;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid #c89000;
+    pointer-events: none;
+    z-index: 2;
+}
+
 
 .card-info-container {
     background: oklch(67.03% 0.023 79.03);

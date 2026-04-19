@@ -1372,6 +1372,18 @@
     flex-shrink: 0;
 }
 
+.gallery-unverified-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid #8a6200;
+    background: #2b1d00;
+    color: #f5c842;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .gallery-pack-section {
     margin-bottom: 0.5rem;
 }
@@ -1929,6 +1941,21 @@
     align-items: center;
     justify-content: center;
     line-height: 1;
+}
+
+.db-unverified-tag {
+    position: absolute;
+    top: 5px;
+    left: 7px;
+    background: #2b1d00;
+    color: #f5c842;
+    border: 1px solid #8a6200;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    padding: 0 3px;
+    line-height: 1.4;
+    font-weight: 700;
+    pointer-events: none;
 }
 
 .db-card-img {
@@ -2746,6 +2773,40 @@
 .custom-card-row-name {
     color: #e0e4f6;
     font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.custom-card-private-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: #1e2a44;
+    color: #7eb3ff;
+    border: 1px solid #3a5a9a;
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+.custom-card-verified-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: #0d2b10;
+    color: #6ee77a;
+    border: 1px solid #2a7a35;
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+.custom-card-unverified-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: #2b1d00;
+    color: #f5c842;
+    border: 1px solid #8a6200;
+    border-radius: 3px;
+    padding: 1px 5px;
 }
 
 .custom-card-row-meta {

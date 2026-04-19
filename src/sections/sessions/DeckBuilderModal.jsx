@@ -36,7 +36,7 @@ const PRESET_OPTIONS = [
  *   loading?: boolean
  *   error?: string | null
  */
-const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) => {
+const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, verifiedCardsOnly = false }) => {
     const token = useSelector((s) => s.auth.token);
     const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
     const [selected, setSelected] = useState(() => new Set(initialDeck || []));
@@ -50,6 +50,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
     const [cards, setCards] = useState(defaultCards);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
+    const [showVerifiedOnly, setShowVerifiedOnly] = useState(verifiedCardsOnly);
 
     useEffect(() => {
         let mounted = true;
@@ -150,9 +151,10 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
         return cards.filter((c) => {
             const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase());
             const matchCategory = categoryFilter === 'all' || (c.category || 'unknown') === categoryFilter;
-            return matchSearch && matchCategory;
+            const matchVerified = !(showVerifiedOnly || verifiedCardsOnly) || !!c.official || !!c.verified;
+            return matchSearch && matchCategory && matchVerified;
         });
-    }, [cards, search, categoryFilter]);
+    }, [cards, search, categoryFilter, showVerifiedOnly, verifiedCardsOnly]);
 
     const selectedDeckIsCustom = !!savedDecks.find((d) => d.name === deckSelectValue);
 
@@ -253,6 +255,14 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                                 </button>
                             );
                         })}
+                        <button
+                            className={`gallery-element-filter-btn${(showVerifiedOnly || verifiedCardsOnly) ? ' active' : ''}`}
+                            onClick={() => { if (!verifiedCardsOnly) setShowVerifiedOnly((v) => !v); }}
+                            disabled={verifiedCardsOnly}
+                            title={verifiedCardsOnly ? 'Lobby requires verified cards only' : 'Show only verified and official cards'}
+                        >
+                            ✓ Verified Only
+                        </button>
                     </div>
                 </div>
 
@@ -270,6 +280,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error }) =
                                     style={isSelected ? { borderColor: elStyle.border, background: elStyle.bg } : undefined}
                                 >
                                     {isSelected && <span className="db-card-check">✓</span>}
+                                    {!card.official && !card.verified && <span className="db-unverified-tag">⚠</span>}
                                     <img src={isCensored ? defaultCards[0]?.image : card.image} alt={card.name} className="db-card-img" />
                                     <div className="db-card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
                                     <div className="db-card-elements">
