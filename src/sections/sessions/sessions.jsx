@@ -546,7 +546,7 @@ const Sessions = () => {
             const beatPhase = (time * bpm / 60) % 1;
             const beatPeak = Math.max(0, 1 - beatPhase * 3.5);
             const gated = Math.max(0, smooth - 0.28) / 0.72;
-            setBrandPulse(1 + gated * beatPeak * 0.06);
+            setBrandPulse(1 + gated * beatPeak * 0.035);
             raf = requestAnimationFrame(tick);
         };
         raf = requestAnimationFrame(tick);
@@ -793,9 +793,8 @@ const Sessions = () => {
                     <button
                         className="sessions-brand-btn"
                         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        style={{ transform: `scale(${brandPulse.toFixed(4)})`, transformOrigin: 'left center' }}
                     >
-                        <img src="/img/Jester.png" alt="jester" className="sessions-brand-jester" />
+                        <img src="/img/Jester.png" alt="jester" className="sessions-brand-jester" style={{ transform: `scale(${brandPulse.toFixed(4)})`, transformOrigin: 'center bottom' }} />
                         <span className="sessions-brand-title">Duel of Fools</span>
                     </button>
                     <div className="sessions-header-right">

@@ -82,7 +82,6 @@ const Auth = () => {
                         className="auth-logo-img"
                         style={{
                             transform: `scale(${logoPulse.toFixed(4)})`,
-                            filter: `drop-shadow(0 0 ${(18 + (logoPulse - 1) * 500).toFixed(1)}px rgba(168, 85, 247, ${Math.min(1, 0.55 + (logoPulse - 1) * 12).toFixed(3)}))`,
                         }}
                     />
                 </div>
