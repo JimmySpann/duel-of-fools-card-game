@@ -1,11 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { authHeader } from '../../utils/api';
 
 const API = '/api/profile';
-
-const authHeader = (token) => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-});
 
 export const fetchProfile = createAsyncThunk('profile/fetch', async (_, { getState, rejectWithValue }) => {
     const token = getState().auth.token;

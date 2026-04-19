@@ -10,28 +10,17 @@ const SelectedCard = ({ card, onCloseClick, buttons, onActionClick }) => {
     }, [])
 
     const handleOpenAnimation = () => {
-        let tick = 0;
-        const interval = setInterval(() => {
-            if (tick === 0) setAnimationTriggers((prev) => ({ ...prev, showCardContainer: true }));
-            if (tick === 3) setAnimationTriggers((prev) => ({ ...prev, showCard: true }));
-            if (tick === 10) setAnimationTriggers((prev) => ({ ...prev, showButtons: true }));
-            if (tick === 15) clearInterval(interval);
-            tick++;
-        }, 100);
-    }
+        setAnimationTriggers((prev) => ({ ...prev, showCardContainer: true }));
+        setTimeout(() => setAnimationTriggers((prev) => ({ ...prev, showCard: true })), 300);
+        setTimeout(() => setAnimationTriggers((prev) => ({ ...prev, showButtons: true })), 1000);
+    };
+
     const handleCloseAnimation = () => {
-        let tick = 0;
-        const interval = setInterval(() => {
-            if (tick === 0) setAnimationTriggers((prev) => ({ ...prev, showButtons: false }));
-            if (tick === 5) setAnimationTriggers((prev) => ({ ...prev, showCard: false }));
-            if (tick === 10) setAnimationTriggers((prev) => ({ ...prev, showCardContainer: false }));
-            if (tick === 12) {
-                onCloseClick();
-                clearInterval(interval);
-            }
-            tick++;
-        }, 100);
-    }
+        setAnimationTriggers((prev) => ({ ...prev, showButtons: false }));
+        setTimeout(() => setAnimationTriggers((prev) => ({ ...prev, showCard: false })), 500);
+        setTimeout(() => setAnimationTriggers((prev) => ({ ...prev, showCardContainer: false })), 1000);
+        setTimeout(() => onCloseClick(), 1200);
+    };
 
     const onClose = () => {
         handleCloseAnimation();

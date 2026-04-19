@@ -1,9 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-
-const authHeader = (token) => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-});
+import { authHeader } from '../../utils/api';
 
 // ── Thunks ────────────────────────────────────────────────────────────────────
 

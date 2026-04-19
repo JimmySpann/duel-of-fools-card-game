@@ -1,12 +1,5 @@
 import './player-hud.css';
-
-import fireIcon from '../../../../assets/elements/fire-icon.png';
-import iceIcon from '../../../../assets/elements/ice-icon.png';
-import earthIcon from '../../../../assets/elements/earth-icon.png';
-import airIcon from '../../../../assets/elements/air-icon.png';
-import electricIcon from '../../../../assets/elements/lightning-icon.png';
-import waterIcon from '../../../../assets/elements/water-icon.png';
-import deathIcon from '../../../../assets/elements/death-icon.png';
+import { getElementIcon } from '../../utils/elementIcons';
 
 
 const PlayerHUD = ({ player, isCurrentUser }) => {
@@ -36,27 +29,6 @@ const PlayerHUD = ({ player, isCurrentUser }) => {
 
     const palette = getHealthPalette();
 
-    const getElementIcon = (element) => {
-        switch (element) {
-            case 'fire':
-                return fireIcon;
-            case 'ice':
-                return iceIcon;
-            case 'earth':
-                return earthIcon;
-            case 'air':
-                return airIcon;
-            case 'electric':
-                return electricIcon;
-            case 'water':
-                return waterIcon;
-            case 'death':
-                return deathIcon;
-            // Add cases for other elements like earth, air, etc.
-            default:
-                return null;
-        }
-    };
 
     const processElements = () => {
         let elementArray = [];

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
+import { authHeader } from '../../utils/api';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
 import { FEATURES } from '../../config/features';
 
@@ -178,7 +179,7 @@ const GalleryModal = ({ onClose }) => {
         const loadCards = async () => {
             try {
                 const res = await fetch('/api/cards', {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: authHeader(token, false),
                 });
                 const data = await res.json();
                 if (!res.ok || !mounted) return;
@@ -196,7 +197,7 @@ const GalleryModal = ({ onClose }) => {
         const loadAbilities = async () => {
             try {
                 const res = await fetch('/api/cards/ability-options', {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: authHeader(token, false),
                 });
                 const data = await res.json();
                 if (!res.ok || !mounted) return;

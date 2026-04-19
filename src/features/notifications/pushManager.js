@@ -1,3 +1,4 @@
+import { authHeader } from '../../utils/api';
 let _swReg = null;
 
 /** Register the service worker. Call once at app startup. */
@@ -69,7 +70,7 @@ export const ensurePushSubscription = async () => {
         console.log('[Push] sending subscription to server...');
         await fetch('/api/push/subscribe', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            headers: authHeader(token),
             body: JSON.stringify({ subscription: sub.toJSON() }),
         });
         console.log('[Push] subscription sync complete');
@@ -96,7 +97,7 @@ export const removePushSubscription = async () => {
         console.log('[Push] removing subscription from server...');
         await fetch('/api/push/subscribe', {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            headers: authHeader(token),
             body: JSON.stringify({ endpoint: sub.endpoint }),
         });
         await sub.unsubscribe();

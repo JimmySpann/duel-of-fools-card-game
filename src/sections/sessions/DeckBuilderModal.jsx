@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { authHeader } from '../../utils/api';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
 import { FEATURES } from '../../config/features';
 
@@ -63,7 +64,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
         const loadCards = async () => {
             try {
                 const res = await fetch('/api/cards', {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: authHeader(token, false),
                 });
                 const data = await res.json();
                 if (!res.ok) return;
@@ -83,7 +84,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
         let mounted = true;
         const loadDecks = async () => {
             try {
-                const res = await fetch('/api/decks', { headers: { Authorization: `Bearer ${token}` } });
+                const res = await fetch('/api/decks', { headers: authHeader(token, false) });
                 const data = await res.json();
                 if (res.ok && mounted && Array.isArray(data.decks)) setSavedDecks(data.decks);
             } catch { /* ignore */ }
@@ -120,7 +121,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
         try {
             const res = await fetch('/api/decks', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: authHeader(token),
                 body: JSON.stringify({ name, cardIds: [...selected] }),
             });
             const data = await res.json();
@@ -138,7 +139,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
         try {
             const res = await fetch(`/api/decks/${encodeURIComponent(name)}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeader(token, false),
             });
             const data = await res.json();
             if (res.ok && Array.isArray(data.decks)) {

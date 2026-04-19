@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { AI_MODEL_PRESETS, generateCardConcept, generateCardDraft } from './ai/cardAIGenerator';
 import { FEATURES } from '../../config/features';
+import { authHeader } from '../../utils/api';
 
 const clampInt = (value, min, max) => {
     const n = Number(value);
@@ -491,8 +492,8 @@ const CustomCardModal = ({ onClose }) => {
             setError('');
             try {
                 const [cardsRes, abilitiesRes] = await Promise.all([
-                    fetch('/api/cards', { headers: { Authorization: `Bearer ${token}` } }),
-                    fetch('/api/cards/ability-options', { headers: { Authorization: `Bearer ${token}` } }),
+                    fetch('/api/cards', { headers: authHeader(token, false) }),
+                    fetch('/api/cards/ability-options', { headers: authHeader(token, false) }),
                 ]);
 
                 const cardsJson = await cardsRes.json();
@@ -515,7 +516,7 @@ const CustomCardModal = ({ onClose }) => {
     }, [token]);
 
     const refreshCards = async () => {
-        const res = await fetch('/api/cards', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch('/api/cards', { headers: authHeader(token, false) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to refresh cards');
         setCards(data.cards || []);
@@ -655,11 +656,9 @@ const CustomCardModal = ({ onClose }) => {
             const res = await fetch(editingCardId ? `/api/cards/${encodeURIComponent(editingCardId)}` : '/api/cards', {
                 method: editingCardId ? 'PATCH' : 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(payload),
-            });
+                    authHeader(token),
+                    body: JSON.stringify(payload),
+                });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || `Failed to ${editingCardId ? 'update' : 'create'} card`);
 
@@ -847,7 +846,7 @@ const CustomCardModal = ({ onClose }) => {
         try {
             const res = await fetch(`/api/cards/${encodeURIComponent(cardId)}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeader(token, false),
             });
             if (!res.ok) {
                 const data = await res.json();
@@ -865,7 +864,7 @@ const CustomCardModal = ({ onClose }) => {
         try {
             const res = await fetch(`/api/cards/${encodeURIComponent(cardId)}/fork`, {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeader(token, false),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to fork card');
@@ -880,7 +879,7 @@ const CustomCardModal = ({ onClose }) => {
         try {
             const res = await fetch(`/api/cards/${encodeURIComponent(cardId)}/verify`, {
                 method: 'PATCH',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeader(token, false),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to update verification');
@@ -898,11 +897,9 @@ const CustomCardModal = ({ onClose }) => {
             const res = await fetch(`/api/cards/${encodeURIComponent(cardId)}/report`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ reason: reason.trim() }),
-            });
+                    authHeader(token),
+                    body: JSON.stringify({ reason: reason.trim() }),
+                });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to report card');
             await refreshCards();
@@ -918,7 +915,7 @@ const CustomCardModal = ({ onClose }) => {
         setError('');
         try {
             const res = await fetch(`/api/cards/${encodeURIComponent(card.id)}/versions`, {
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeader(token, false),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to load versions');

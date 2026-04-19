@@ -1,6 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
-import counterReducer from '../features/counter/counterSlice';
-import cardGameReducer, { ABILITY_TARGETS } from '../sections/card-game/database/cardGameSlice';
+import cardGameReducer, { ABILITY_TARGETS, getAbilityTargetType } from '../sections/card-game/database/cardGameSlice';
 import authReducer from '../features/auth/authSlice';
 import sessionsReducer from '../features/sessions/sessionsSlice';
 import chatReducer from '../features/chat/chatSlice';
@@ -13,8 +12,6 @@ const LOCAL_ONLY_ACTIONS = new Set(['cardGame/setGameState', 'cardGame/resetGame
 // Returns true if this action will be intercepted by the server to hold for a
 // microevent — meaning we must NOT apply it optimistically, or the hit will
 // appear on-screen before the minigame even starts.
-const getAbilityTargetType = (ability) => ability?.customConfig?.targetType || ABILITY_TARGETS[ability?.name] || 'enemyCard';
-
 const wouldTriggerMicroevent = (type, payload, cardGameState) => {
   const state = cardGameState;
   const cp = state.players?.find((p) => p.id === state.currentTurn);
@@ -77,7 +74,6 @@ const onlineGameMiddleware = (store) => (next) => (action) => {
 
 export const store = configureStore({
   reducer: {
-    counter: counterReducer,
     cardGame: cardGameReducer,
     auth: authReducer,
     sessions: sessionsReducer,
