@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import musicManager from '../../../../features/sound/musicManager';
 import './header.css'
 
 const phaseMessage = (phase) => {
@@ -38,7 +39,26 @@ const Header = ({
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
+    const [brandPulse, setBrandPulse] = useState(1);
     const msg = phaseMessage(phase);
+
+    useEffect(() => {
+        let raf;
+        let smooth = 0;
+        const tick = () => {
+            const raw = musicManager.getReactiveLevel();
+            smooth += (raw - smooth) * 0.2;
+            const bpm = Math.max(60, musicManager.getCurrentBPM() || 120);
+            const time = musicManager.getCurrentTime();
+            const beatPhase = (time * bpm / 60) % 1;
+            const beatPeak = Math.max(0, 1 - beatPhase * 3.5);
+            const gated = Math.max(0, smooth - 0.28) / 0.72;
+            setBrandPulse(1 + gated * beatPeak * 0.06);
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, []);
 
     useEffect(() => {
         if (!turnTimeLimit || !turnStartedAt) {
@@ -57,7 +77,11 @@ const Header = ({
 
     return (
         <div className="header-container">
-            <button className="header-brand-btn" onClick={onLobbies}>
+            <button
+                className="header-brand-btn"
+                onClick={onLobbies}
+                style={{ transform: `scale(${brandPulse.toFixed(4)})`, transformOrigin: 'left center' }}
+            >
                 <img src="/img/Jester.png" alt="jester" className="header-brand-jester" />
                 <span className="header-title header-title--clickable">Duel of Fools</span>
             </button>
