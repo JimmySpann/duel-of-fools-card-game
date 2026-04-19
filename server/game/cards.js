@@ -6,7 +6,7 @@ const cards = [
         name: 'Drip Potter',
         elements: { air: 3, normal: 2 },
         type: 'Battler',
-        image: 'https://i.postimg.cc/hhXm3Sq3/Drip-Potter.jpg',
+        image: 'https://i.postimg.cc/pVZBrTcx/Drip-Potter.jpg',
         description: 'The Boy Who Lived... and stayed fly. His robes are designer, and his wand is gold-plated.',
         passives: [
             { name: 'Main Character Energy', effect: 'Lethal hits leave him at 1 HP', description: 'Plot armor, but make it fashion.' },
@@ -24,7 +24,7 @@ const cards = [
         name: 'Hustle Granger',
         elements: { earth: 3, normal: 2 },
         type: 'Battler',
-        image: 'https://i.postimg.cc/K41TsZyH/Hustle-Granger.jpg',
+        image: 'https://i.postimg.cc/pVZBrTcR/Hustle-Granger.jpg',
         description: "She didn't just read the books; she owns the publishing company.",
         passives: [
             { name: 'Know-It-All', effect: 'Reveal enemy actions', description: 'She already predicted your mid-tier fit.' },
@@ -41,7 +41,7 @@ const cards = [
         name: 'Lil Snape',
         elements: { death: 4, normal: 1 },
         type: 'Battler',
-        image: 'https://i.postimg.cc/kD2Shnd0/Lil-Snap.jpg',
+        image: 'https://i.postimg.cc/8D8XyfhM/Lil-Snap.jpg',
         description: 'The Half-Blood Prince of Luxury. His potions are served in crystal chalices.',
         passives: [
             { name: 'Cold Glare', effect: 'Enemy ATK -2', description: 'One look makes your outfit feel outdated.' },
@@ -58,7 +58,7 @@ const cards = [
         name: 'The Voldy Don',
         elements: { death: 5 },
         type: 'Battler',
-        image: 'https://i.postimg.cc/xqXmF02Q/The-Voldy-Don.jpg',
+        image: 'https://i.postimg.cc/3rBZNRfk/The-Voldy-Don.jpg',
         description: 'The Dark Lord of the Underground. No nose, but he can smell a fake from a mile away.',
         passives: [
             { name: 'Horcrux Chain', effect: 'Revive with 5 HP once', description: 'His soul is split between seven diamond chains.' },
@@ -75,7 +75,7 @@ const cards = [
         name: 'Dumbledrip',
         elements: { fire: 3, air: 2 },
         type: 'Battler',
-        image: 'https://i.postimg.cc/G94DSc1g/Dombledore.jpg',
+        image: 'https://i.postimg.cc/bYTRrJVP/Dombledore.jpg',
         description: 'Headmaster of the Streets. His beard is braided with 24k gold wire.',
         passives: [
             { name: 'Elder Swag', effect: 'Allies Agility +2', description: 'The OG leads the way.' },
@@ -92,7 +92,7 @@ const cards = [
         name: 'Swagrid',
         elements: { earth: 4, normal: 1 },
         type: 'Battler',
-        image: 'https://i.postimg.cc/dDhCSqYc/Sw-agrid.jpg',
+        image: 'https://i.postimg.cc/Sq01ZYW6/Sw-agrid.jpg',
         description: 'Keeper of the Keys and the Kicks. He breeds rare designer beasts.',
         passives: [
             { name: 'Thick Fur Coat', effect: 'Physical Resistance 25%', description: 'That XXL designer coat is basically armor.' },
@@ -109,7 +109,7 @@ const cards = [
         name: 'Dobby the Free',
         elements: { air: 3, death: 2 },
         type: 'Battler',
-        image: 'https://i.ytimg.com/vi/MnHjz8jvWFk/hqdefault.jpg',
+        image: 'https://i.postimg.cc/jqXh253R/Dobby.jpg',
         description: 'Master has given Dobby a Glock... Dobby is a free elf, and he stays strapped.',
         passives: [
             { name: 'Trigger Happy', effect: 'Double Strike chance', description: "Dobby doesn't just shoot; he empties the mag." },
@@ -127,7 +127,7 @@ const cards = [
         name: 'Malfoy Mogul',
         elements: { ice: 3, normal: 2 },
         type: 'Battler',
-        image: 'https://i.postimg.cc/8s7vn1SQ/Malfoy-Mogul.jpg',
+        image: 'https://i.postimg.cc/fZ4qHSxx/Malfoy-Mogul.jpg',
         description: 'His father will hear about this... and then buy the whole arena.',
         passives: [
             { name: 'Pureblood Pride', effect: 'Enemy DEF -1', description: 'His condescending look lowers your guard.' },
@@ -144,7 +144,7 @@ const cards = [
         name: 'Bellatrix Baddie',
         elements: { fire: 2, death: 3 },
         type: 'Battler',
-        image: 'https://i.postimg.cc/MZDYHT3G/image.jpg',
+        image: 'https://i.postimg.cc/2mp9HL4n/image.jpg',
         description: 'Unbalanced, unhinged, and undisputed in the dark arts of fashion.',
         passives: [
             { name: 'Chaos Theory', effect: 'Random Crit Chance', description: "She's a wild card in a corset." },
@@ -161,7 +161,7 @@ const cards = [
         "name": "Ron Riches",
         "elements": { "fire": 2, "normal": 3 },
         "type": "Battler",
-        "image": "https://i.postimg.cc/c6v35sSZ/wesley.jpg",
+        "image": "https://i.postimg.cc/1Px7WVpK/wesley.jpg",
         "description": "Sick of hand-me-downs, Ron hit the jackpot. Now his robes are pure silk and his pockets are never empty.",
         "passives": [
             { "name": "King Weasley", "effect": "DEF +2 if HP < 50%", "description": "He starts playing for keeps when the pressure is on." },
