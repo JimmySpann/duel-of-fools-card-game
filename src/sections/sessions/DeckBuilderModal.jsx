@@ -50,7 +50,13 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
     const [cards, setCards] = useState(defaultCards);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
-    const [showVerifiedOnly, setShowVerifiedOnly] = useState(verifiedCardsOnly);
+
+    // If the lobby mandates verified cards only, we can never show unverified
+    useEffect(() => {
+        if (verifiedCardsOnly && categoryFilter === 'unverified') {
+            setCategoryFilter('all');
+        }
+    }, [verifiedCardsOnly, categoryFilter]);
 
     useEffect(() => {
         let mounted = true;
@@ -150,11 +156,14 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
     const filteredCards = useMemo(() => {
         return cards.filter((c) => {
             const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase());
+            if (categoryFilter === 'unverified' && !verifiedCardsOnly) {
+                return matchSearch && !c.official && !c.verified;
+            }
+            const isVerified = !!c.official || !!c.verified;
             const matchCategory = categoryFilter === 'all' || (c.category || 'unknown') === categoryFilter;
-            const matchVerified = !(showVerifiedOnly || verifiedCardsOnly) || !!c.official || !!c.verified;
-            return matchSearch && matchCategory && matchVerified;
+            return matchSearch && isVerified && matchCategory;
         });
-    }, [cards, search, categoryFilter, showVerifiedOnly, verifiedCardsOnly]);
+    }, [cards, search, categoryFilter, verifiedCardsOnly]);
 
     const selectedDeckIsCustom = !!savedDecks.find((d) => d.name === deckSelectValue);
 
@@ -255,14 +264,15 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
                                 </button>
                             );
                         })}
-                        <button
-                            className={`gallery-element-filter-btn${(showVerifiedOnly || verifiedCardsOnly) ? ' active' : ''}`}
-                            onClick={() => { if (!verifiedCardsOnly) setShowVerifiedOnly((v) => !v); }}
-                            disabled={verifiedCardsOnly}
-                            title={verifiedCardsOnly ? 'Lobby requires verified cards only' : 'Show only verified and official cards'}
-                        >
-                            ✓ Verified Only
-                        </button>
+                        {!verifiedCardsOnly && (
+                            <button
+                                className={`gallery-element-filter-btn${categoryFilter === 'unverified' ? ' active' : ''}`}
+                                onClick={() => setCategoryFilter((v) => v === 'unverified' ? 'all' : 'unverified')}
+                                title="Show only unverified cards"
+                            >
+                                ⚠ Unverified
+                            </button>
+                        )}
                     </div>
                 </div>
 

@@ -146,16 +146,18 @@ const GalleryModal = ({ onClose }) => {
     const [abilityTypeFilter, setAbilityTypeFilter] = useState('all');
     const [abilityExamples, setAbilityExamples] = useState([]);
     const [cards, setCards] = useState(defaultCards);
-    const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
 
     const filtered = useMemo(() => {
         return cards.filter((c) => {
             const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase());
+            if (categoryFilter === 'unverified') {
+                return matchSearch && !c.official && !c.verified;
+            }
+            const isVerified = !!c.official || !!c.verified;
             const matchCategory = categoryFilter === 'all' || (c.category || 'unknown') === categoryFilter;
-            const matchVerified = !showVerifiedOnly || !!c.official || !!c.verified;
-            return matchSearch && matchCategory && matchVerified;
+            return matchSearch && isVerified && matchCategory;
         });
-    }, [search, categoryFilter, cards, showVerifiedOnly]);
+    }, [search, categoryFilter, cards]);
 
     const filteredAbilities = useMemo(() => {
         const q = abilitySearch.trim().toLowerCase();
@@ -258,11 +260,11 @@ const GalleryModal = ({ onClose }) => {
                                     );
                                 })}
                                 <button
-                                    className={`gallery-element-filter-btn${showVerifiedOnly ? ' active' : ''}`}
-                                    onClick={() => setShowVerifiedOnly((v) => !v)}
-                                    title="Show only verified and official cards"
+                                    className={`gallery-element-filter-btn${categoryFilter === 'unverified' ? ' active' : ''}`}
+                                    onClick={() => setCategoryFilter((v) => v === 'unverified' ? 'all' : 'unverified')}
+                                    title="Show only unverified cards"
                                 >
-                                    ✓ Verified Only
+                                    ⚠ Unverified
                                 </button>
                             </div>
                         </div>
