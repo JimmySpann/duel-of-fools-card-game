@@ -140,6 +140,18 @@ export const removeCpu = createAsyncThunk('sessions/removeCpu', async ({ session
     return data2.session;
 });
 
+export const setCpuDeck = createAsyncThunk('sessions/setCpuDeck', async ({ sessionId, slot, deck }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/cpu/${slot}/deck`, {
+        method: 'PATCH',
+        headers: authHeader(token),
+        body: JSON.stringify({ deck }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.session;
+});
+
 export const leaveSessionLobby = createAsyncThunk('sessions/leaveLobby', async ({ sessionId }, { getState, rejectWithValue }) => {
     const token = getState().auth.token;
     const res = await fetch(`${API}/${sessionId}/leave`, {
@@ -294,6 +306,13 @@ const sessionsSlice = createSlice({
                 if (idx >= 0) state.list[idx] = action.payload;
             })
             .addCase(removeCpu.rejected, (state, action) => { state.error = action.payload; })
+
+            .addCase(setCpuDeck.fulfilled, (state, action) => {
+                state.activeSession = action.payload;
+                const idx = state.list.findIndex((s) => s._id === action.payload._id);
+                if (idx >= 0) state.list[idx] = action.payload;
+            })
+            .addCase(setCpuDeck.rejected, (state, action) => { state.error = action.payload; })
 
             .addCase(joinSessionById.pending, (state) => { state.loading = true; state.error = null; })
             .addCase(joinSessionById.fulfilled, (state, action) => {

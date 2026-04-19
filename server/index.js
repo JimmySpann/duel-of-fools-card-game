@@ -1279,7 +1279,10 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
             return res.status(409).json({ error: `Waiting for players to choose a deck: ${names}` });
         }
 
-        const selectedIds = [...new Set(session.players.flatMap((p) => p.selectedDeck || []))];
+        // Collect all unique card IDs needed — from human players AND CPU slots with custom decks
+        const humanDeckIds = [...new Set(session.players.flatMap((p) => p.selectedDeck || []))];
+        const cpuDeckIds = [...new Set((session.cpuSlots || []).flatMap((c) => c.selectedDeck || []))];
+        const selectedIds = [...new Set([...humanDeckIds, ...cpuDeckIds])];
         const selectedDeckCards = selectedIds.length > 0
             ? await Card.find({ id: { $in: selectedIds } }).lean()
             : [];
@@ -1299,7 +1302,15 @@ app.post('/api/sessions/:id/start', requireAuth, async (req, res) => {
                 image: avatarByUserId.get(String(p.userId)) || '',
                 selectedDeck: (p.selectedDeck || []).map((id) => cardById.get(id)).filter(Boolean),
             })),
-            ...(session.cpuSlots || []).map((c) => ({ name: c.name, team: null, slot: c.slot, isBot: true, selectedDeck: [] })),
+            ...(session.cpuSlots || []).map((c) => ({
+                name: c.name,
+                team: null,
+                slot: c.slot,
+                isBot: true,
+                selectedDeck: (c.selectedDeck || []).length >= 3
+                    ? (c.selectedDeck || []).map((id) => cardById.get(id)).filter(Boolean)
+                    : [],
+            })),
         ].sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
 
         const playerConfigs = combined.map((p, i) => ({
@@ -1565,6 +1576,47 @@ app.delete('/api/sessions/:id/cpu/:slot', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('DELETE /api/sessions/:id/cpu/:slot error:', err);
         res.status(500).json({ error: 'Failed to remove CPU' });
+    }
+});
+
+/**
+ * PATCH /api/sessions/:id/cpu/:slot/deck
+ * Host-only; sets a CPU player's deck by card ID array.
+ * Body: { deck: string[] }  — 3–10 card IDs
+ */
+app.patch('/api/sessions/:id/cpu/:slot/deck', requireAuth, async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can set CPU decks' });
+        if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change deck after game starts' });
+
+        const cpu = (session.cpuSlots || []).find((c) => c.slot === req.params.slot);
+        if (!cpu) return res.status(404).json({ error: 'CPU slot not found' });
+
+        const { deck } = req.body;
+        if (!Array.isArray(deck)) return res.status(400).json({ error: 'deck must be an array of card IDs' });
+        if (deck.length < 3 || deck.length > 10) return res.status(400).json({ error: 'Deck must contain 3–10 cards' });
+
+        const dbCards = await Card.find({ id: { $in: deck } }).select('id official').lean();
+        const knownIds = new Set(dbCards.map((c) => c.id));
+        const unknown = deck.filter((id) => !knownIds.has(id));
+        if (unknown.length > 0) return res.status(400).json({ error: `Unknown card IDs: ${unknown.join(', ')}` });
+
+        if (session.settings?.allowCustomCards === false) {
+            const officialIds = new Set(dbCards.filter((c) => c.official).map((c) => c.id));
+            const disallowed = deck.filter((id) => !officialIds.has(id));
+            if (disallowed.length > 0) return res.status(400).json({ error: 'Custom cards are disabled in this lobby' });
+        }
+
+        cpu.selectedDeck = [...new Set(deck)];
+        session.markModified('cpuSlots');
+        await session.save();
+
+        res.json({ session });
+    } catch (err) {
+        console.error('PATCH /api/sessions/:id/cpu/:slot/deck error:', err);
+        res.status(500).json({ error: 'Failed to set CPU deck' });
     }
 });
 

@@ -925,9 +925,6 @@
 }
 
 .lobby-slot-remove-cpu {
-    position: absolute;
-    top: 6px;
-    right: 10px;
     background: none;
     border: none;
     color: #e74c3c;
@@ -935,6 +932,15 @@
     cursor: pointer;
     padding: 0;
     line-height: 1;
+    flex-shrink: 0;
+}
+
+.lobby-cpu-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    flex-wrap: wrap;
+    margin-top: 4px;
 }
 
 .lobby-add-cpu-btn {

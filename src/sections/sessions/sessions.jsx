@@ -12,6 +12,7 @@ import {
     updateTeam,
     addCpu,
     removeCpu,
+    setCpuDeck,
     leaveSessionLobby,
     deleteSession,
     submitDeck,
@@ -62,6 +63,7 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
     const unreadLobby = useSelector((s) => s.chat.unreadLobby[session._id] || 0);
     const [showChat, setShowChat] = useState(false);
     const [showDeckBuilder, setShowDeckBuilder] = useState(false);
+    const [cpuDeckSlot, setCpuDeckSlot] = useState(null); // slot string when editing a CPU deck
     const [inviteUsername, setInviteUsername] = useState('');
     const [inviteFeedback, setInviteFeedback] = useState('');
     const [inviteFeedbackType, setInviteFeedbackType] = useState('');
@@ -89,6 +91,12 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
     const handleDeckConfirm = (deck) => {
         dispatch(submitDeck({ sessionId: session._id, deck })).then((res) => {
             if (!res.error) setShowDeckBuilder(false);
+        });
+    };
+
+    const handleCpuDeckConfirm = (deck) => {
+        dispatch(setCpuDeck({ sessionId: session._id, slot: cpuDeckSlot, deck })).then((res) => {
+            if (!res.error) setCpuDeckSlot(null);
         });
     };
 
@@ -326,11 +334,23 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                                 </button>
                             )}
                             {isCpu && isHost && (
-                                <button
-                                    className="lobby-slot-remove-cpu"
-                                    onClick={() => dispatch(removeCpu({ sessionId: session._id, slot }))}
-                                    title="Remove CPU"
-                                >✕</button>
+                                <div className="lobby-cpu-actions">
+                                    <span className={`lobby-slot-status${cpu.selectedDeck?.length >= 3 ? ' ready' : ' prep'}`}>
+                                        {cpu.selectedDeck?.length >= 3 ? `✓ ${cpu.selectedDeck.length} cards` : '⏳ Random deck'}
+                                    </span>
+                                    <button
+                                        className="lobby-build-deck-btn edit"
+                                        onClick={() => setCpuDeckSlot(slot)}
+                                        disabled={loading}
+                                    >
+                                        {cpu.selectedDeck?.length >= 3 ? '✏ Edit Deck' : '🃏 Set Deck'}
+                                    </button>
+                                    <button
+                                        className="lobby-slot-remove-cpu"
+                                        onClick={() => dispatch(removeCpu({ sessionId: session._id, slot }))}
+                                        title="Remove CPU"
+                                    >✕</button>
+                                </div>
                             )}
                             {teamMode === 'teams' && player && (
                                 isHost ? (
@@ -430,12 +450,24 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
             </button>
             {showChat && <LobbyChat sessionId={session._id} isWatching={true} />}
 
-            {/* Deck builder modal */}
+            {/* Deck builder modal — current player */}
             {showDeckBuilder && (
                 <DeckBuilderModal
                     onClose={() => setShowDeckBuilder(false)}
                     onConfirm={handleDeckConfirm}
                     initialDeck={myPlayer?.selectedDeck || []}
+                    loading={loading}
+                    error={error}
+                    verifiedCardsOnly={!!settings.verifiedCardsOnly}
+                />
+            )}
+
+            {/* Deck builder modal — CPU slot */}
+            {cpuDeckSlot && (
+                <DeckBuilderModal
+                    onClose={() => setCpuDeckSlot(null)}
+                    onConfirm={handleCpuDeckConfirm}
+                    initialDeck={cpuSlots.find((c) => c.slot === cpuDeckSlot)?.selectedDeck || []}
                     loading={loading}
                     error={error}
                     verifiedCardsOnly={!!settings.verifiedCardsOnly}
