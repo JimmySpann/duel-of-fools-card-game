@@ -92,19 +92,20 @@ const CardHeader = ({ category, createdBy, elements }) => {
         <div className="card-header">
             <div className="card-type">{creatorLabel}</div>
 
-
-            <div className='card-elements'>
-                {elementArray.map((type, index) => (
-                    <div className="card-elements-icon" key={index}>
-                        <img src={getElementIcon(type)} className="card-elements-icon-image" />
-                    </div>
-                ))}
-                {normalCount > 0 && (
-                    <div className="card-elements-icon" style={{ backgroundColor: 'gray', textAlign: 'center', fontWeight: 'bold' }}>
-                        {normalCount}
-                    </div>
-                )}
-            </div>
+            {FEATURES.showElements && (
+                <div className='card-elements'>
+                    {elementArray.map((type, index) => (
+                        <div className="card-elements-icon" key={index}>
+                            <img src={getElementIcon(type)} className="card-elements-icon-image" />
+                        </div>
+                    ))}
+                    {normalCount > 0 && (
+                        <div className="card-elements-icon" style={{ backgroundColor: 'gray', textAlign: 'center', fontWeight: 'bold' }}>
+                            {normalCount}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     )
 }

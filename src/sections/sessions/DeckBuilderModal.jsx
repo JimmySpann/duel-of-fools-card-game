@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import defaultCards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
+import { FEATURES } from '../../config/features';
 
 const ELEMENT_COLORS = {
     fire: { bg: '#7c1a00', color: '#ff7a40', border: '#b04000' },
@@ -280,29 +281,28 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
                     {filteredCards.map((card) => {
                         const isSelected = selected.has(card.id);
                         const isCensored = !!card.adultOnly && censorAdultCards;
-                        const primaryElement = Object.entries(card.elements || {})[0];
-                        const elStyle = primaryElement ? (ELEMENT_COLORS[primaryElement[0]] || ELEMENT_COLORS.normal) : ELEMENT_COLORS.normal;
                         return (
                             <div key={card.id} className={`db-card-wrap${isSelected ? ' selected' : ''}`}>
                                 <button
                                     className={`db-card${isSelected ? ' selected' : ''}`}
                                     onClick={() => toggle(card.id)}
-                                    style={isSelected ? { borderColor: elStyle.border, background: elStyle.bg } : undefined}
                                 >
                                     {isSelected && <span className="db-card-check">✓</span>}
                                     {!card.official && !card.verified && <span className="db-unverified-tag">⚠</span>}
                                     <img src={isCensored ? defaultCards[0]?.image : card.image} alt={card.name} className="db-card-img" />
                                     <div className="db-card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
-                                    <div className="db-card-elements">
-                                        {Object.entries(card.elements || {}).map(([el, val]) => {
-                                            const s = ELEMENT_COLORS[el] || ELEMENT_COLORS.normal;
-                                            return (
-                                                <span key={el} className="db-element-chip" style={{ background: s.bg, color: s.color, borderColor: s.border }}>
-                                                    {el}
-                                                </span>
-                                            );
-                                        })}
-                                    </div>
+                                    {FEATURES.showElements && (
+                                        <div className="db-card-elements">
+                                            {Object.entries(card.elements || {}).map(([el]) => {
+                                                const s = ELEMENT_COLORS[el] || ELEMENT_COLORS.normal;
+                                                return (
+                                                    <span key={el} className="db-element-chip" style={{ background: s.bg, color: s.color, borderColor: s.border }}>
+                                                        {el}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                     <div className="db-card-stats">
                                         <span>HP {card.health}</span>
                                         <span>DEF {card.defense}</span>
