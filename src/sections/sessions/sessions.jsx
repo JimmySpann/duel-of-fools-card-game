@@ -29,6 +29,7 @@ import CustomCardModal from './CustomCardModal';
 import RulesModal from '../shared/rules/RulesModal';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import { getSocket } from '../../features/chat/socket';
+import musicManager from '../../features/sound/musicManager';
 import './sessions.css';
 
 const POLL_INTERVAL = 3000;
@@ -347,6 +348,19 @@ const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading,
                 })}
             </div>
 
+            {/* Deck reminder for players who haven't built their deck */}
+            {myPlayer && myDeckStatus !== 'ready' && (
+                <div className="lobby-deck-reminder">
+                    <span>🃏 Please build your deck before the game can start</span>
+                    <button
+                        className="lobby-deck-reminder-btn"
+                        onClick={() => setShowDeckBuilder(true)}
+                    >
+                        Build Deck
+                    </button>
+                </div>
+            )}
+
             {!isHost && (
                 <div className="lobby-settings lobby-settings--readonly">
                     <span>HP: {settings.startingHp ?? 20}</span>
@@ -491,7 +505,7 @@ const SessionCard = ({ session, isParticipant, openSlots, isMyTurn, currentTurnN
             >
                 {isParticipant
                     ? session.status === 'in-progress' ? 'Rejoin' : 'Open Lobby'
-                    : session.status === 'waiting' ? 'Join' : 'View'}
+                    : 'View'}
             </button>
         </div>
     );
@@ -519,6 +533,25 @@ const Sessions = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
     const inviteJoinAttemptedRef = useRef(false);
+
+    const [brandPulse, setBrandPulse] = useState(1);
+    useEffect(() => {
+        let raf;
+        let smooth = 0;
+        const tick = () => {
+            const raw = musicManager.getReactiveLevel();
+            smooth += (raw - smooth) * 0.2;
+            const bpm = Math.max(60, musicManager.getCurrentBPM() || 120);
+            const time = musicManager.getCurrentTime();
+            const beatPhase = (time * bpm / 60) % 1;
+            const beatPeak = Math.max(0, 1 - beatPhase * 3.5);
+            const gated = Math.max(0, smooth - 0.28) / 0.72;
+            setBrandPulse(1 + gated * beatPeak * 0.06);
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, []);
 
     useEffect(() => {
         dispatch(fetchSessions());
@@ -612,10 +645,14 @@ const Sessions = () => {
                     <div className="lobby-slots" style={{ marginTop: '1.5rem' }}>
                         {SLOTS.map((slot, i) => {
                             const player = ps.players.find((p) => p.slot === slot);
+                            const cpu = (ps.cpuSlots || []).find((c) => c.slot === slot);
+                            const isCpu = !!cpu;
                             return (
-                                <div key={slot} className={`lobby-slot ${player ? 'filled' : 'empty'}`}>
+                                <div key={slot} className={`lobby-slot ${player ? 'filled' : isCpu ? 'cpu' : 'empty'}`}>
                                     <span className="lobby-slot-label">Player {i + 1}</span>
-                                    <span className="lobby-slot-name">{player ? player.username : 'Open'}</span>
+                                    <span className="lobby-slot-name">
+                                        {isCpu ? `🤖 ${cpu.name}` : player ? player.username : 'Open'}
+                                    </span>
                                 </div>
                             );
                         })}
@@ -753,7 +790,11 @@ const Sessions = () => {
         <div className="sessions-backdrop">
             <div className="sessions-page">
                 <header className="sessions-header">
-                    <button className="sessions-brand-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    <button
+                        className="sessions-brand-btn"
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        style={{ transform: `scale(${brandPulse.toFixed(4)})`, transformOrigin: 'left center' }}
+                    >
                         <img src="/img/Jester.png" alt="jester" className="sessions-brand-jester" />
                         <span className="sessions-brand-title">Duel of Fools</span>
                     </button>
@@ -781,17 +822,6 @@ const Sessions = () => {
                                 <div className="sessions-profile-dropdown">
                                     <button
                                         className="sessions-profile-dropdown-item"
-                                        onClick={() => { setShowProfileMenu(false); setShowMessages(true); }}
-                                    >
-                                        💬 Messages
-                                        {Object.values(unreadDm).reduce((a, b) => a + b, 0) > 0 && (
-                                            <span className="sessions-dropdown-badge">
-                                                {Object.values(unreadDm).reduce((a, b) => a + b, 0)}
-                                            </span>
-                                        )}
-                                    </button>
-                                    <button
-                                        className="sessions-profile-dropdown-item"
                                         onClick={() => { setShowProfileMenu(false); setShowProfile(true); }}
                                     >
                                         👤 Profile
@@ -810,7 +840,7 @@ const Sessions = () => {
                 </header>
 
                 <div className="sessions-actions">
-                    <button className="sessions-action-btn primary" onClick={() => { dispatch(clearSessionError()); setView('create'); }}>
+                    <button className="sessions-action-btn primary" onClick={() => { dispatch(clearSessionError()); setNewName(`${username}'s session`); setView('create'); }}>
                         + New Session
                     </button>
                     <button className="sessions-action-btn" onClick={() => { dispatch(clearSessionError()); setView('join'); }}>

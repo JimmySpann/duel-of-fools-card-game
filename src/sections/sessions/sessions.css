@@ -1630,6 +1630,39 @@
     color: #c084fc;
 }
 
+/* ── Deck build reminder banner ─────────────────────────────────────────── */
+.lobby-deck-reminder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: rgba(168, 85, 247, 0.12);
+    border: 1px solid rgba(168, 85, 247, 0.45);
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    margin: 1rem 0 0.25rem;
+    color: #d8b4fe;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.lobby-deck-reminder-btn {
+    flex-shrink: 0;
+    padding: 0.35rem 0.9rem;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.lobby-deck-reminder-btn:hover {
+    opacity: 0.85;
+}
+
 /* ── Deck builder modal ──────────────────────────────────────────────────── */
 .db-overlay {
     position: fixed;
