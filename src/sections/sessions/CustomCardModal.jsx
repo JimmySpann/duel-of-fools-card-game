@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import defaultCards from '../card-game/database/cards';
 import { AI_MODEL_PRESETS, generateCardConcept, generateCardDraft } from './ai/cardAIGenerator';
+import { FEATURES } from '../config/features';
 
 const clampInt = (value, min, max) => {
     const n = Number(value);
@@ -1105,22 +1106,24 @@ const CustomCardModal = ({ onClose }) => {
                             Budget: {usedPoints} / {maxPoints}
                         </div>
 
-                        <div className="custom-card-elements-grid">
-                            {Object.keys(initialElements).map((el) => (
-                                <label key={el} className="custom-card-label">
-                                    {el}
-                                    <input
-                                        className="custom-card-input"
-                                        type="number"
-                                        min={0}
-                                        max={5}
-                                        value={elements[el]}
-                                        onChange={(e) => updateElement(el, e.target.value)}
-                                        title="Element affinity from 0 to 5."
-                                    />
-                                </label>
-                            ))}
-                        </div>
+                        {FEATURES.showElements && (
+                            <div className="custom-card-elements-grid">
+                                {Object.keys(initialElements).map((el) => (
+                                    <label key={el} className="custom-card-label">
+                                        {el}
+                                        <input
+                                            className="custom-card-input"
+                                            type="number"
+                                            min={0}
+                                            max={5}
+                                            value={elements[el]}
+                                            onChange={(e) => updateElement(el, e.target.value)}
+                                            title="Element affinity from 0 to 5."
+                                        />
+                                    </label>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="custom-card-abilities">
                             <div className="custom-card-subtitle" title="Each card can equip up to 3 abilities total (official + custom).">Abilities (pick up to 3 total)</div>

@@ -8,6 +8,7 @@ import airIcon from '../../../../../assets/elements/air-icon.png';
 import electricIcon from '../../../../../assets/elements/lightning-icon.png';
 import waterIcon from '../../../../../assets/elements/water-icon.png';
 import deathIcon from '../../../../../assets/elements/death-icon.png';
+import { FEATURES } from '../../../../../config/features';
 import './mini-card.css';
 
 const STATUS_BADGE_CONFIG = {
@@ -118,18 +119,20 @@ const CardHeader = ({ type, elements }) => {
         <div className="mini-card-header">
             <div className="mini-card-type">{type}</div>
 
-            <div className='mini-card-elements'>
-                {elementArray.map((type, index) => (
-                    <div className="mini-card-elements-icon" key={index}>
-                        <img src={getElementIcon(type)} className="mini-card-elements-icon-image" alt={type} />
-                    </div>
-                ))}
-                {normalCount > 0 && (
-                    <div className="mini-card-elements-icon" style={{ backgroundColor: 'gray', textAlign: 'center', fontWeight: 'bold' }}>
-                        {normalCount}
-                    </div>
-                )}
-            </div>
+            {FEATURES.showElements && (
+                <div className='mini-card-elements'>
+                    {elementArray.map((type, index) => (
+                        <div className="mini-card-elements-icon" key={index}>
+                            <img src={getElementIcon(type)} className="mini-card-elements-icon-image" alt={type} />
+                        </div>
+                    ))}
+                    {normalCount > 0 && (
+                        <div className="mini-card-elements-icon" style={{ backgroundColor: 'gray', textAlign: 'center', fontWeight: 'bold' }}>
+                            {normalCount}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     )
 }

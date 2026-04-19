@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FEATURES } from '../../../../../config/features';
 import { useSelector } from 'react-redux';
 
 import cardBack from '../../../../../assets/card-back.jpg';
@@ -156,7 +157,7 @@ const Card = ({
 
                 <div className="card-info-container">
                     <div className="card-description">{isCensored ? 'Description hidden by content settings.' : card.description}</div>
-                    {card.passives.length > 1 && <div className="card-passives-container">
+                    {FEATURES.showPassives && card.passives.length > 1 && <div className="card-passives-container">
                         <div className="card-info-title">Passives</div>
                         {card.passives.map((passive, index) => (
                             <div
@@ -171,7 +172,7 @@ const Card = ({
                                     <div className="ability-description">{isCensored ? 'Text hidden by content settings.' : passive.description}</div>
                                 </div>
                                 <div className="ability-card-right-side">
-                                    {passive.type && <div className="card-elements-icon" style={{ textAlign: 'right' }}>
+                                    {FEATURES.showElements && passive.type && <div className="card-elements-icon" style={{ textAlign: 'right' }}>
                                         <img src={getElementIcon(passive.type)} className="card-elements-icon-image" />
                                     </div>}
                                     {passive.limit &&
@@ -205,7 +206,7 @@ const Card = ({
                                     <div className="ability-description">{isCensored ? 'Text hidden by content settings.' : action.description}</div>
                                 </div>
                                 <div className="ability-card-right-side">
-                                    {action.type && <div className="card-elements-icon" style={{ textAlign: 'right' }}>
+                                    {FEATURES.showElements && action.type && <div className="card-elements-icon" style={{ textAlign: 'right' }}>
                                         <img src={getElementIcon(action.type)} className="card-elements-icon-image" />
                                     </div>}
                                     <div style={{ padding: '2px 2px 0 0' }}>{action.usesRemaining}/{action.limit}</div>

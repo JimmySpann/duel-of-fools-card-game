@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import defaultCards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
+import { FEATURES } from '../config/features';
 
 const ELEMENT_COLORS = {
     fire: { bg: '#7c1a00', color: '#ff7a40', border: '#b04000' },
@@ -56,11 +57,13 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
                             {CATEGORY_LABELS[catKey] || catKey}
                         </span>
                     </div>
-                    <div className="gallery-card-elements">
-                        {Object.entries(card.elements || {}).map(([el, val]) => (
-                            <ElementChip key={el} element={el} value={val} />
-                        ))}
-                    </div>
+                    {FEATURES.showElements && (
+                        <div className="gallery-card-elements">
+                            {Object.entries(card.elements || {}).map(([el, val]) => (
+                                <ElementChip key={el} element={el} value={val} />
+                            ))}
+                        </div>
+                    )}
                     <div className="gallery-card-stats">
                         <span className="gallery-stat"><span className="gallery-stat-label">HP</span>{card.health}</span>
                         {card.attack != null && <span className="gallery-stat"><span className="gallery-stat-label">ATK</span>{card.attack}</span>}
@@ -81,7 +84,7 @@ const CardEntry = ({ card, onPreview, isExpanded, onToggle }) => {
                 <div className="gallery-card-body" onClick={(e) => e.stopPropagation()}>
                     <p className="gallery-card-desc">{isCensored ? 'Description hidden by content settings.' : card.description}</p>
 
-                    {hasPassives && (
+                    {FEATURES.showPassives && hasPassives && (
                         <div className="gallery-section">
                             <div className="gallery-section-title">Passives</div>
                             {card.passives.map((p, i) => (
