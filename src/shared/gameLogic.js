@@ -577,7 +577,7 @@ const processStatusEffects = (player, state) => {
 
 // ── Exports ───────────────────────────────────────────────────────────────────
 
-module.exports = {
+export {
     addStatus,
     removeStatus,
     hasStatus,
