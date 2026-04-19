@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
-import {
+import * as _gl from '../../../shared/gameLogic';
+const {
   addStatus, removeStatus, hasStatus, getStatus,
   getEffectiveDef, getEffectiveEva, getEffectiveAtk,
   getEnemies, getAllies,
@@ -8,7 +9,7 @@ import {
   ABILITY_DEFS, ABILITY_TARGETS, getAbilityDefinition,
   getAbilityTargetType, isUntouchable,
   applySingleEffect, executeAbility, processStatusEffects,
-} from '../../../shared/gameLogic';
+} = _gl;
 
 const cards = [];
 
@@ -285,5 +286,5 @@ export const {
   setGameState,
 } = cardGameSlice.actions;
 
-export { ABILITY_TARGETS };
+export { ABILITY_TARGETS, getAbilityTargetType };
 export default cardGameSlice.reducer;
