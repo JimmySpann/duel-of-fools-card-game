@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import defaultCards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
 import { FEATURES } from '../../config/features';
 
@@ -48,7 +47,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
     const [previewCard, setPreviewCard] = useState(null);
     const [confirmDeleteDeck, setConfirmDeleteDeck] = useState(null);
     const [deckSaving, setDeckSaving] = useState(false);
-    const [cards, setCards] = useState(defaultCards);
+    const [cards, setCards] = useState([]);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
 
@@ -289,7 +288,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
                                 >
                                     {isSelected && <span className="db-card-check">✓</span>}
                                     {!card.official && !card.verified && <span className="db-unverified-tag">⚠</span>}
-                                    <img src={isCensored ? defaultCards[0]?.image : card.image} alt={card.name} className="db-card-img" />
+                                    <img src={isCensored ? (cards[0]?.image || '') : card.image} alt={card.name} className="db-card-img" />
                                     <div className="db-card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
                                     {FEATURES.showElements && (
                                         <div className="db-card-elements">

@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import defaultCards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
 import { FEATURES } from '../../config/features';
 
@@ -145,7 +144,7 @@ const GalleryModal = ({ onClose }) => {
     const [abilitySearch, setAbilitySearch] = useState('');
     const [abilityTypeFilter, setAbilityTypeFilter] = useState('all');
     const [abilityExamples, setAbilityExamples] = useState([]);
-    const [cards, setCards] = useState(defaultCards);
+    const [cards, setCards] = useState([]);
 
     const filtered = useMemo(() => {
         return cards.filter((c) => {

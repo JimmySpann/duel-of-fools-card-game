@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import defaultCards from '../card-game/database/cards';
 import { AI_MODEL_PRESETS, generateCardConcept, generateCardDraft } from './ai/cardAIGenerator';
 import { FEATURES } from '../../config/features';
 
@@ -416,7 +415,7 @@ const CustomCardModal = ({ onClose }) => {
 
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [image, setImage] = useState(defaultCards[0]?.image || '');
+    const [image, setImage] = useState('');
     const [stats, setStats] = useState(initialStats);
     const [elements, setElements] = useState(initialElements);
     const [abilityNames, setAbilityNames] = useState([]);
@@ -438,8 +437,8 @@ const CustomCardModal = ({ onClose }) => {
     const usedPoints = computePoints(stats);
 
     const builtinImages = useMemo(
-        () => [...new Set(defaultCards.map((c) => c.image).filter(Boolean))],
-        []
+        () => [...new Set(cards.map((c) => c.image).filter(Boolean))],
+        [cards]
     );
 
     useEffect(() => {
@@ -720,7 +719,7 @@ const CustomCardModal = ({ onClose }) => {
         setEditingCardId(null);
         setName('');
         setDescription('');
-        setImage(defaultCards[0]?.image || '');
+        setImage(cards[0]?.image || '');
         setStats(initialStats);
         setElements(initialElements);
         setAbilityNames([]);
@@ -746,7 +745,7 @@ const CustomCardModal = ({ onClose }) => {
 
         const randomImage = builtinImages.length
             ? builtinImages[Math.floor(Math.random() * builtinImages.length)]
-            : (defaultCards[0]?.image || image);
+            : (cards[0]?.image || image);
 
         setStats(randomizedStats);
         setElements(randomizedElements);
@@ -1507,7 +1506,7 @@ const CustomCardModal = ({ onClose }) => {
                             <div className="custom-card-list">
                                 {filteredCards.map((card) => (
                                     <div key={card.id} className="custom-card-row">
-                                        <img src={card.adultOnly && censorAdultCards ? defaultCards[0]?.image : card.image} alt={card.name} className="custom-card-thumb" />
+                                        <img src={card.adultOnly && censorAdultCards ? (cards[0]?.image || '') : card.image} alt={card.name} className="custom-card-thumb" />
                                         <div className="custom-card-row-info">
                                             <div className="custom-card-row-name">
                                                 {card.adultOnly && censorAdultCards ? 'Adults-only Card' : card.name}

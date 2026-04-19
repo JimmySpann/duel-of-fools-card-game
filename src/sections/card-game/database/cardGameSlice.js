@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
-import cards from './cards';
+
+const cards = [];
 
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
