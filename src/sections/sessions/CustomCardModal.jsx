@@ -655,10 +655,9 @@ const CustomCardModal = ({ onClose }) => {
             };
             const res = await fetch(editingCardId ? `/api/cards/${encodeURIComponent(editingCardId)}` : '/api/cards', {
                 method: editingCardId ? 'PATCH' : 'POST',
-                headers: {
-                    authHeader(token),
-                    body: JSON.stringify(payload),
-                });
+                headers: { ...authHeader(token) },
+                body: JSON.stringify(payload),
+            });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || `Failed to ${editingCardId ? 'update' : 'create'} card`);
 
@@ -896,10 +895,9 @@ const CustomCardModal = ({ onClose }) => {
         try {
             const res = await fetch(`/api/cards/${encodeURIComponent(cardId)}/report`, {
                 method: 'POST',
-                headers: {
-                    authHeader(token),
-                    body: JSON.stringify({ reason: reason.trim() }),
-                });
+                headers: { ...authHeader(token) },
+                body: JSON.stringify({ reason: reason.trim() }),
+            });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to report card');
             await refreshCards();

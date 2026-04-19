@@ -1,66 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     updateProfile,
-    sendFriendRequest,
-    acceptFriendRequest,
-    removeFriend,
-    blockUser,
-    unblockUser,
     clearProfileError,
     setNotifyTurn,
     setNotifyDM,
     setNotifyLobby,
-    setSoundVolume,
-    setCardDanceEnabled,
-    setCardDanceIntensity,
-    setCensorAdultCards,
 } from './profileSlice';
-import sounds from '../sound/soundManager';
-import useMusicPlayer from '../sound/useMusicPlayer';
 import useNotifications from '../notifications/useNotifications';
+import FriendsPanel from './FriendsPanel';
+import OptionsPanel from './OptionsPanel';
 import './profile.css';
 
 const TABS = ['Profile', 'Friends', 'Blocked', 'Options'];
 
 const Profile = ({ onClose, initialTab = 'Profile' }) => {
     const dispatch = useDispatch();
-    const { displayName, avatarUrl, friends, friendRequests, blocked, loading, error, notifyTurn, notifyDM, notifyLobby, soundVolume, cardDanceEnabled, cardDanceIntensity, censorAdultCards } = useSelector((s) => s.profile);
+    const { displayName, avatarUrl, friendRequests, loading, error, notifyTurn, notifyDM, notifyLobby } = useSelector((s) => s.profile);
     const username = useSelector((s) => s.auth.username);
     const { permission, request } = useNotifications();
 
     const [tab, setTab] = useState(initialTab);
     const [nameInput, setNameInput] = useState(displayName);
     const [avatarInput, setAvatarInput] = useState(avatarUrl);
-    const [addInput, setAddInput] = useState('');
-    const [addStatus, setAddStatus] = useState(null); // { ok, msg }
-    const [localVolume, setLocalVolume] = useState(soundVolume ?? 0.7);
-
-    const music = useMusicPlayer();
-
-    // Keep sound manager in sync with stored volume on mount
-    useEffect(() => {
-        sounds.setVolume(soundVolume ?? 0.7);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSaveProfile = async (e) => {
         e.preventDefault();
         dispatch(clearProfileError());
         await dispatch(updateProfile({ displayName: nameInput, avatarUrl: avatarInput }));
-    };
-
-    const handleSendRequest = async (e) => {
-        e.preventDefault();
-        if (!addInput.trim()) return;
-        setAddStatus(null);
-        const res = await dispatch(sendFriendRequest({ username: addInput.trim() }));
-        if (sendFriendRequest.fulfilled.match(res)) {
-            const msg = res.payload.status === 'accepted' ? 'Now friends!' : 'Request sent!';
-            setAddStatus({ ok: true, msg });
-            setAddInput('');
-        } else {
-            setAddStatus({ ok: false, msg: res.payload ?? 'Failed to send request' });
-        }
     };
 
     const imgSrc = avatarUrl || `https://i.pravatar.cc/150?u=${username}`;
@@ -200,329 +167,11 @@ const Profile = ({ onClose, initialTab = 'Profile' }) => {
                     </div>
                 )}
 
-                {/* ── Friends Tab ── */}
-                {tab === 'Friends' && (
-                    <div className="profile-section">
-                        {/* Add friend */}
-                        <form className="profile-add-row" onSubmit={handleSendRequest}>
-                            <input
-                                className="profile-input"
-                                type="text"
-                                value={addInput}
-                                onChange={(e) => setAddInput(e.target.value)}
-                                placeholder="Add by username…"
-                                maxLength={24}
-                            />
-                            <button className="profile-add-btn" type="submit" disabled={loading || !addInput.trim()}>
-                                Add
-                            </button>
-                        </form>
-                        {addStatus && (
-                            <p className={addStatus.ok ? 'profile-success' : 'profile-error'}>
-                                {addStatus.msg}
-                            </p>
-                        )}
+                {/* ── Friends / Blocked Tabs ── */}
+                {(tab === 'Friends' || tab === 'Blocked') && <FriendsPanel tab={tab} />}
 
-                        {/* Incoming requests */}
-                        {friendRequests.length > 0 && (
-                            <div className="profile-subsection">
-                                <h3 className="profile-subsection-title">Incoming Requests</h3>
-                                {friendRequests.map((u) => (
-                                    <div key={u} className="profile-friend-row">
-                                        <img
-                                            className="profile-friend-avatar"
-                                            src={`https://i.pravatar.cc/40?u=${u}`}
-                                            alt={u}
-                                        />
-                                        <span className="profile-friend-name">{u}</span>
-                                        <div className="profile-friend-actions">
-                                            <button
-                                                className="profile-friend-btn accept"
-                                                onClick={() => dispatch(acceptFriendRequest({ username: u }))}
-                                                disabled={loading}
-                                            >
-                                                Accept
-                                            </button>
-                                            <button
-                                                className="profile-friend-btn decline"
-                                                onClick={() => dispatch(removeFriend({ username: u }))}
-                                                disabled={loading}
-                                            >
-                                                Decline
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Friends list */}
-                        <div className="profile-subsection">
-                            <h3 className="profile-subsection-title">
-                                Friends {friends.length > 0 && <span className="profile-count">({friends.length})</span>}
-                            </h3>
-                            {friends.length === 0 ? (
-                                <p className="profile-empty">No friends yet. Add someone above!</p>
-                            ) : (
-                                friends.map((u) => (
-                                    <div key={u} className="profile-friend-row">
-                                        <img
-                                            className="profile-friend-avatar"
-                                            src={`https://i.pravatar.cc/40?u=${u}`}
-                                            alt={u}
-                                        />
-                                        <span className="profile-friend-name">{u}</span>
-                                        <div className="profile-friend-actions">
-                                            <button
-                                                className="profile-friend-btn remove"
-                                                onClick={() => dispatch(removeFriend({ username: u }))}
-                                                disabled={loading}
-                                            >
-                                                Remove
-                                            </button>
-                                            <button
-                                                className="profile-friend-btn block"
-                                                onClick={() => dispatch(blockUser({ username: u }))}
-                                                disabled={loading}
-                                            >
-                                                Block
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                        {error && <p className="profile-error">{error}</p>}
-                    </div>
-                )}
-
-                {/* ── Blocked Tab ── */}
-                {tab === 'Blocked' && (
-                    <div className="profile-section">
-                        <h3 className="profile-subsection-title">Blocked Users</h3>
-                        {blocked.length === 0 ? (
-                            <p className="profile-empty">No blocked users.</p>
-                        ) : (
-                            blocked.map((u) => (
-                                <div key={u} className="profile-friend-row">
-                                    <img
-                                        className="profile-friend-avatar"
-                                        src={`https://i.pravatar.cc/40?u=${u}`}
-                                        alt={u}
-                                    />
-                                    <span className="profile-friend-name">{u}</span>
-                                    <div className="profile-friend-actions">
-                                        <button
-                                            className="profile-friend-btn accept"
-                                            onClick={() => dispatch(unblockUser({ username: u }))}
-                                            disabled={loading}
-                                        >
-                                            Unblock
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                        {error && <p className="profile-error">{error}</p>}
-                    </div>
-                )}
                 {/* ── Options Tab ── */}
-                {tab === 'Options' && (
-                    <div className="profile-section">
-                        {/* ── Sound Effects ── */}
-                        <div className="profile-notif-section">
-                            <div className="profile-subsection-title" style={{ marginBottom: '0.5rem' }}>
-                                Sound Effects
-                            </div>
-
-                            {/* Mute toggle */}
-                            <div className="profile-toggle-row">
-                                <span className="profile-toggle-label">
-                                    Sound effects
-                                    <span className="profile-toggle-hint">Plays sounds for attacks, abilities &amp; turns</span>
-                                </span>
-                                <button
-                                    type="button"
-                                    className={`profile-toggle ${localVolume > 0 ? 'on' : 'off'}`}
-                                    onClick={() => {
-                                        const next = localVolume > 0 ? 0 : (soundVolume > 0 ? soundVolume : 0.7);
-                                        setLocalVolume(next);
-                                        sounds.setVolume(next);
-                                        dispatch(setSoundVolume(next));
-                                    }}
-                                    aria-label="Toggle sound effects"
-                                >
-                                    <span className="profile-toggle-knob" />
-                                </button>
-                            </div>
-
-                            {/* Volume slider */}
-                            <div className="profile-volume-row">
-                                <span className="profile-volume-label">Volume</span>
-                                <div className="profile-volume-slider-wrap">
-                                    <span className="profile-volume-icon">🔇</span>
-                                    <input
-                                        className="profile-volume-slider"
-                                        type="range"
-                                        min="0"
-                                        max="1"
-                                        step="0.05"
-                                        value={localVolume}
-                                        onChange={(e) => {
-                                            const v = parseFloat(e.target.value);
-                                            setLocalVolume(v);
-                                            sounds.setVolume(v);
-                                            dispatch(setSoundVolume(v));
-                                        }}
-                                    />
-                                    <span className="profile-volume-icon">🔊</span>
-                                </div>
-                                <span className="profile-volume-pct">{Math.round(localVolume * 100)}%</span>
-                            </div>
-
-                            <button
-                                type="button"
-                                className="profile-save-btn"
-                                style={{ marginTop: '0.25rem' }}
-                                onClick={() => sounds.hit()}
-                            >
-                                Test Sound
-                            </button>
-                        </div>
-
-                        {/* ── Background Music ── */}
-                        <div className="profile-notif-section" style={{ marginTop: '1.25rem' }}>
-                            <div className="profile-subsection-title" style={{ marginBottom: '0.5rem' }}>
-                                Background Music
-                            </div>
-
-                            {/* Play / pause toggle */}
-                            <div className="profile-toggle-row">
-                                <span className="profile-toggle-label">
-                                    Music
-                                    <span className="profile-toggle-hint">Background playlist during gameplay</span>
-                                </span>
-                                <button
-                                    type="button"
-                                    className={`profile-toggle ${music.playing ? 'on' : 'off'}`}
-                                    onClick={() => music.toggle()}
-                                    aria-label="Toggle background music"
-                                >
-                                    <span className="profile-toggle-knob" />
-                                </button>
-                            </div>
-
-                            <div className="profile-toggle-row">
-                                <span className="profile-toggle-label">
-                                    Card dance
-                                    <span className="profile-toggle-hint">In-game board cards react to music</span>
-                                </span>
-                                <button
-                                    type="button"
-                                    className={`profile-toggle ${cardDanceEnabled ? 'on' : 'off'}`}
-                                    onClick={() => dispatch(setCardDanceEnabled(!cardDanceEnabled))}
-                                    aria-label="Toggle card dance"
-                                >
-                                    <span className="profile-toggle-knob" />
-                                </button>
-                            </div>
-
-                            <div className="profile-volume-row">
-                                <span className="profile-volume-label">Card dance intensity</span>
-                                <div className="profile-volume-slider-wrap">
-                                    <span className="profile-volume-icon">🕺</span>
-                                    <input
-                                        className="profile-volume-slider"
-                                        type="range"
-                                        min="0.1"
-                                        max="1.5"
-                                        step="0.05"
-                                        value={cardDanceIntensity}
-                                        disabled={!cardDanceEnabled}
-                                        onChange={(e) => dispatch(setCardDanceIntensity(parseFloat(e.target.value)))}
-                                    />
-                                    <span className="profile-volume-icon">🔥</span>
-                                </div>
-                                <span className="profile-volume-pct">{Math.round(cardDanceIntensity * 100)}%</span>
-                            </div>
-
-                            {/* Music volume slider */}
-                            <div className="profile-volume-row">
-                                <span className="profile-volume-label">Volume</span>
-                                <div className="profile-volume-slider-wrap">
-                                    <span className="profile-volume-icon">🔇</span>
-                                    <input
-                                        className="profile-volume-slider"
-                                        type="range"
-                                        min="0"
-                                        max="1"
-                                        step="0.05"
-                                        value={music.volume}
-                                        onChange={(e) => music.setVolume(parseFloat(e.target.value))}
-                                    />
-                                    <span className="profile-volume-icon">🔊</span>
-                                </div>
-                                <span className="profile-volume-pct">{Math.round(music.volume * 100)}%</span>
-                            </div>
-
-                            {/* Playback controls */}
-                            <div className="music-controls">
-                                <button className="music-ctrl-btn" onClick={() => music.prev()} title="Previous">⏮</button>
-                                <button className="music-ctrl-btn music-ctrl-play" onClick={() => music.toggle()} title={music.playing ? 'Pause' : 'Play'}>
-                                    {music.playing ? '⏸' : '▶'}
-                                </button>
-                                <button className="music-ctrl-btn" onClick={() => music.next()} title="Next">⏭</button>
-                            </div>
-
-                            {/* Playlist */}
-                            <div className="music-track-list">
-                                {music.tracks.map((track, i) => (
-                                    <button
-                                        key={i}
-                                        className={`music-track-item${i === music.currentIndex ? ' active' : ''}`}
-                                        onClick={() => {
-                                            music.setTrack(i);
-                                            if (!music.playing) music.toggle();
-                                        }}
-                                    >
-                                        <span className="music-track-icon">
-                                            {i === music.currentIndex && music.playing ? '🎵' : '🎶'}
-                                        </span>
-                                        <span className="music-track-name">{track.name}</span>
-                                        {i === music.currentIndex && (
-                                            <span className="music-track-badge">{music.playing ? 'Now Playing' : 'Paused'}</span>
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="profile-notif-section" style={{ marginTop: '1.25rem' }}>
-                            <div className="profile-subsection-title" style={{ marginBottom: '0.5rem' }}>
-                                Content
-                            </div>
-
-                            <div className="profile-toggle-row">
-                                <span className="profile-toggle-label">
-                                    Censor adults-only cards
-                                    <span className="profile-toggle-hint">Hide adults-only card art and text in game, deck builder, and card views</span>
-                                </span>
-                                <button
-                                    type="button"
-                                    className={`profile-toggle ${censorAdultCards ? 'on' : 'off'}`}
-                                    onClick={() => {
-                                        const next = !censorAdultCards;
-                                        dispatch(setCensorAdultCards(next));
-                                        dispatch(updateProfile({ censorAdultCards: next }));
-                                    }}
-                                    aria-label="Toggle adults-only card censorship"
-                                >
-                                    <span className="profile-toggle-knob" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {tab === 'Options' && <OptionsPanel />}
             </div>
         </div>
     );
