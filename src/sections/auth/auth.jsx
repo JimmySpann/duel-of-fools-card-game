@@ -1,14 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { login, signup, clearAuthError } from '../../features/auth/authSlice';
 import musicManager from '../../features/sound/musicManager';
 import useMusicPlayer from '../../features/sound/useMusicPlayer';
 import './auth.css';
 
-const Auth = () => {
+const Auth = ({ initialMode = 'login' }) => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { loading, error } = useSelector((s) => s.auth);
-    const [mode, setMode] = useState('login'); // 'login' | 'signup'
+    const [mode, setMode] = useState(initialMode); // 'login' | 'signup'
+
+    // Sync mode when navigating between /login and /signup
+    useEffect(() => {
+        setMode(initialMode);
+    }, [initialMode]);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
@@ -45,9 +52,9 @@ const Auth = () => {
     };
 
     const switchMode = (m) => {
-        setMode(m);
         setLocalError('');
         dispatch(clearAuthError());
+        navigate(m === 'signup' ? '/signup' : '/login');
     };
 
     const handleSubmit = (e) => {
@@ -55,9 +62,13 @@ const Auth = () => {
         setLocalError('');
         if (mode === 'signup') {
             if (password !== confirm) return setLocalError('Passwords do not match');
-            dispatch(signup({ username, password }));
+            dispatch(signup({ username, password })).then((res) => {
+                if (!res.error) navigate('/');
+            });
         } else {
-            dispatch(login({ username, password }));
+            dispatch(login({ username, password })).then((res) => {
+                if (!res.error) navigate('/');
+            });
         }
     };
 

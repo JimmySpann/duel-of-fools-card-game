@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { endTurn, resetGame, cancelSelection, setGameState, forfeitCurrentPlayer } from './database/cardGameSlice';
 import { getSocket } from '../../features/chat/socket';
 import { leaveSession } from '../../features/sessions/sessionsSlice';
@@ -21,6 +22,7 @@ import './card-game.css';
 
 const CardGame = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { players, currentTurn, phase, gameOver, winner, log, lastHitEvents } = useSelector((state) => state.cardGame);
     const turnStartedAt = useSelector((state) => state.cardGame.turnStartedAt);
     const gameSettings = useSelector((state) => state.cardGame.settings);
@@ -211,6 +213,7 @@ const CardGame = () => {
                         onClick={() => {
                             dispatch(resetGame());
                             dispatch(leaveSession());
+                            navigate('/');
                         }}
                     >
                         Back
@@ -226,7 +229,7 @@ const CardGame = () => {
                 currentPlayerName={gamePlayers.find((p) => p.id === currentTurn)?.name}
                 phase={phase}
                 isMyTurn={isMyTurn}
-                onLobbies={() => dispatch(leaveSession())}
+                onLobbies={() => { dispatch(leaveSession()); navigate('/'); }}
                 onProfileOpen={() => setShowProfile(true)}
                 onSignOut={() => dispatch(logout())}
                 onBriefToggle={() => { setShowBrief((v) => !v); setShowChat(false); }}

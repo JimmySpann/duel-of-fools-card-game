@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     fetchSessions,
     createSession,
@@ -7,7 +8,6 @@ import {
     joinSession,
     joinSessionById,
     startSession,
-    pollSession,
     updateSettings,
     updateTeam,
     addCpu,
@@ -51,7 +51,7 @@ const defaultMaxBattlers = (count) => {
 const inviteLinkFromCode = (joinCode) => `${window.location.origin}/?join=${encodeURIComponent(joinCode || '')}`;
 
 // ── Lobby view ─────────────────────────────────────────────────────────────────
-const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading, error, dispatch }) => {
+export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading, error, dispatch }) => {
     const isHost = session.host.username === username;
     const isPublic = session.isPublic !== false;
     const settings = session.settings || {};
@@ -525,27 +525,32 @@ const SessionCard = ({ session, isParticipant, openSlots, isMyTurn, currentTurnN
 };
 
 // ── Sessions list view ─────────────────────────────────────────────────────────
-const Sessions = () => {
+const Sessions = ({ initialModal } = {}) => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const location = useLocation();
     const { list, activeSession, loading, error } = useSelector((s) => s.sessions);
     const { username } = useSelector((s) => s.auth);
     const { displayName, avatarUrl, friendRequests } = useSelector((s) => s.profile);
     const unreadLobby = useSelector((s) => s.chat.unreadLobby);
     const unreadDm = useSelector((s) => s.chat.unreadDm);
 
-    const [view, setView] = useState('list'); // 'list' | 'create' | 'join' | 'preview' | 'lobby'
+    const [view, setView] = useState('list'); // 'list' | 'create' | 'join' | 'preview'
     const [newName, setNewName] = useState('');
     const [newSessionIsPublic, setNewSessionIsPublic] = useState(true);
     const [joinCode, setJoinCode] = useState('');
     const [previewSession, setPreviewSession] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
-    const [showGallery, setShowGallery] = useState(false);
-    const [showDeckBuilder, setShowDeckBuilder] = useState(false);
-    const [showCustomCards, setShowCustomCards] = useState(false);
-    const [showRules, setShowRules] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
     const inviteJoinAttemptedRef = useRef(false);
+
+    // Derive modal visibility from URL pathname
+    const pathname = location.pathname;
+    const showGallery = pathname === '/gallery';
+    const showDeckBuilder = pathname === '/deck-builder';
+    const showCustomCards = pathname === '/card-creator';
+    const showRules = pathname === '/rules';
 
     const [brandPulse, setBrandPulse] = useState(1);
     useEffect(() => {
@@ -582,28 +587,21 @@ const Sessions = () => {
 
         dispatch(clearSessionError());
         dispatch(joinSession({ joinCode: join })).then((res) => {
-            if (!res.error) setView('lobby');
+            if (!res.error) navigate(`/game/${res.payload._id}`);
         });
-    }, [dispatch]);
+    }, [dispatch, navigate]);
 
-    // Poll active session in lobby
-    useEffect(() => {
-        if (view !== 'lobby' || !activeSession) return;
-        const id = setInterval(() => {
-            dispatch(pollSession({ sessionId: activeSession._id }));
-        }, POLL_INTERVAL);
-        return () => clearInterval(id);
-    }, [view, activeSession, dispatch]);
+    // Poll active session in lobby — handled by GamePage in App.js
 
     const handleCreate = useCallback(
         (e) => {
             e.preventDefault();
             if (!newName.trim()) return;
             dispatch(createSession({ name: newName.trim(), isPublic: newSessionIsPublic })).then((res) => {
-                if (!res.error) setView('lobby');
+                if (!res.error) navigate(`/game/${res.payload._id}`);
             });
         },
-        [dispatch, newName, newSessionIsPublic]
+        [dispatch, newName, newSessionIsPublic, navigate]
     );
 
     const handleJoin = useCallback(
@@ -611,18 +609,18 @@ const Sessions = () => {
             e.preventDefault();
             if (!joinCode.trim()) return;
             dispatch(joinSession({ joinCode: joinCode.trim() })).then((res) => {
-                if (!res.error) setView('lobby');
+                if (!res.error) navigate(`/game/${res.payload._id}`);
             });
         },
-        [dispatch, joinCode]
+        [dispatch, joinCode, navigate]
     );
 
     const handleEnterSession = useCallback(
         (session) => {
             dispatch(setActiveSession(session));
-            setView('lobby');
+            navigate(`/game/${session._id}`);
         },
-        [dispatch]
+        [dispatch, navigate]
     );
 
     const handleBack = useCallback(() => {
@@ -677,7 +675,7 @@ const Sessions = () => {
                             disabled={loading}
                             onClick={() => {
                                 dispatch(joinSessionById({ sessionId: ps._id })).then((res) => {
-                                    if (!res.error) setView('lobby');
+                                    if (!res.error) navigate(`/game/${ps._id}`);
                                 });
                             }}
                         >
@@ -685,38 +683,6 @@ const Sessions = () => {
                         </button>
                     </div>
                 </div>
-                <DMPanel />
-            </div>
-        );
-    }
-
-    // ── Lobby ────────────────────────────────────────────────────────────────────
-    if (view === 'lobby' && activeSession) {
-        return (
-            <div className="sessions-backdrop">
-                <Lobby
-                    session={activeSession}
-                    username={username}
-                    loading={loading}
-                    error={error}
-                    onBack={handleBack}
-                    onStart={() => {
-                        dispatch(startSession({ sessionId: activeSession._id })).then((res) => {
-                            if (res.payload?.state) dispatch(setGameState(res.payload.state));
-                        });
-                    }}
-                    onLeave={() => {
-                        dispatch(leaveSessionLobby({ sessionId: activeSession._id })).then((res) => {
-                            if (!res.error) handleBack();
-                        });
-                    }}
-                    onDelete={() => {
-                        dispatch(deleteSession({ sessionId: activeSession._id })).then((res) => {
-                            if (!res.error) handleBack();
-                        });
-                    }}
-                    dispatch={dispatch}
-                />
                 <DMPanel />
             </div>
         );
@@ -860,16 +826,16 @@ const Sessions = () => {
                     </button>
                 </div>
                 <div className="sessions-secondary-actions">
-                    <button className="sessions-action-btn" onClick={() => setShowRules(true)}>
+                    <button className="sessions-action-btn" onClick={() => navigate('/rules')}>
                         📜 Rules
                     </button>
-                    <button className="sessions-action-btn" onClick={() => setShowGallery(true)}>
+                    <button className="sessions-action-btn" onClick={() => navigate('/gallery')}>
                         📖 Gallery
                     </button>
-                    <button className="sessions-action-btn" onClick={() => setShowDeckBuilder(true)}>
+                    <button className="sessions-action-btn" onClick={() => navigate('/deck-builder')}>
                         🃏 Deck Builder
                     </button>
-                    <button className="sessions-action-btn" onClick={() => setShowCustomCards(true)}>
+                    <button className="sessions-action-btn" onClick={() => navigate('/card-creator')}>
                         🧪 Create Cards
                     </button>
                 </div>
@@ -911,18 +877,18 @@ const Sessions = () => {
                 </section>
             </div>
             {showProfile && <Profile onClose={() => setShowProfile(false)} />}
-            {showRules && <RulesModal onClose={() => setShowRules(false)} title="Rules Deep Dive" />}
-            {showGallery && <GalleryModal onClose={() => setShowGallery(false)} />}
+            {showRules && <RulesModal onClose={() => navigate('/')} title="Rules Deep Dive" />}
+            {showGallery && <GalleryModal onClose={() => navigate('/')} />}
             {showDeckBuilder && (
                 <DeckBuilderModal
-                    onClose={() => setShowDeckBuilder(false)}
-                    onConfirm={() => setShowDeckBuilder(false)}
+                    onClose={() => navigate('/')}
+                    onConfirm={() => navigate('/')}
                     initialDeck={[]}
                     loading={false}
                     error={null}
                 />
             )}
-            {showCustomCards && <CustomCardModal onClose={() => setShowCustomCards(false)} />}
+            {showCustomCards && <CustomCardModal onClose={() => navigate('/')} />}
             <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
         </div>
     );
