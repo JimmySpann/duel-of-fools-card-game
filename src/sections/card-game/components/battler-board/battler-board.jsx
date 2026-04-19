@@ -11,9 +11,8 @@ const DANCE_PEAK_BOOST = 1.95;
 const DANCE_MAX_X_TRAVEL = 34;
 const DANCE_MAX_LIFT = 18;
 const DANCE_MAX_ROTATION = 22;
-const DANCE_Y_SPIN_INTERVAL = 32;  // beats between pirouette windows (~every 8 bars)
-const DANCE_Y_SPIN_DURATION = 3.2; // beats for a full 360 Y-spin (slow pirouette)
-const DANCE_Y_SPIN_THRESHOLD = 0.72; // min energy required to trigger
+const DANCE_FLIP_DURATION = 1.2;  // seconds per single 360° scheduled flip
+const DANCE_FLIP_PAUSE = 0.5;  // seconds gap between flips in a sequence
 
 const TWO_PI = Math.PI * 2;
 const DANCE_CHOREOGRAPHIES = [
@@ -324,7 +323,7 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
     const [danceTrackProgress, setDanceTrackProgress] = useState(0);
     const danceSmoothRef = useRef(0);
     const rafRef = useRef(null);
-    const ySpinRef = useRef({});
+    const flipScheduleRef = useRef({ trackStartTime: 0, events: [] });
 
     useEffect(() => {
         if (!lastHitEvents?.length) return;
@@ -382,6 +381,20 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
     }, [cardDanceEnabled, cards.length]);
+
+    // Generate a new flip schedule whenever the track changes
+    useEffect(() => {
+        if (!cardDanceEnabled) return;
+        const trackStartTime = musicManager.getCurrentTime();
+        const events = [];
+        let t = 10 + Math.random() * 20;
+        while (t < 280) {
+            const count = 1 + Math.floor(Math.random() * 3);
+            events.push({ startTime: t, count });
+            t += 10 + Math.random() * 20;
+        }
+        flipScheduleRef.current = { trackStartTime, events };
+    }, [danceTrackIndex, cardDanceEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const animClass = (card) => {
         const a = animations[card.id];
@@ -479,33 +492,38 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const bassJump = bassPulse * (profile.bassJump ?? 2.7);
                             const liftPx = (liftBase + liftKick + reboundLift + bassJump + patternMotion.extraY * 0.62) * effectiveEnergy * intensity;
 
-                            const spinPulse =
-                                effectiveEnergy >= profile.spinEnergyThreshold
-                                    ? beatEnvelope(trackBeats * profile.spinBeatFreq + phase / TWO_PI + profile.spinLag, profile.spinWidth)
-                                    : 0;
-                            const spinDirection = ((Math.floor(trackBeats) + index) % 2 === 0 ? 1 : -1);
-                            const spinDeg = spinPulse * profile.spinDeg * 0.56 * spinDirection * (0.56 + barline * 0.44 + patternMotion.spinBoost) * intensity;
-
-                            // Y-axis pirouette — one smooth full spin every ~8 bars; cumulative angle prevents snap-back glitch
-                            const ySpinBeat = trackBeats + phase / TWO_PI;
-                            const ySpinSlot = Math.floor(ySpinBeat / DANCE_Y_SPIN_INTERVAL);
-                            const ySpinOffset = ySpinBeat - ySpinSlot * DANCE_Y_SPIN_INTERVAL;
-                            const ySpinDir = (ySpinSlot + index) % 2 === 0 ? 1 : -1;
-                            const isSpinActive = effectiveEnergy >= DANCE_Y_SPIN_THRESHOLD && ySpinOffset < DANCE_Y_SPIN_DURATION;
-                            const ySpinKey = card.id ?? index;
-                            if (!ySpinRef.current[ySpinKey]) ySpinRef.current[ySpinKey] = { slot: -1, baseAngle: 0, prevSpinning: false, dir: 1 };
-                            const ys = ySpinRef.current[ySpinKey];
-                            if (ySpinSlot !== ys.slot) { ys.slot = ySpinSlot; ys.dir = ySpinDir; }
-                            if (!isSpinActive && ys.prevSpinning) { ys.baseAngle += 360 * ys.dir; }
-                            ys.prevSpinning = isSpinActive;
-                            const spinEase = (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-                            const rotateYDeg = isSpinActive ? ys.baseAngle + spinEase(ySpinOffset / DANCE_Y_SPIN_DURATION) * 360 * ys.dir : ys.baseAngle;
+                            // Scheduled flip sequences — 1-3 flips per event, every 10-30s, staggered per card
+                            const flipTimeInTrack = danceAudioTime - flipScheduleRef.current.trackStartTime;
+                            const cardFlipStagger = (phase / TWO_PI) * 8; // up to 8s offset per card
+                            const cardFlipTime = Math.max(0, flipTimeInTrack - cardFlipStagger);
+                            let flipAngle = 0;
+                            let isFlipActive = false;
+                            for (const event of flipScheduleRef.current.events) {
+                                const cycleDur = DANCE_FLIP_DURATION + DANCE_FLIP_PAUSE;
+                                const seqDur = event.count * DANCE_FLIP_DURATION + (event.count - 1) * DANCE_FLIP_PAUSE;
+                                if (cardFlipTime >= event.startTime + seqDur) {
+                                    flipAngle += event.count * 360;
+                                } else if (cardFlipTime >= event.startTime) {
+                                    isFlipActive = true;
+                                    const elapsed = cardFlipTime - event.startTime;
+                                    const completedFlips = Math.min(Math.floor(elapsed / cycleDur), event.count - 1);
+                                    flipAngle += completedFlips * 360;
+                                    const flipElapsed = elapsed - completedFlips * cycleDur;
+                                    if (flipElapsed < DANCE_FLIP_DURATION) {
+                                        const ft = flipElapsed / DANCE_FLIP_DURATION;
+                                        flipAngle += (ft < 0.5 ? 2 * ft * ft : -1 + (4 - 2 * ft) * ft) * 360;
+                                    } else {
+                                        flipAngle += 360;
+                                    }
+                                    break;
+                                }
+                            }
 
                             const baseRotateDeg =
                                 ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick) + (stepShape * profile.leanDeg) + (patternMotion.extraRot * 0.72)) *
                                 effectiveEnergy *
                                 intensity;
-                            const rotateDeg = baseRotateDeg + spinDeg;
+                            const rotateDeg = baseRotateDeg;
 
                             const scale =
                                 1 +
@@ -515,10 +533,9 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const safeX = clamp(slideX, -DANCE_MAX_X_TRAVEL * intensity, DANCE_MAX_X_TRAVEL * intensity);
                             const safeLift = clamp(liftPx, 0, DANCE_MAX_LIFT * intensity);
                             const safeRotate = clamp(rotateDeg, -DANCE_MAX_ROTATION, DANCE_MAX_ROTATION);
-                            // rotateYDeg is a full 360 — intentionally not clamped so the pirouette completes smoothly
 
                             return {
-                                transform: `perspective(760px) translateX(${safeX.toFixed(2)}px) translateY(${-safeLift.toFixed(2)}px) rotateY(${rotateYDeg.toFixed(2)}deg) rotate(${safeRotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
+                                transform: `perspective(760px) translateX(${safeX.toFixed(2)}px) translateY(${-safeLift.toFixed(2)}px) rotateY(${flipAngle.toFixed(2)}deg) rotate(${safeRotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
                             };
                         })()}
                     >
