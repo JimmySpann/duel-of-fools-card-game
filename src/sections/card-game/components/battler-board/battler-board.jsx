@@ -324,6 +324,8 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
     const danceSmoothRef = useRef(0);
     const rafRef = useRef(null);
     const flipScheduleRef = useRef({ trackStartTime: 0, events: [] });
+    // Per-card flip angle tracking: advances at a max rate so audio time jumps never cause instant spins
+    const flipAngleRef = useRef({});   // { [cardKey]: { angle: number, lastTime: number } }
 
     useEffect(() => {
         if (!lastHitEvents?.length) return;
@@ -493,31 +495,51 @@ const CardLayout = ({ cards, onCardClick, highlight, playerId, showExhausted = t
                             const liftPx = (liftBase + liftKick + reboundLift + bassJump + patternMotion.extraY * 0.62) * effectiveEnergy * intensity;
 
                             // Scheduled flip sequences — 1-3 flips per event, every 10-30s, staggered per card
+                            // Target angle is computed from audio time; actual angle is rate-limited to
+                            // 360°/DANCE_FLIP_DURATION per second so audio jumps never produce instant spins.
                             const flipTimeInTrack = danceAudioTime - flipScheduleRef.current.trackStartTime;
                             const cardFlipStagger = (phase / TWO_PI) * 8; // up to 8s offset per card
                             const cardFlipTime = Math.max(0, flipTimeInTrack - cardFlipStagger);
-                            let flipAngle = 0;
+                            let targetFlipAngle = 0;
                             let isFlipActive = false;
                             for (const event of flipScheduleRef.current.events) {
                                 const cycleDur = DANCE_FLIP_DURATION + DANCE_FLIP_PAUSE;
                                 const seqDur = event.count * DANCE_FLIP_DURATION + (event.count - 1) * DANCE_FLIP_PAUSE;
                                 if (cardFlipTime >= event.startTime + seqDur) {
-                                    flipAngle += event.count * 360;
+                                    targetFlipAngle += event.count * 360;
                                 } else if (cardFlipTime >= event.startTime) {
                                     isFlipActive = true;
                                     const elapsed = cardFlipTime - event.startTime;
                                     const completedFlips = Math.min(Math.floor(elapsed / cycleDur), event.count - 1);
-                                    flipAngle += completedFlips * 360;
+                                    targetFlipAngle += completedFlips * 360;
                                     const flipElapsed = elapsed - completedFlips * cycleDur;
                                     if (flipElapsed < DANCE_FLIP_DURATION) {
                                         const ft = flipElapsed / DANCE_FLIP_DURATION;
-                                        flipAngle += (ft < 0.5 ? 2 * ft * ft : -1 + (4 - 2 * ft) * ft) * 360;
+                                        targetFlipAngle += (ft < 0.5 ? 2 * ft * ft : -1 + (4 - 2 * ft) * ft) * 360;
                                     } else {
-                                        flipAngle += 360;
+                                        targetFlipAngle += 360;
                                     }
                                     break;
                                 }
                             }
+
+                            // Rate-limit: advance stored angle toward target at max 360°/DANCE_FLIP_DURATION per second
+                            const flipKey = card.id ?? index;
+                            const now = performance.now() / 1000;
+                            if (!flipAngleRef.current[flipKey]) {
+                                flipAngleRef.current[flipKey] = { angle: targetFlipAngle, lastTime: now };
+                            }
+                            const fa = flipAngleRef.current[flipKey];
+                            const dtFlip = Math.min(now - fa.lastTime, 0.1); // cap delta to 100ms to survive tab-hidden wakeup
+                            fa.lastTime = now;
+                            const maxStep = (360 / DANCE_FLIP_DURATION) * dtFlip;
+                            const diff = targetFlipAngle - fa.angle;
+                            if (Math.abs(diff) <= maxStep) {
+                                fa.angle = targetFlipAngle;
+                            } else {
+                                fa.angle += Math.sign(diff) * maxStep;
+                            }
+                            const flipAngle = fa.angle;
 
                             const baseRotateDeg =
                                 ((primaryWave * profile.rotSwing) + (accentWave * onBeat * profile.rotKick) + (stepShape * profile.leanDeg) + (patternMotion.extraRot * 0.72)) *
