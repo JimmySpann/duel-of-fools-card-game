@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import defaultCards from '../card-game/database/cards';
 import { AI_MODEL_PRESETS, generateCardConcept, generateCardDraft } from './ai/cardAIGenerator';
-import { FEATURES } from '../config/features';
+import { FEATURES } from '../../config/features';
 
 const clampInt = (value, min, max) => {
     const n = Number(value);

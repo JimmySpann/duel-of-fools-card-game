@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import defaultCards from '../card-game/database/cards';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
-import { FEATURES } from '../config/features';
+import { FEATURES } from '../../config/features';
 
 const ELEMENT_COLORS = {
     fire: { bg: '#7c1a00', color: '#ff7a40', border: '#b04000' },
