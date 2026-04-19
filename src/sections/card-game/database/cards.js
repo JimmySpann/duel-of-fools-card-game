@@ -186,7 +186,7 @@ const cards = [
         ],
         actions: [
             { name: 'Guardian Strike', actionInfo: 'Physical Damage', description: 'A reliable melee attack.', limit: 10, usesRemaining: 10 },
-            { name: 'Fortify', actionInfo: 'DEF +2 (Self)', description: 'Raises own defense for 2 turns.', limit: 5, usesRemaining: 5 },
+            { name: 'Guard Up', actionInfo: 'DEF +2 (Self)', description: 'Raises own defense for 2 turns.', limit: 5, usesRemaining: 5 },
         ],
         defense: 7, agility: 5, attack: 6, evasion: 5, health: 11, category: 'official v1',
     },

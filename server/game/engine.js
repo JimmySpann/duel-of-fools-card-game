@@ -194,6 +194,14 @@ const getEffectiveEva = (card) => {
     return Math.max(0, eva);
 };
 
+const getEffectiveAtk = (card) => {
+    let atk = card.attack || 5;
+    for (const s of card.statusEffects || []) {
+        if (s.type === 'atk_up') atk += s.value;
+    }
+    return Math.max(0, atk);
+};
+
 // ── Event helpers ─────────────────────────────────────────────────────────────
 
 const pushHitEvent = (state, defenderPlayerId, cardId, damage, type, cardName, healthAfter, maxHealth) => {
@@ -267,7 +275,7 @@ const resolveBasicAttack = (attacker, defender, defenderPlayer, state) => {
         return { hit: false, damage: 0 };
     }
 
-    let damage = Math.max(1, (attacker.attack || 5) - getEffectiveDef(defender));
+    let damage = Math.max(1, getEffectiveAtk(attacker) - getEffectiveDef(defender));
 
     const focused = getStatus(attacker, 'focused');
     if (focused) {
@@ -335,6 +343,32 @@ const ABILITY_DEFS = {
     'Venom Spit': { targetType: 'enemyCard', effects: [{ type: 'status', status: 'poisoned', value: 1, duration: 3 }] },
     'Lacerate': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true, onHitStatus: { status: 'bleeding', value: 1, duration: 2 } }] },
     'Noxious Cloud': { targetType: 'allEnemies', effects: [{ type: 'status', status: 'poisoned', value: 1, duration: 2 }] },
+    // ── Dripwarts pack ───────────────────────────────────────────────────────
+    'Expelli-Drip-Mus': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 0.7 }, { type: 'status', status: 'frozen', value: 1, duration: 1 }] },
+    'Nimbus 2000 Retro': { targetType: 'self', effects: [{ type: 'status', status: 'eva_up', value: 5, duration: 2 }] },
+    'Wand Flex': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 1.3, ignoreDef: true }] },
+    'Wingardium Lev-I-O-Sa': { targetType: 'enemyCard', effects: [{ type: 'status', status: 'def_down', value: 4, duration: 2 }] },
+    'Study Break': { targetType: 'self', effects: [{ type: 'healSelf', amount: 4 }, { type: 'cleanse', debuffs: ['burned', 'poisoned', 'bleeding', 'frozen', 'def_down'] }] },
+    'Sectum-Sempra-Drip': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true, onHitStatus: { status: 'bleeding', value: 3, duration: 3 } }] },
+    'Potions Master': { targetType: 'self', effects: [{ type: 'status', status: 'def_up', value: 2, duration: 3 }, { type: 'status', status: 'eva_up', value: 2, duration: 2 }, { type: 'healSelf', amount: 3 }] },
+    'Avada Kedavra': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 3.5, ignoreDef: true }] },
+    'Snake Walk': { targetType: 'self', effects: [{ type: 'status', status: 'invisible', value: 1, duration: 1 }] },
+    'Firework Show': { targetType: 'allEnemies', effects: [{ type: 'damage', multiplier: 0.8, ignoreEvasion: true }, { type: 'status', status: 'burned', value: 1, duration: 2 }] },
+    'Points to Gryffindor': { targetType: 'allAllies', effects: [{ type: 'status', status: 'atk_up', value: 3, duration: 3 }] },
+    'Umbrella Poke': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true, defPiercing: 3 }] },
+    'Release the Hounds': { targetType: 'allEnemies', effects: [{ type: 'damage', multiplier: 0.6 }, { type: 'status', status: 'bleeding', value: 1, duration: 2 }] },
+    'Pop a Cap': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 1.2, ignoreEvasion: true }] },
+    'Tactical Apparition': { targetType: 'self', effects: [{ type: 'status', status: 'invulnerable', value: 1, duration: 1 }] },
+    'Mag Dump': { targetType: 'allEnemies', effects: [{ type: 'damage', multiplier: 0.4, floor: true, ignoreEvasion: true, repeat: 4, randomTarget: true }] },
+    'Silver Tongue': { targetType: 'enemyCard', effects: [{ type: 'status', status: 'def_down', value: 3, duration: 3 }] },
+    'Cane Strike': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true, onHitStatus: { status: 'frozen', value: 1, duration: 1 } }] },
+    'Crucial Strike': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 2.2, ignoreDef: true }] },
+    'Dagger Toss': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 1.2, ignoreEvasion: true }] },
+    'Slug Vomit Trap': { targetType: 'enemyCard', effects: [{ type: 'status', status: 'poisoned', value: 2, duration: 3 }, { type: 'status', status: 'frozen', value: 1, duration: 1 }] },
+    'Broken Wand Blast': { targetType: 'enemyCard', effects: [{ type: 'damage', multiplier: 2.2, ignoreDef: true }] },
+    // ── Vanguard Knight ──────────────────────────────────────────────────────
+    'Guardian Strike': { targetType: 'enemyCard', effects: [{ type: 'damage', useBasicAttack: true }] },
+    'Guard Up': { targetType: 'self', effects: [{ type: 'status', status: 'def_up', value: 2, duration: 2 }] },
 };
 
 // Derive ABILITY_TARGETS from definitions (used by initiateAbility routing)
@@ -478,7 +512,7 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
                         return;
                     }
                 }
-                const atk = caster.attack || 5;
+                const atk = getEffectiveAtk(caster);
                 const mult = effect.multiplier ?? 1;
                 const rawAtk = mult === 1 ? atk
                     : effect.floor ? Math.floor(atk * mult)
