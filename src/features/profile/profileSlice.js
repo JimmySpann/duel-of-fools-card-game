@@ -91,9 +91,10 @@ const loadNotifPrefs = () => {
             cardDanceEnabled: localStorage.getItem('cg_cardDanceEnabled') !== 'false',
             cardDanceIntensity: Math.max(0.1, Math.min(1.5, parseFloat(localStorage.getItem('cg_cardDanceIntensity') ?? '0.6'))),
             censorAdultCards: localStorage.getItem('cg_censorAdultCards') !== 'false',
+            cardFlipEnabled: localStorage.getItem('cg_cardFlipEnabled') !== 'false',
         };
     } catch {
-        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7, cardDanceEnabled: true, cardDanceIntensity: 0.6, censorAdultCards: true };
+        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7, cardDanceEnabled: true, cardDanceIntensity: 0.6, censorAdultCards: true, cardFlipEnabled: true };
     }
 };
 
@@ -138,6 +139,10 @@ const profileSlice = createSlice({
         setCensorAdultCards(state, action) {
             state.censorAdultCards = !!action.payload;
             try { localStorage.setItem('cg_censorAdultCards', state.censorAdultCards); } catch { }
+        },
+        setCardFlipEnabled(state, action) {
+            state.cardFlipEnabled = !!action.payload;
+            try { localStorage.setItem('cg_cardFlipEnabled', state.cardFlipEnabled); } catch { }
         },
         resetProfile(state) {
             state.displayName = '';
@@ -222,5 +227,5 @@ const profileSlice = createSlice({
     },
 });
 
-export const { clearProfileError, resetProfile, setNotifyTurn, setNotifyDM, setNotifyLobby, setSoundVolume, setCardDanceEnabled, setCardDanceIntensity, setCensorAdultCards } = profileSlice.actions;
+export const { clearProfileError, resetProfile, setNotifyTurn, setNotifyDM, setNotifyLobby, setSoundVolume, setCardDanceEnabled, setCardDanceIntensity, setCensorAdultCards, setCardFlipEnabled } = profileSlice.actions;
 export default profileSlice.reducer;

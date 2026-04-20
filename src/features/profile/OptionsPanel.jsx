@@ -6,13 +6,14 @@ import {
     setCardDanceEnabled,
     setCardDanceIntensity,
     setCensorAdultCards,
+    setCardFlipEnabled,
 } from './profileSlice';
 import sounds from '../sound/soundManager';
 import useMusicPlayer from '../sound/useMusicPlayer';
 
 const OptionsPanel = () => {
     const dispatch = useDispatch();
-    const { soundVolume, cardDanceEnabled, cardDanceIntensity, censorAdultCards } = useSelector((s) => s.profile);
+    const { soundVolume, cardDanceEnabled, cardDanceIntensity, cardFlipEnabled, censorAdultCards } = useSelector((s) => s.profile);
     const [localVolume, setLocalVolume] = useState(soundVolume ?? 0.7);
     const music = useMusicPlayer();
 
@@ -135,6 +136,22 @@ const OptionsPanel = () => {
                         <span className="profile-volume-icon">🔥</span>
                     </div>
                     <span className="profile-volume-pct">{Math.round(cardDanceIntensity * 100)}%</span>
+                </div>
+
+                <div className="profile-toggle-row">
+                    <span className="profile-toggle-label">
+                        Card flipping
+                        <span className="profile-toggle-hint">360° card flips during card dance</span>
+                    </span>
+                    <button
+                        type="button"
+                        className={`profile-toggle ${cardFlipEnabled !== false ? 'on' : 'off'}`}
+                        onClick={() => dispatch(setCardFlipEnabled(cardFlipEnabled === false ? true : false))}
+                        disabled={!cardDanceEnabled}
+                        aria-label="Toggle card flipping"
+                    >
+                        <span className="profile-toggle-knob" />
+                    </button>
                 </div>
 
                 <div className="profile-volume-row">

@@ -208,7 +208,7 @@ const computePhase = (playerId, cardId, index) => {
  * @param {{ cardDanceEnabled: boolean, cardCount: number, playerId: string }} params
  * @returns {{ danceEnergy: number, getCardDanceStyle: function }}
  */
-export const useDanceAnimation = ({ cardDanceEnabled, cardCount, playerId }) => {
+export const useDanceAnimation = ({ cardDanceEnabled, cardFlipEnabled = false, cardCount, playerId }) => {
     const [danceEnergy, setDanceEnergy] = useState(0);
     const [danceAudioTime, setDanceAudioTime] = useState(0);
     const [danceBpm, setDanceBpm] = useState(120);
@@ -371,7 +371,7 @@ export const useDanceAnimation = ({ cardDanceEnabled, cardCount, playerId }) => 
         const safeRotate = clamp(rotateDeg, -DANCE_MAX_ROTATION, DANCE_MAX_ROTATION);
 
         return {
-            transform: `perspective(760px) translateX(${safeX.toFixed(2)}px) translateY(${-safeLift.toFixed(2)}px) rotateY(${flipAngle.toFixed(2)}deg) rotate(${safeRotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
+            transform: `perspective(760px) translateX(${safeX.toFixed(2)}px) translateY(${-safeLift.toFixed(2)}px) rotateY(${(cardFlipEnabled ? flipAngle : 0).toFixed(2)}deg) rotate(${safeRotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
         };
     };
 
