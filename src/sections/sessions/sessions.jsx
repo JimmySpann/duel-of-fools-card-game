@@ -14,6 +14,7 @@ import {
     removeCpu,
     setCpuDeck,
     setCpuSkill,
+    leaveSession,
     leaveSessionLobby,
     deleteSession,
     submitDeck,
@@ -613,6 +614,7 @@ const Sessions = ({ initialModal } = {}) => {
     const [showProfile, setShowProfile] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
     const inviteJoinAttemptedRef = useRef(false);
+    const preventAutoJoinNavigateRef = useRef(false);
     const hasUnreadMessages = Object.values(unreadDm).some((v) => v > 0);
 
     // Derive modal visibility from URL pathname
@@ -627,7 +629,7 @@ const Sessions = ({ initialModal } = {}) => {
     }, [dispatch]);
 
     useEffect(() => {
-        if (inviteJoinAttemptedRef.current) return;
+        if (inviteJoinAttemptedRef.current || preventAutoJoinNavigateRef.current) return;
         const url = new URL(window.location.href);
         const join = (url.searchParams.get('join') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
         if (!join) return;
@@ -638,7 +640,9 @@ const Sessions = ({ initialModal } = {}) => {
 
         dispatch(clearSessionError());
         dispatch(joinSession({ joinCode: join })).then((res) => {
-            if (!res.error) navigate(`/game/${res.payload._id}`);
+            if (!res.error && !preventAutoJoinNavigateRef.current) {
+                navigate(`/game/${res.payload._id}`);
+            }
         });
     }, [dispatch, navigate]);
 
@@ -682,6 +686,26 @@ const Sessions = ({ initialModal } = {}) => {
         setPreviewSession(null);
         dispatch(clearSessionError());
         dispatch(fetchSessions());
+    }, [dispatch]);
+
+    const handleOpenCreate = useCallback(() => {
+        preventAutoJoinNavigateRef.current = true;
+        dispatch(leaveSession());
+        dispatch(clearSessionError());
+        setPreviewSession(null);
+        setJoinCode('');
+        setNewSessionIsPublic(true);
+        setNewName(`${username}'s session`);
+        setView('create');
+    }, [dispatch, username]);
+
+    const handleOpenJoin = useCallback(() => {
+        preventAutoJoinNavigateRef.current = true;
+        dispatch(leaveSession());
+        dispatch(clearSessionError());
+        setPreviewSession(null);
+        setJoinCode('');
+        setView('join');
     }, [dispatch]);
 
     const renderViewShell = useCallback((content, includeGlobalOverlays = false) => (
@@ -860,10 +884,10 @@ const Sessions = ({ initialModal } = {}) => {
     return renderViewShell(
         <div className="sessions-page">
             <div className="sessions-actions">
-                <button className="sessions-action-btn primary" onClick={() => { dispatch(clearSessionError()); setNewName(`${username}'s session`); setView('create'); }}>
+                <button className="sessions-action-btn primary" onClick={handleOpenCreate}>
                     + New Session
                 </button>
-                <button className="sessions-action-btn" onClick={() => { dispatch(clearSessionError()); setView('join'); }}>
+                <button className="sessions-action-btn" onClick={handleOpenJoin}>
                     Join by Code
                 </button>
             </div>
