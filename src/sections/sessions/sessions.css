@@ -364,6 +364,38 @@
 }
 
 /* ── Sessions list ───────────────────────────────────────────────────────── */
+.sessions-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.sessions-tab {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #2e3148;
+    background: #1a1d27;
+    color: #8890b0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.sessions-tab.active {
+    background: #2a6fdb;
+    color: #fff;
+    border-color: #2a6fdb;
+}
+
+.sessions-tab:not(.active):hover {
+    background: #22263a;
+    color: #c0c8e8;
+}
+
 .sessions-list-heading {
     font-size: 1rem;
     text-transform: uppercase;
@@ -492,6 +524,30 @@
     background: rgba(200, 60, 60, 0.25);
     color: #ff7070;
     animation: countdown-pulse 1s ease-in-out infinite;
+}
+
+.session-card-winner {
+    display: inline-block;
+    background: rgba(212, 175, 55, 0.2);
+    color: #f0c040;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+.session-card-finished {
+    display: inline-block;
+    background: rgba(100, 100, 130, 0.25);
+    color: #8890b0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 10px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
 }
 
 @keyframes countdown-pulse {

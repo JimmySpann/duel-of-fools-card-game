@@ -86,10 +86,16 @@ module.exports = (io, gameActions) => {
                     game.markModified('state');
                     await game.save();
 
-                    await Session.findOneAndUpdate(
-                        { gameId },
-                        { currentTurn: nextState.currentTurn, turnStartedAt: nextState.turnStartedAt ? new Date(nextState.turnStartedAt) : null }
-                    ).catch(() => { });
+                    const sessionUpdate = {
+                        currentTurn: nextState.currentTurn,
+                        turnStartedAt: nextState.turnStartedAt ? new Date(nextState.turnStartedAt) : null,
+                    };
+                    if (nextState.gameOver) {
+                        sessionUpdate.status = 'finished';
+                        const wp = nextState.players?.find((p) => p.id === nextState.winner);
+                        sessionUpdate.winner = wp ? wp.name : (nextState.winner ? `Team ${nextState.winner}` : null);
+                    }
+                    await Session.findOneAndUpdate({ gameId }, sessionUpdate).catch(() => { });
 
                     io.to(`game:${gameId}`).emit('game:state', nextState);
                     scheduleTimer(gameId, nextState);
@@ -138,10 +144,16 @@ module.exports = (io, gameActions) => {
                     game.markModified('state');
                     await game.save();
 
-                    await Session.findOneAndUpdate(
-                        { gameId },
-                        { currentTurn: nextState.currentTurn, turnStartedAt: nextState.turnStartedAt ? new Date(nextState.turnStartedAt) : null }
-                    ).catch(() => { });
+                    const sessionUpdate2 = {
+                        currentTurn: nextState.currentTurn,
+                        turnStartedAt: nextState.turnStartedAt ? new Date(nextState.turnStartedAt) : null,
+                    };
+                    if (nextState.gameOver) {
+                        sessionUpdate2.status = 'finished';
+                        const wp = nextState.players?.find((p) => p.id === nextState.winner);
+                        sessionUpdate2.winner = wp ? wp.name : (nextState.winner ? `Team ${nextState.winner}` : null);
+                    }
+                    await Session.findOneAndUpdate({ gameId }, sessionUpdate2).catch(() => { });
 
                     io.to(`game:${gameId}`).emit('game:state', nextState);
                     scheduleTimer(gameId, nextState);

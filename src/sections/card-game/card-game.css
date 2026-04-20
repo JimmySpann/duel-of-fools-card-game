@@ -220,6 +220,13 @@ body {
     transform: scale(1.08);
 }
 
+.game-over-actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
 /* ── Ally-targetable board ───────────────────────────────────────────────── */
 .board-ally-targetable {
     outline: 3px solid #2ecc71;

@@ -528,11 +528,17 @@ const SessionCard = ({ session, isParticipant, openSlots, isMyTurn, currentTurnN
                 <span className={`session-card-visibility ${(session.isPublic !== false) ? 'public' : 'private'}`}>
                     {(session.isPublic !== false) ? 'Public' : 'Private'}
                 </span>
-                {isMyTurn && <span className="session-card-your-turn">⚔ Your Turn!</span>}
-                {!isMyTurn && currentTurnName && (
+                {session.status === 'finished' && session.winner && (
+                    <span className="session-card-winner">🏆 {session.winner}</span>
+                )}
+                {session.status === 'finished' && !session.winner && (
+                    <span className="session-card-finished">Finished</span>
+                )}
+                {session.status !== 'finished' && isMyTurn && <span className="session-card-your-turn">⚔ Your Turn!</span>}
+                {session.status !== 'finished' && !isMyTurn && currentTurnName && (
                     <span className="session-card-their-turn">🎲 {currentTurnName}'s Turn</span>
                 )}
-                {countdown && (
+                {session.status !== 'finished' && countdown && (
                     <span className={`session-card-countdown${urgent ? ' session-card-countdown--urgent' : ''}`}>
                         ⏱ {countdown}
                     </span>
@@ -582,6 +588,7 @@ const Sessions = ({ initialModal } = {}) => {
     const unreadDm = useSelector((s) => s.chat.unreadDm);
 
     const [view, setView] = useState('list'); // 'list' | 'create' | 'join' | 'preview'
+    const [lobbyTab, setLobbyTab] = useState('current');
     const [newName, setNewName] = useState('');
     const [newSessionIsPublic, setNewSessionIsPublic] = useState(true);
     const [joinCode, setJoinCode] = useState('');
@@ -889,13 +896,36 @@ const Sessions = ({ initialModal } = {}) => {
                 {error && <p className="sessions-error sessions-error--center">{error}</p>}
 
                 <section className="sessions-list-section">
-                    <h2 className="sessions-list-heading">Sessions</h2>
+                    <div className="sessions-tabs">
+                        <button
+                            className={`sessions-tab${lobbyTab === 'current' ? ' active' : ''}`}
+                            onClick={() => setLobbyTab('current')}
+                        >
+                            My Games
+                        </button>
+                        <button
+                            className={`sessions-tab${lobbyTab === 'open' ? ' active' : ''}`}
+                            onClick={() => setLobbyTab('open')}
+                        >
+                            Open Lobbies
+                        </button>
+                    </div>
                     {loading && list.length === 0 && <p className="sessions-empty">Loading…</p>}
-                    {!loading && list.length === 0 && (
-                        <p className="sessions-empty">No sessions yet. Create one or join with a code!</p>
-                    )}
+                    {!loading && list.filter((s) => lobbyTab === 'current'
+                        ? s.players.some((p) => p.username === username)
+                        : s.status === 'waiting' && !s.players.some((p) => p.username === username)
+                    ).length === 0 && (
+                            <p className="sessions-empty">
+                                {lobbyTab === 'current'
+                                    ? 'No active games. Create one or join with a code!'
+                                    : 'No open lobbies available right now.'}
+                            </p>
+                        )}
                     <div className="sessions-list">
-                        {list.map((session) => {
+                        {list.filter((s) => lobbyTab === 'current'
+                            ? s.players.some((p) => p.username === username)
+                            : s.status === 'waiting' && !s.players.some((p) => p.username === username)
+                        ).map((session) => {
                             const isParticipant = session.players.some((p) => p.username === username);
                             const openSlots = 6 - session.players.length;
                             const mySlot = session.players.find((p) => p.username === username)?.slot;

@@ -230,7 +230,14 @@ module.exports = (io) => {
 
                     await Session.findOneAndUpdate(
                         { gameId },
-                        { currentTurn: nextState.currentTurn, turnStartedAt: nextState.turnStartedAt ? new Date(nextState.turnStartedAt) : null, ...(nextState.gameOver ? { status: 'finished' } : {}) }
+                        {
+                            currentTurn: nextState.currentTurn,
+                            turnStartedAt: nextState.turnStartedAt ? new Date(nextState.turnStartedAt) : null,
+                            ...(nextState.gameOver ? {
+                                status: 'finished',
+                                winner: (() => { const wp = nextState.players?.find((p) => p.id === nextState.winner); return wp ? wp.name : (nextState.winner ? `Team ${nextState.winner}` : null); })(),
+                            } : {}),
+                        }
                     ).catch(() => { });
 
                     io.to(`game:${gameId}`).emit('game:state', nextState);
@@ -287,7 +294,14 @@ module.exports = (io) => {
 
                 await Session.findOneAndUpdate(
                     { gameId },
-                    { currentTurn: resolvedState.currentTurn, turnStartedAt: resolvedState.turnStartedAt ? new Date(resolvedState.turnStartedAt) : null }
+                    {
+                        currentTurn: resolvedState.currentTurn,
+                        turnStartedAt: resolvedState.turnStartedAt ? new Date(resolvedState.turnStartedAt) : null,
+                        ...(resolvedState.gameOver ? {
+                            status: 'finished',
+                            winner: (() => { const wp = resolvedState.players?.find((p) => p.id === resolvedState.winner); return wp ? wp.name : (resolvedState.winner ? `Team ${resolvedState.winner}` : null); })(),
+                        } : {}),
+                    }
                 ).catch(() => { });
                 io.to(`game:${gameId}`).emit('game:state', resolvedState);
                 scheduleTimer(gameId, resolvedState);
@@ -303,7 +317,14 @@ module.exports = (io) => {
 
             await Session.findOneAndUpdate(
                 { gameId },
-                { currentTurn: cpuState.currentTurn, turnStartedAt: cpuState.turnStartedAt ? new Date(cpuState.turnStartedAt) : null }
+                {
+                    currentTurn: cpuState.currentTurn,
+                    turnStartedAt: cpuState.turnStartedAt ? new Date(cpuState.turnStartedAt) : null,
+                    ...(cpuState.gameOver ? {
+                        status: 'finished',
+                        winner: (() => { const wp = cpuState.players?.find((p) => p.id === cpuState.winner); return wp ? wp.name : (cpuState.winner ? `Team ${cpuState.winner}` : null); })(),
+                    } : {}),
+                }
             ).catch(() => { });
             io.to(`game:${gameId}`).emit('game:state', cpuState);
 

@@ -184,17 +184,30 @@ const CardGame = () => {
             <div className="card-game-container">
                 <div className="game-over-screen">
                     <h1 className="game-over-title">{winnerLabel}</h1>
-                    <button
-                        className="game-over-btn"
-                        onClick={() => {
-                            dispatch(resetGame());
-                            dispatch(leaveSession());
-                            navigate('/');
-                        }}
-                    >
-                        Back
-                    </button>
+                    <div className="game-over-actions">
+                        <button className="game-over-btn" onClick={() => setShowBrief((v) => !v)}>
+                            📋 Brief
+                        </button>
+                        <button
+                            className="game-over-btn"
+                            onClick={() => {
+                                dispatch(resetGame());
+                                dispatch(leaveSession());
+                                navigate('/');
+                            }}
+                        >
+                            Back
+                        </button>
+                    </div>
                 </div>
+                {showBrief && (
+                    <BriefPanel
+                        onClose={() => setShowBrief(false)}
+                        gamePlayers={gamePlayers}
+                        myPlayerId={myPlayerId}
+                        isOnline={isOnline}
+                    />
+                )}
             </div>
         );
     }
