@@ -76,7 +76,7 @@ const Header = ({
     }, [turnTimeLimit, turnStartedAt]);
 
     return (
-        <div className="header-container">
+        <div className="header-container" style={{ position: 'relative' }}>
             <button
                 className="header-brand-btn"
                 onClick={onLobbies}
@@ -131,6 +131,8 @@ const Header = ({
                 </div>
             </div>
             <div className="player-container">
+                {/* Overlay for censoring turn and buttons */}
+                <div className="turn-censor-overlay" />
                 {(onBriefToggle || onChatToggle) && (
                     <div className="player-buttons-container">
                         {onBriefToggle && (
