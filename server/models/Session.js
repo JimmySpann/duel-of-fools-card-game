@@ -34,7 +34,7 @@ const settingsSchema = new mongoose.Schema(
         deckSize: { type: Number, default: null, min: 4, max: 50 },   // null = all cards
         teamMode: { type: String, enum: ['ffa', 'teams'], default: 'ffa' },
         turnTimeLimit: { type: Number, default: 86400, min: 60 },     // seconds; null = no limit
-        microgameDifficulty: { type: Number, default: 2, min: 1, max: 5 },
+        microgameDifficulty: { type: Number, default: 1, min: 1, max: 5 },
         allowCustomCards: { type: Boolean, default: true },
         verifiedCardsOnly: { type: Boolean, default: false },
     },

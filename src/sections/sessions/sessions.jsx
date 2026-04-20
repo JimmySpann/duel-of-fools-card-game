@@ -29,7 +29,6 @@ import GalleryModal from './GalleryModal';
 import DeckBuilderModal from './DeckBuilderModal';
 import CustomCardModal from './CustomCardModal';
 import RulesModal from '../shared/rules/RulesModal';
-import Header from '../card-game/components/header/header.jsx';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import { getSocket } from '../../features/chat/socket';
 import musicManager from '../../features/sound/musicManager';
@@ -276,7 +275,7 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                             Minigame Difficulty
                             <select
                                 className="lobby-setting-input"
-                                value={settings.microgameDifficulty ?? 2}
+                                value={settings.microgameDifficulty ?? 1}
                                 onChange={(e) => handleSettingChange('microgameDifficulty', Number(e.target.value))}
                             >
                                 <option value={1}>Easy</option>
@@ -287,13 +286,24 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                             </select>
                         </label>
                         <label className="lobby-setting-label">
-                            Card Types Allowed
+                            Custom Cards
+                            <select
+                                className="lobby-setting-input"
+                                value={settings.allowCustomCards === false ? 'off' : 'on'}
+                                onChange={(e) => handleSettingChange('allowCustomCards', e.target.value === 'on')}
+                            >
+                                <option value="on">Enabled</option>
+                                <option value="off">Disabled</option>
+                            </select>
+                        </label>
+                        <label className="lobby-setting-label">
+                            Verified Cards Only
                             <select
                                 className="lobby-setting-input"
                                 value={settings.verifiedCardsOnly ? 'on' : 'off'}
                                 onChange={(e) => handleSettingChange('verifiedCardsOnly', e.target.value === 'on')}
                             >
-                                <option value="off">All Cards</option>
+                                <option value="off">Any Card</option>
                                 <option value="on">Verified Only</option>
                             </select>
                         </label>
@@ -421,8 +431,9 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                     <span>Deck: {settings.deckSize ?? 'All'}</span>
                     <span>Mode: {teamMode === 'teams' ? 'Teams' : 'Free for All'}</span>
                     <span>Turn Limit: {settings.turnTimeLimit ? (() => { const h = Math.floor(settings.turnTimeLimit / 3600); const m = Math.floor((settings.turnTimeLimit % 3600) / 60); return h > 0 ? `${h}h` : `${m}m`; })() : 'None'}</span>
-                    <span>Minigames: {['Easy', 'Normal', 'Hard', 'Expert', 'Brutal'][(settings.microgameDifficulty ?? 2) - 1]}</span>
-                    <span>Card Types: {settings.verifiedCardsOnly ? 'Verified Only' : 'All Cards'}</span>
+                    <span>Minigames: {['Easy', 'Normal', 'Hard', 'Expert', 'Brutal'][(settings.microgameDifficulty ?? 1) - 1]}</span>
+                    <span>Custom Cards: {settings.allowCustomCards === false ? 'Off' : 'On'}</span>
+                    <span>Verified Cards: {settings.verifiedCardsOnly ? 'Required' : 'Any'}</span>
                 </div>
             )}
 
@@ -743,16 +754,10 @@ const Sessions = ({ initialModal } = {}) => {
     // ── Create form ──────────────────────────────────────────────────────────────
     if (view === 'create') {
         return (
-            <div className="sessions-backdrop sessions-backdrop--page">
-                <Header
-                    onLobbies={handleBack}
-                    displayName={displayName}
-                    avatarUrl={avatarUrl}
-                    username={username}
-                    onSignOut={() => dispatch(logout())}
-                    onProfileOpen={() => setShowProfile(true)}
-                />
-                <div className="sessions-form-page">
+            <div className="sessions-backdrop">
+                <div className="sessions-card">
+                    <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
+                    <div className="sessions-card-logo-wrap"><img src="/img/Logo.png" alt="Duel of Fools" className="sessions-card-logo" /></div>
                     <h2 className="sessions-card-title">New Session</h2>
                     <form className="sessions-form" onSubmit={handleCreate}>
                         <label className="sessions-label">
@@ -784,7 +789,7 @@ const Sessions = ({ initialModal } = {}) => {
                         </button>
                     </form>
                 </div>
-                {showProfile && <Profile onClose={() => setShowProfile(false)} />}
+                <DMPanel />
             </div>
         );
     }
@@ -792,16 +797,10 @@ const Sessions = ({ initialModal } = {}) => {
     // ── Join form ────────────────────────────────────────────────────────────────
     if (view === 'join') {
         return (
-            <div className="sessions-backdrop sessions-backdrop--page">
-                <Header
-                    onLobbies={handleBack}
-                    displayName={displayName}
-                    avatarUrl={avatarUrl}
-                    username={username}
-                    onSignOut={() => dispatch(logout())}
-                    onProfileOpen={() => setShowProfile(true)}
-                />
-                <div className="sessions-form-page">
+            <div className="sessions-backdrop">
+                <div className="sessions-card">
+                    <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
+                    <div className="sessions-card-logo-wrap"><img src="/img/Logo.png" alt="Duel of Fools" className="sessions-card-logo" /></div>
                     <h2 className="sessions-card-title">Join a Session</h2>
                     <form className="sessions-form" onSubmit={handleJoin}>
                         <label className="sessions-label">
@@ -823,7 +822,7 @@ const Sessions = ({ initialModal } = {}) => {
                         </button>
                     </form>
                 </div>
-                {showProfile && <Profile onClose={() => setShowProfile(false)} />}
+                <DMPanel />
             </div>
         );
     }
