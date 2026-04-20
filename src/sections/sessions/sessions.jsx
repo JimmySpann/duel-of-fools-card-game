@@ -137,6 +137,13 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
         setFeedback(`Invite sent to ${toUsername}.`, 'success');
     };
 
+    // Find the first empty slot index
+    const firstEmptySlotIndex = SLOTS.findIndex((slot) => {
+        const player = session.players.find((p) => p.slot === slot);
+        const cpu = cpuSlots.find((c) => c.slot === slot);
+        return !player && !cpu;
+    });
+
     return (
         <div className="lobby-container">
             <button className="sessions-back-btn" onClick={onBack}>← Back to Sessions</button>
@@ -303,6 +310,7 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                     const isCpu = !!cpu;
                     const isFilled = !!player || isCpu;
                     const isMe = player?.username === username;
+                    const isEmpty = !isFilled;
                     return (
                         <div key={slot} className={`lobby-slot ${isFilled ? (isCpu ? 'cpu' : 'filled') : 'empty'}`}>
                             <span className="lobby-slot-label">Player {slotNum}</span>
@@ -355,6 +363,16 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                                         title="Remove CPU"
                                     >✕</button>
                                 </div>
+                            )}
+                            {/* Add CPU button in the first empty slot if host, not full, and not loading */}
+                            {isHost && isEmpty && i === firstEmptySlotIndex && session.players.length + cpuSlots.length < 6 && !loading && (
+                                <button
+                                    className="lobby-add-cpu-btn"
+                                    onClick={() => dispatch(addCpu({ sessionId: session._id }))}
+                                    title="Add a CPU opponent"
+                                >
+                                    🤖 Add CPU
+                                </button>
                             )}
                             {teamMode === 'teams' && player && (
                                 isHost ? (
@@ -412,14 +430,6 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
 
             {isHost ? (
                 <div className="lobby-actions">
-                    <button
-                        className="lobby-add-cpu-btn"
-                        onClick={() => dispatch(addCpu({ sessionId: session._id }))}
-                        disabled={playerCount >= 6 || loading}
-                        title="Add a CPU opponent"
-                    >
-                        🤖 Add CPU
-                    </button>
                     <button
                         className="lobby-start-btn"
                         onClick={onStart}
