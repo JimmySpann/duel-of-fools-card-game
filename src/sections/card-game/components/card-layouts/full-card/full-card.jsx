@@ -126,7 +126,7 @@ const Card = ({
                         </div>
                     )}
                     <div className="card-name">{isCensored ? 'Adults-only Card' : card.name}</div>
-                    {!card.official && !card.verified && (
+                    {!card.verified && (
                         <div className="card-unverified-badge">⚠ Unverified</div>
                     )}
                 </div>
