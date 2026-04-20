@@ -128,7 +128,7 @@ export const cardGameSlice = createSlice({
         const { hit, damage } = resolveBasicAttack(attacker, defender, defenderPlayer, state);
         attacker.acted = true;
         if (hit) {
-          applyDamageToCard(defenderPlayer, targetCardIndex, damage, state);
+          applyDamageToCard(defenderPlayer, targetCardIndex, damage, state, { attackerName: attacker.name });
           state.log.unshift(`${attacker.name} attacks ${defender.name} for ${damage} damage!`);
         } else {
           state.log.unshift(`${attacker.name} attacked ${defender.name} but missed!`);

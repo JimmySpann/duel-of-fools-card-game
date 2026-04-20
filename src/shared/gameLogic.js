@@ -68,7 +68,7 @@ const getAllies = (state, playerId) => {
 
 // ── Event helpers ─────────────────────────────────────────────────────────────
 
-const pushHitEvent = (state, defenderPlayerId, cardId, damage, type, cardName, healthAfter, maxHealth) => {
+const pushHitEvent = (state, defenderPlayerId, cardId, damage, type, cardName, healthAfter, maxHealth, attackerName = null, abilityName = null) => {
     state.lastHitEvents.push({ defenderPlayerId, cardId, damage, type });
     state.recapEvents.push({
         type, cardId,
@@ -77,6 +77,8 @@ const pushHitEvent = (state, defenderPlayerId, cardId, damage, type, cardName, h
         healthAfter: healthAfter ?? null,
         maxHealth: maxHealth ?? null,
         targetPlayerId: defenderPlayerId,
+        ...(attackerName ? { attackerName } : {}),
+        ...(abilityName ? { abilityName } : {}),
     });
 };
 
@@ -94,13 +96,14 @@ const cleanupDefeated = (state) => {
 
 // ── Damage / attack ───────────────────────────────────────────────────────────
 
-const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state) => {
+const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state, context = {}) => {
+    const { attackerName = null, abilityName = null } = context;
     const defender = defenderPlayer.inPlay[targetIdx];
     if (!defender || defender.dying) return 0;
 
     if (hasStatus(defender, 'invulnerable') || hasStatus(defender, 'invisible')) {
         state.log.unshift(`${defender.name} is untouchable!`);
-        pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'blocked', defender.name, defender.currentHealth, defender.health);
+        pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'blocked', defender.name, defender.currentHealth, defender.health, attackerName, abilityName);
         return 0;
     }
 
@@ -123,11 +126,11 @@ const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state) => {
 
     defender.currentHealth = Math.max(0, defender.currentHealth - damage);
     if (defender.currentHealth <= 0) {
-        pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'defeat', defender.name, 0, defender.health);
+        pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'defeat', defender.name, 0, defender.health, attackerName, abilityName);
         defender.dying = true;
         state.log.unshift(`${defender.name} was defeated!`);
     } else {
-        pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'hit', defender.name, defender.currentHealth, defender.health);
+        pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'hit', defender.name, defender.currentHealth, defender.health, attackerName, abilityName);
     }
     return damage;
 };
@@ -391,7 +394,10 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
                     : Math.max(0, getEffectiveDef(target) - (effect.defPiercing ?? 0));
                 dmg = Math.max(1, base - effDef);
             }
-            const actualDmg = applyDamageToCard(targetPlayer, targetCardIdx, dmg, state);
+            const actualDmg = applyDamageToCard(targetPlayer, targetCardIdx, dmg, state, { attackerName: caster.name, abilityName });
+            if (actualDmg > 0 && !targetPlayer.inPlay[targetCardIdx]?.dying) {
+                state.log.unshift(`${target.name} takes ${actualDmg} damage from ${abilityName}!`);
+            }
             if (effect.onHitStatus && actualDmg > 0) {
                 const live = targetPlayer.inPlay[targetCardIdx];
                 if (live && !live.dying) {
@@ -412,16 +418,23 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
             const value = effect.valueFn === 'targetDef' ? (target.defense || 0) : effect.value;
             addStatus(target, effect.status, value, effect.duration);
             state.log.unshift(`${target.name} gains ${effect.status}!`);
+            pushRecapEvent(state, { type: 'statusApplied', cardName: target.name, targetPlayerId: targetPlayer.id, status: effect.status, duration: effect.duration, attackerName: caster.name, abilityName });
             break;
         }
         case 'heal': {
+            const prevHp = target.currentHealth;
             target.currentHealth = Math.min(target.health, target.currentHealth + effect.amount);
-            state.log.unshift(`${target.name} is healed for ${effect.amount} HP!`);
+            const healed = target.currentHealth - prevHp;
+            state.log.unshift(`${target.name} is healed for ${healed} HP!`);
+            pushRecapEvent(state, { type: 'heal', cardName: target.name, targetPlayerId: targetPlayer.id, amount: healed, healthAfter: target.currentHealth, maxHealth: target.health, attackerName: caster.name, abilityName });
             break;
         }
         case 'healSelf': {
+            const prevHp = caster.currentHealth;
             caster.currentHealth = Math.min(caster.health, caster.currentHealth + effect.amount);
-            state.log.unshift(`${caster.name} restores ${effect.amount} HP!`);
+            const healed = caster.currentHealth - prevHp;
+            state.log.unshift(`${caster.name} restores ${healed} HP!`);
+            pushRecapEvent(state, { type: 'heal', cardName: caster.name, targetPlayerId: casterPlayer.id, amount: healed, healthAfter: caster.currentHealth, maxHealth: caster.health, attackerName: caster.name, abilityName });
             break;
         }
         case 'cleanse': {

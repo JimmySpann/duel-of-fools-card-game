@@ -161,6 +161,14 @@
     border-left-color: #8e44ad;
 }
 
+.recap-status-applied {
+    border-left-color: #1abc9c;
+}
+
+.recap-heal {
+    border-left-color: #2ecc71;
+}
+
 .recap-event-icon {
     font-size: 1.25rem;
     flex-shrink: 0;

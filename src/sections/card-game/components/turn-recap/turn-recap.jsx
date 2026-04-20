@@ -11,6 +11,8 @@ const EVENT_CONFIG = {
     directHit: { icon: '🎯', label: 'Direct Attack', className: 'recap-direct' },
     dot: { icon: '☠️', label: 'Status Damage', className: 'recap-dot' },
     dotDefeat: { icon: '💀', label: 'Defeated by Status', className: 'recap-defeat' },
+    statusApplied: { icon: '🌀', label: 'Status Applied', className: 'recap-status-applied' },
+    heal: { icon: '💚', label: 'Healed', className: 'recap-heal' },
 };
 
 const DOT_LABEL = {
@@ -39,12 +41,19 @@ const RecapEvent = ({ event, index, playerNames, currentPlayerId }) => {
 
     const buildMessage = () => {
         switch (event.type) {
-            case 'hit':
-                return `${event.cardName} took ${event.damage} damage (${targetLabel} side)`;
-            case 'defeat':
-                return `${event.cardName} was defeated! (${targetLabel} side)`;
-            case 'miss':
-                return `An attack missed ${event.cardName} (${targetLabel} side)`;
+            case 'hit': {
+                const via = event.abilityName ? ` from ${event.abilityName}` : event.attackerName ? ` by ${event.attackerName}` : '';
+                return `${event.cardName} took ${event.damage} damage${via} (${targetLabel} side)`;
+            }
+            case 'defeat': {
+                const by = event.attackerName ? ` by ${event.attackerName}` : '';
+                const via = event.abilityName ? ` (${event.abilityName})` : '';
+                return `${event.cardName} was defeated${by}${via} (${targetLabel} side)`;
+            }
+            case 'miss': {
+                const src = event.abilityName ?? event.attackerName ?? 'Attack';
+                return `${src} missed ${event.cardName} (${targetLabel} side)`;
+            }
             case 'blocked':
                 return `${event.cardName} was untouchable — attack blocked! (${targetLabel} side)`;
             case 'directHit':
@@ -55,12 +64,21 @@ const RecapEvent = ({ event, index, playerNames, currentPlayerId }) => {
             }
             case 'dotDefeat':
                 return `${event.cardName} was defeated by status effects! (${targetLabel} side)`;
+            case 'statusApplied': {
+                const by = event.attackerName ? ` by ${event.attackerName}` : '';
+                const via = event.abilityName ? ` via ${event.abilityName}` : '';
+                return `${event.cardName} afflicted with ${event.status}${by}${via} (${targetLabel} side)`;
+            }
+            case 'heal': {
+                const by = event.abilityName ? ` via ${event.abilityName}` : '';
+                return `${event.cardName} healed for ${event.amount} HP${by}`;
+            }
             default:
                 return JSON.stringify(event);
         }
     };
 
-    const showHealth = ['hit', 'directHit', 'dot'].includes(event.type);
+    const showHealth = ['hit', 'directHit', 'dot', 'blocked', 'heal'].includes(event.type);
 
     return (
         <div

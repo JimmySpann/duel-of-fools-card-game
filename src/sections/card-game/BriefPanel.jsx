@@ -11,6 +11,16 @@ const BriefPanel = ({ onClose, gamePlayers, myPlayerId, isOnline }) => {
     const [briefSearch, setBriefSearch] = useState('');
     const [showRulesModal, setShowRulesModal] = useState(false);
 
+    const classifyLogEntry = (entry) => {
+        const e = entry.toLowerCase();
+        if (e.includes('---')) return 'game-panel-log-entry log-entry--turn';
+        if (e.includes('wins!') || e.includes('draw')) return 'game-panel-log-entry log-entry--turn';
+        if (e.includes('attacks') || e.includes('damage') || e.includes('missed') || e.includes('defeated') || e.includes('blocked') || e.includes('untouchable')) return 'game-panel-log-entry log-entry--combat';
+        if (e.includes('healed') || e.includes('restores') || e.includes('drains')) return 'game-panel-log-entry log-entry--heal';
+        if (e.includes('afflicted') || e.includes('gains') || e.includes('cleansed') || e.includes('refreshed') || e.includes('frozen') || e.includes('burned') || e.includes('poisoned') || e.includes('bleeding')) return 'game-panel-log-entry log-entry--status';
+        return 'game-panel-log-entry';
+    };
+
     return (
         <>
             <div className="game-panel-overlay" onClick={onClose}>
@@ -66,7 +76,7 @@ const BriefPanel = ({ onClose, gamePlayers, myPlayerId, isOnline }) => {
                                     ? log.filter((entry) => entry.toLowerCase().includes(briefSearch.toLowerCase()))
                                     : log
                                 ).map((entry, i) => (
-                                    <li key={i} className="game-panel-log-entry">{entry}</li>
+                                    <li key={i} className={classifyLogEntry(entry)}>{entry}</li>
                                 ))}
                                 {briefSearch && log.filter((e) => e.toLowerCase().includes(briefSearch.toLowerCase())).length === 0 && (
                                     <li className="game-panel-log-empty">No entries match "{briefSearch}"</li>
