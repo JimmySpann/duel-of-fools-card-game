@@ -81,7 +81,7 @@ const PlayerHUD = ({ player, isCurrentUser }) => {
                                 boxShadow: palette.railGlow,
                             }}
                         />
-                        <span className="hud-health-bar-text">HP {player.health}/{player.maxHealth}</span>
+                        <span className="hud-health-bar-text">HP {+player.health.toFixed(1)}/{+player.maxHealth.toFixed(1)}</span>
                     </div>
                 </div>
             </div>

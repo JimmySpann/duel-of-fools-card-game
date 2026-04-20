@@ -101,7 +101,7 @@ const BriefPanel = ({ onClose, gamePlayers, myPlayerId, isOnline }) => {
                                                         {isCurrent ? '▶ ' : ''}{p.name}
                                                         {p.id === myPlayerId && isOnline ? ' (You)' : ''}
                                                     </span>
-                                                    <span className="game-panel-player-hp">{p.health} / {p.maxHealth} HP</span>
+                                                    <span className="game-panel-player-hp">{+p.health.toFixed(1)} / {+p.maxHealth.toFixed(1)} HP</span>
                                                 </div>
                                                 <div className="game-panel-hp-bar">
                                                     <div

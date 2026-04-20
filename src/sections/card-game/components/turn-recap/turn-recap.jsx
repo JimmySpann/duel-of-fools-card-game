@@ -28,7 +28,7 @@ const HPBar = ({ current, max }) => {
     return (
         <div className="recap-hp-bar-track">
             <div className="recap-hp-bar-fill" style={{ width: `${pct}%`, background: color }} />
-            <span className="recap-hp-label">{current}/{max} HP</span>
+            <span className="recap-hp-label">{+current.toFixed(1)}/{+max.toFixed(1)} HP</span>
         </div>
     );
 };
@@ -107,6 +107,7 @@ const TurnRecap = ({ currentPlayer, players }) => {
     if (!turnSummary?.length || currentTurn !== currentPlayer?.id) return null;
 
     const playerNames = Object.fromEntries((players ?? []).map((p) => [p.id, p.name]));
+    const isOneVOne = (players ?? []).length <= 2;
 
     // Stats specific to the current player (damage they took)
     const myEvents = turnSummary.filter((e) => e.targetPlayerId === currentPlayer.id);
@@ -141,12 +142,14 @@ const TurnRecap = ({ currentPlayer, players }) => {
                     >
                         Brief
                     </button>
-                    <button
-                        className={`recap-tab${activeTab === 'full' ? ' recap-tab--active' : ''}`}
-                        onClick={() => setActiveTab('full')}
-                    >
-                        Full Brief
-                    </button>
+                    {!isOneVOne && (
+                        <button
+                            className={`recap-tab${activeTab === 'full' ? ' recap-tab--active' : ''}`}
+                            onClick={() => setActiveTab('full')}
+                        >
+                            Full Brief
+                        </button>
+                    )}
                 </div>
 
                 {activeTab === 'brief' && (
@@ -160,7 +163,7 @@ const TurnRecap = ({ currentPlayer, players }) => {
                             <span className="recap-stat-label">Cards Lost</span>
                         </div>
                         <div className="recap-stat">
-                            <span className="recap-stat-value">{currentPlayer.health}/{currentPlayer.maxHealth}</span>
+                            <span className="recap-stat-value">{+currentPlayer.health.toFixed(1)}/{+currentPlayer.maxHealth.toFixed(1)}</span>
                             <span className="recap-stat-label">Your HP</span>
                         </div>
                     </div>

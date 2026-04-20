@@ -197,7 +197,7 @@ const Card = ({
                     <div>ATK:{card.attack}</div>
                     <div>AGI:{card.agility}</div>
                     <div className="health-circle">
-                        {card.currentHealth ?? card.health}/{card.health}
+                        {+(card.currentHealth ?? card.health).toFixed(1)}/{+card.health.toFixed(1)}
                         <div className="health-text">HP</div>
                     </div>
                     <div>EVA:{card.evasion}</div>
