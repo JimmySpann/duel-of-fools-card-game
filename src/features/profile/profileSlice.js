@@ -91,10 +91,10 @@ const loadNotifPrefs = () => {
             cardDanceEnabled: localStorage.getItem('cg_cardDanceEnabled') !== 'false',
             cardDanceIntensity: Math.max(0.1, Math.min(1.5, parseFloat(localStorage.getItem('cg_cardDanceIntensity') ?? '0.6'))),
             censorAdultCards: localStorage.getItem('cg_censorAdultCards') !== 'false',
-            cardFlipEnabled: localStorage.getItem('cg_cardFlipEnabled') !== 'false',
+            cardFlipEnabled: localStorage.getItem('cg_cardFlipEnabled') === 'true',
         };
     } catch {
-        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7, cardDanceEnabled: true, cardDanceIntensity: 0.6, censorAdultCards: true, cardFlipEnabled: true };
+        return { notifyTurn: true, notifyDM: true, notifyLobby: true, soundVolume: 0.7, cardDanceEnabled: true, cardDanceIntensity: 0.6, censorAdultCards: true, cardFlipEnabled: false };
     }
 };
 

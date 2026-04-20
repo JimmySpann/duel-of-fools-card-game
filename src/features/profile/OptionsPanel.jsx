@@ -145,8 +145,8 @@ const OptionsPanel = () => {
                     </span>
                     <button
                         type="button"
-                        className={`profile-toggle ${cardFlipEnabled !== false ? 'on' : 'off'}`}
-                        onClick={() => dispatch(setCardFlipEnabled(cardFlipEnabled === false ? true : false))}
+                        className={`profile-toggle ${cardFlipEnabled ? 'on' : 'off'}`}
+                        onClick={() => dispatch(setCardFlipEnabled(!cardFlipEnabled))}
                         disabled={!cardDanceEnabled}
                         aria-label="Toggle card flipping"
                     >
