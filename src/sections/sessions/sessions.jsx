@@ -29,9 +29,9 @@ import GalleryModal from './GalleryModal';
 import DeckBuilderModal from './DeckBuilderModal';
 import CustomCardModal from './CustomCardModal';
 import RulesModal from '../shared/rules/RulesModal';
+import Header from '../card-game/components/header/header.jsx';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import { getSocket } from '../../features/chat/socket';
-import musicManager from '../../features/sound/musicManager';
 import './sessions.css';
 
 const POLL_INTERVAL = 3000;
@@ -581,7 +581,7 @@ const Sessions = ({ initialModal } = {}) => {
     const location = useLocation();
     const { list, activeSession, loading, error } = useSelector((s) => s.sessions);
     const { username } = useSelector((s) => s.auth);
-    const { displayName, avatarUrl, friendRequests } = useSelector((s) => s.profile);
+    const { displayName, avatarUrl } = useSelector((s) => s.profile);
     const unreadLobby = useSelector((s) => s.chat.unreadLobby);
     const unreadDm = useSelector((s) => s.chat.unreadDm);
 
@@ -592,9 +592,9 @@ const Sessions = ({ initialModal } = {}) => {
     const [joinCode, setJoinCode] = useState('');
     const [previewSession, setPreviewSession] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
-    const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
     const inviteJoinAttemptedRef = useRef(false);
+    const hasUnreadMessages = Object.values(unreadDm).some((v) => v > 0);
 
     // Derive modal visibility from URL pathname
     const pathname = location.pathname;
@@ -602,25 +602,6 @@ const Sessions = ({ initialModal } = {}) => {
     const showDeckBuilder = pathname === '/deck-builder';
     const showCustomCards = pathname === '/card-creator';
     const showRules = pathname === '/rules';
-
-    const [brandPulse, setBrandPulse] = useState(1);
-    useEffect(() => {
-        let raf;
-        let smooth = 0;
-        const tick = () => {
-            const raw = musicManager.getReactiveLevel();
-            smooth += (raw - smooth) * 0.2;
-            const bpm = Math.max(60, musicManager.getCurrentBPM() || 120);
-            const time = musicManager.getCurrentTime();
-            const beatPhase = (time * bpm / 60) % 1;
-            const beatPeak = Math.max(0, 1 - beatPhase * 3.5);
-            const gated = Math.max(0, smooth - 0.28) / 0.72;
-            setBrandPulse(1 + gated * beatPeak * 0.035);
-            raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
-    }, []);
 
     useEffect(() => {
         dispatch(fetchSessions());
@@ -684,17 +665,69 @@ const Sessions = ({ initialModal } = {}) => {
         dispatch(fetchSessions());
     }, [dispatch]);
 
+    const renderViewShell = useCallback((content, includeGlobalOverlays = false) => (
+        <div className="sessions-backdrop">
+            <Header
+                onLobbies={handleBack}
+                displayName={displayName}
+                avatarUrl={avatarUrl}
+                username={username}
+                onSignOut={() => dispatch(logout())}
+                onProfileOpen={() => setShowProfile(true)}
+                onMessagesToggle={setShowMessages}
+                hasUnreadMessages={hasUnreadMessages}
+            />
+            {content}
+            {showProfile && <Profile onClose={() => setShowProfile(false)} />}
+            {includeGlobalOverlays && showRules && <RulesModal onClose={() => navigate('/')} title="Rules Deep Dive" />}
+            {includeGlobalOverlays && showGallery && <GalleryModal onClose={() => navigate('/')} />}
+            {includeGlobalOverlays && showDeckBuilder && (
+                <DeckBuilderModal
+                    onClose={() => navigate('/')}
+                    onConfirm={() => navigate('/')}
+                    initialDeck={[]}
+                    loading={false}
+                    error={null}
+                />
+            )}
+            {includeGlobalOverlays && showCustomCards && <CustomCardModal onClose={() => navigate('/')} />}
+            <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
+        </div>
+    ), [
+        handleBack,
+        displayName,
+        avatarUrl,
+        username,
+        dispatch,
+        showProfile,
+        showRules,
+        showGallery,
+        showDeckBuilder,
+        showCustomCards,
+        showMessages,
+        hasUnreadMessages,
+        navigate,
+    ]);
+
+    const renderFormCard = useCallback((title, body, cardError = null) => (
+        <div className="sessions-card">
+            <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
+            <div className="sessions-card-logo-wrap"><img src="/img/Logo.png" alt="Duel of Fools" className="sessions-card-logo" /></div>
+            <h2 className="sessions-card-title">{title}</h2>
+            {body}
+            {cardError}
+        </div>
+    ), [handleBack]);
+
     // ── Session preview (confirm before join) ───────────────────────────────────
     if (view === 'preview' && previewSession) {
         const ps = previewSession;
         const psSettings = ps.settings || {};
         const psPlayerCount = ps.players.length;
-        return (
-            <div className="sessions-backdrop">
-                <div className="sessions-card">
-                    <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
-                    <div className="sessions-card-logo-wrap"><img src="/img/Logo.png" alt="Duel of Fools" className="sessions-card-logo" /></div>
-                    <h2 className="sessions-card-title">{ps.name}</h2>
+        return renderViewShell(
+            renderFormCard(
+                ps.name,
+                <>
                     <p className="lobby-code-label">Invite code</p>
                     <div className="lobby-code">{ps.joinCode}</div>
                     <div className="preview-settings">
@@ -719,7 +752,6 @@ const Sessions = ({ initialModal } = {}) => {
                             );
                         })}
                     </div>
-                    {error && <p className="sessions-error" style={{ marginTop: '0.75rem' }}>{error}</p>}
                     <div className="preview-actions">
                         <button
                             className="sessions-submit"
@@ -733,238 +765,164 @@ const Sessions = ({ initialModal } = {}) => {
                             {loading ? 'Joining…' : 'Join Session'}
                         </button>
                     </div>
-                </div>
-                <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
-            </div>
+                </>,
+                error ? <p className="sessions-error" style={{ marginTop: '0.75rem' }}>{error}</p> : null
+            )
         );
     }
 
     // ── Create form ──────────────────────────────────────────────────────────────
     if (view === 'create') {
-        return (
-            <div className="sessions-backdrop">
-                <div className="sessions-card">
-                    <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
-                    <div className="sessions-card-logo-wrap"><img src="/img/Logo.png" alt="Duel of Fools" className="sessions-card-logo" /></div>
-                    <h2 className="sessions-card-title">New Session</h2>
-                    <form className="sessions-form" onSubmit={handleCreate}>
-                        <label className="sessions-label">
-                            Session Name
-                            <input
-                                className="sessions-input"
-                                type="text"
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
-                                maxLength={40}
-                                required
-                                autoFocus
-                            />
-                        </label>
-                        <label className="sessions-label">
-                            Session Visibility
-                            <select
-                                className="sessions-input"
-                                value={newSessionIsPublic ? 'public' : 'private'}
-                                onChange={(e) => setNewSessionIsPublic(e.target.value === 'public')}
-                            >
-                                <option value="public">Public (listed in Sessions)</option>
-                                <option value="private">Private (hidden; join by code/link)</option>
-                            </select>
-                        </label>
-                        {error && <p className="sessions-error">{error}</p>}
-                        <button className="sessions-submit" type="submit" disabled={loading}>
-                            {loading ? 'Creating…' : 'Create Session'}
-                        </button>
-                    </form>
-                </div>
-                <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
-            </div>
+        return renderViewShell(
+            renderFormCard(
+                'New Session',
+                <form className="sessions-form" onSubmit={handleCreate}>
+                    <label className="sessions-label">
+                        Session Name
+                        <input
+                            className="sessions-input"
+                            type="text"
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            maxLength={40}
+                            required
+                            autoFocus
+                        />
+                    </label>
+                    <label className="sessions-label">
+                        Session Visibility
+                        <select
+                            className="sessions-input"
+                            value={newSessionIsPublic ? 'public' : 'private'}
+                            onChange={(e) => setNewSessionIsPublic(e.target.value === 'public')}
+                        >
+                            <option value="public">Public (listed in Sessions)</option>
+                            <option value="private">Private (hidden; join by code/link)</option>
+                        </select>
+                    </label>
+                    {error && <p className="sessions-error">{error}</p>}
+                    <button className="sessions-submit" type="submit" disabled={loading}>
+                        {loading ? 'Creating…' : 'Create Session'}
+                    </button>
+                </form>
+            )
         );
     }
 
     // ── Join form ────────────────────────────────────────────────────────────────
     if (view === 'join') {
-        return (
-            <div className="sessions-backdrop">
-                <div className="sessions-card">
-                    <button className="sessions-back-btn" onClick={handleBack}>← Back</button>
-                    <div className="sessions-card-logo-wrap"><img src="/img/Logo.png" alt="Duel of Fools" className="sessions-card-logo" /></div>
-                    <h2 className="sessions-card-title">Join a Session</h2>
-                    <form className="sessions-form" onSubmit={handleJoin}>
-                        <label className="sessions-label">
-                            6-Character Code
-                            <input
-                                className="sessions-input sessions-input--code"
-                                type="text"
-                                value={joinCode}
-                                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                                maxLength={6}
-                                required
-                                autoFocus
-                                placeholder="e.g. XF92K1"
-                            />
-                        </label>
-                        {error && <p className="sessions-error">{error}</p>}
-                        <button className="sessions-submit" type="submit" disabled={loading}>
-                            {loading ? 'Joining…' : 'Join Session'}
-                        </button>
-                    </form>
-                </div>
-                <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
-            </div>
+        return renderViewShell(
+            renderFormCard(
+                'Join a Session',
+                <form className="sessions-form" onSubmit={handleJoin}>
+                    <label className="sessions-label">
+                        6-Character Code
+                        <input
+                            className="sessions-input sessions-input--code"
+                            type="text"
+                            value={joinCode}
+                            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                            maxLength={6}
+                            required
+                            autoFocus
+                            placeholder="e.g. XF92K1"
+                        />
+                    </label>
+                    {error && <p className="sessions-error">{error}</p>}
+                    <button className="sessions-submit" type="submit" disabled={loading}>
+                        {loading ? 'Joining…' : 'Join Session'}
+                    </button>
+                </form>
+            )
         );
     }
 
     // ── Main list ────────────────────────────────────────────────────────────────
-    return (
-        <div className="sessions-backdrop">
-            <div className="sessions-page">
-                <header className="sessions-header">
+    return renderViewShell(
+        <div className="sessions-page">
+            <div className="sessions-actions">
+                <button className="sessions-action-btn primary" onClick={() => { dispatch(clearSessionError()); setNewName(`${username}'s session`); setView('create'); }}>
+                    + New Session
+                </button>
+                <button className="sessions-action-btn" onClick={() => { dispatch(clearSessionError()); setView('join'); }}>
+                    Join by Code
+                </button>
+            </div>
+            <div className="sessions-secondary-actions">
+                <button className="sessions-action-btn" onClick={() => navigate('/rules')}>
+                    📜 Rules
+                </button>
+                <button className="sessions-action-btn" onClick={() => navigate('/gallery')}>
+                    📖 Gallery
+                </button>
+                <button className="sessions-action-btn" onClick={() => navigate('/deck-builder')}>
+                    🃏 Deck Builder
+                </button>
+                <button className="sessions-action-btn" onClick={() => navigate('/card-creator')}>
+                    🧪 Create Cards
+                </button>
+            </div>
+
+            {error && <p className="sessions-error sessions-error--center">{error}</p>}
+
+            <section className="sessions-list-section">
+                <div className="sessions-tabs">
                     <button
-                        className="sessions-brand-btn"
-                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className={`sessions-tab${lobbyTab === 'current' ? ' active' : ''}`}
+                        onClick={() => setLobbyTab('current')}
                     >
-                        <img src="/img/Jester.png" alt="jester" className="sessions-brand-jester" style={{ transform: `scale(${brandPulse.toFixed(4)})`, transformOrigin: 'center bottom' }} />
-                        <span className="sessions-brand-title">Duel of Fools</span>
+                        My Games
                     </button>
-                    <div className="sessions-header-right">
-                        <div className="sessions-profile-wrap">
-                            <button
-                                className="sessions-profile-btn"
-                                onClick={() => setShowProfileMenu((v) => !v)}
-                            >
-                                <img
-                                    className="sessions-profile-avatar"
-                                    src={avatarUrl || `https://i.pravatar.cc/40?u=${username}`}
-                                    alt="avatar"
-                                    onError={(e) => { e.target.src = `https://i.pravatar.cc/40?u=${username}`; }}
-                                />
-                                <span className="sessions-username">{displayName || username}</span>
-                                <span className="sessions-profile-caret">▾</span>
-                                {(friendRequests.length > 0 || Object.values(unreadDm).some((v) => v > 0)) && (
-                                    <span className="sessions-profile-badge">
-                                        {friendRequests.length + Object.values(unreadDm).reduce((a, b) => a + b, 0)}
-                                    </span>
-                                )}
-                            </button>
-                            {showProfileMenu && (
-                                <div className="sessions-profile-dropdown">
-                                    <button
-                                        className="sessions-profile-dropdown-item"
-                                        onClick={() => { setShowProfileMenu(false); setShowProfile(true); }}
-                                    >
-                                        👤 Profile
-                                    </button>
-                                    <div className="sessions-profile-dropdown-divider" />
-                                    <button
-                                        className="sessions-profile-dropdown-item signout"
-                                        onClick={() => { setShowProfileMenu(false); dispatch(logout()); }}
-                                    >
-                                        🚪 Log Out
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </header>
-
-                <div className="sessions-actions">
-                    <button className="sessions-action-btn primary" onClick={() => { dispatch(clearSessionError()); setNewName(`${username}'s session`); setView('create'); }}>
-                        + New Session
-                    </button>
-                    <button className="sessions-action-btn" onClick={() => { dispatch(clearSessionError()); setView('join'); }}>
-                        Join by Code
+                    <button
+                        className={`sessions-tab${lobbyTab === 'open' ? ' active' : ''}`}
+                        onClick={() => setLobbyTab('open')}
+                    >
+                        Open Lobbies
                     </button>
                 </div>
-                <div className="sessions-secondary-actions">
-                    <button className="sessions-action-btn" onClick={() => navigate('/rules')}>
-                        📜 Rules
-                    </button>
-                    <button className="sessions-action-btn" onClick={() => navigate('/gallery')}>
-                        📖 Gallery
-                    </button>
-                    <button className="sessions-action-btn" onClick={() => navigate('/deck-builder')}>
-                        🃏 Deck Builder
-                    </button>
-                    <button className="sessions-action-btn" onClick={() => navigate('/card-creator')}>
-                        🧪 Create Cards
-                    </button>
-                </div>
-
-                {error && <p className="sessions-error sessions-error--center">{error}</p>}
-
-                <section className="sessions-list-section">
-                    <div className="sessions-tabs">
-                        <button
-                            className={`sessions-tab${lobbyTab === 'current' ? ' active' : ''}`}
-                            onClick={() => setLobbyTab('current')}
-                        >
-                            My Games
-                        </button>
-                        <button
-                            className={`sessions-tab${lobbyTab === 'open' ? ' active' : ''}`}
-                            onClick={() => setLobbyTab('open')}
-                        >
-                            Open Lobbies
-                        </button>
-                    </div>
-                    {loading && list.length === 0 && <p className="sessions-empty">Loading…</p>}
-                    {!loading && list.filter((s) => lobbyTab === 'current'
+                {loading && list.length === 0 && <p className="sessions-empty">Loading…</p>}
+                {!loading && list.filter((s) => lobbyTab === 'current'
+                    ? s.players.some((p) => p.username === username)
+                    : s.status === 'waiting' && !s.players.some((p) => p.username === username)
+                ).length === 0 && (
+                        <p className="sessions-empty">
+                            {lobbyTab === 'current'
+                                ? 'No active games. Create one or join with a code!'
+                                : 'No open lobbies available right now.'}
+                        </p>
+                    )}
+                <div className="sessions-list">
+                    {list.filter((s) => lobbyTab === 'current'
                         ? s.players.some((p) => p.username === username)
                         : s.status === 'waiting' && !s.players.some((p) => p.username === username)
-                    ).length === 0 && (
-                            <p className="sessions-empty">
-                                {lobbyTab === 'current'
-                                    ? 'No active games. Create one or join with a code!'
-                                    : 'No open lobbies available right now.'}
-                            </p>
-                        )}
-                    <div className="sessions-list">
-                        {list.filter((s) => lobbyTab === 'current'
-                            ? s.players.some((p) => p.username === username)
-                            : s.status === 'waiting' && !s.players.some((p) => p.username === username)
-                        ).map((session) => {
-                            const isParticipant = session.players.some((p) => p.username === username);
-                            const openSlots = 6 - session.players.length;
-                            const mySlot = session.players.find((p) => p.username === username)?.slot;
-                            const isMyTurn = session.status === 'in-progress' && mySlot != null && session.currentTurn === mySlot;
-                            const currentTurnName = session.status === 'in-progress'
-                                ? session.players.find((p) => p.slot === session.currentTurn)?.username
-                                : null;
-                            const sessionUnread = unreadLobby[session._id] || 0;
-                            return (
-                                <SessionCard
-                                    key={session._id}
-                                    session={session}
-                                    isParticipant={isParticipant}
-                                    openSlots={openSlots}
-                                    isMyTurn={isMyTurn}
-                                    currentTurnName={currentTurnName}
-                                    sessionUnread={sessionUnread}
-                                    onEnter={handleEnterSession}
-                                    onPreview={(s) => { dispatch(clearSessionError()); setPreviewSession(s); setView('preview'); }}
-                                    dispatch={dispatch}
-                                />
-                            );
-                        })}
-                    </div>
-                </section>
-            </div>
-            {showProfile && <Profile onClose={() => setShowProfile(false)} />}
-            {showRules && <RulesModal onClose={() => navigate('/')} title="Rules Deep Dive" />}
-            {showGallery && <GalleryModal onClose={() => navigate('/')} />}
-            {showDeckBuilder && (
-                <DeckBuilderModal
-                    onClose={() => navigate('/')}
-                    onConfirm={() => navigate('/')}
-                    initialDeck={[]}
-                    loading={false}
-                    error={null}
-                />
-            )}
-            {showCustomCards && <CustomCardModal onClose={() => navigate('/')} />}
-            <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
-        </div>
+                    ).map((session) => {
+                        const isParticipant = session.players.some((p) => p.username === username);
+                        const openSlots = 6 - session.players.length;
+                        const mySlot = session.players.find((p) => p.username === username)?.slot;
+                        const isMyTurn = session.status === 'in-progress' && mySlot != null && session.currentTurn === mySlot;
+                        const currentTurnName = session.status === 'in-progress'
+                            ? session.players.find((p) => p.slot === session.currentTurn)?.username
+                            : null;
+                        const sessionUnread = unreadLobby[session._id] || 0;
+                        return (
+                            <SessionCard
+                                key={session._id}
+                                session={session}
+                                isParticipant={isParticipant}
+                                openSlots={openSlots}
+                                isMyTurn={isMyTurn}
+                                currentTurnName={currentTurnName}
+                                sessionUnread={sessionUnread}
+                                onEnter={handleEnterSession}
+                                onPreview={(s) => { dispatch(clearSessionError()); setPreviewSession(s); setView('preview'); }}
+                                dispatch={dispatch}
+                            />
+                        );
+                    })}
+                </div>
+            </section>
+        </div>,
+        true
     );
 };
 
