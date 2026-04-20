@@ -38,6 +38,27 @@ const getEffectiveEva = (card) => {
     return Math.max(0, eva);
 };
 
+const getEffectiveAgi = (card) => {
+    let agi = card.agility || 0;
+    for (const s of card.statusEffects || []) {
+        if (s.type === 'agi_up') agi += s.value;
+        if (s.type === 'agi_down') agi -= s.value;
+    }
+    return Math.max(0, agi);
+};
+
+const getHitChancePercent = (attacker, defender) => {
+    const agi = getEffectiveAgi(attacker);
+    const eva = getEffectiveEva(defender);
+    return Math.max(0, 50 + (15 * (agi - eva)));
+};
+
+const attackHits = (attacker, defender) => {
+    const hitChance = getHitChancePercent(attacker, defender);
+    if (hitChance >= 100) return true;
+    return (Math.random() * 100) < hitChance;
+};
+
 const getEffectiveAtk = (card) => {
     let atk = card.attack || 5;
     for (const s of card.statusEffects || []) {
@@ -152,8 +173,7 @@ const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state, context 
 const resolveBasicAttack = (attacker, defender, defenderPlayer, state) => {
     const attackerPlayerId = state.players.find((p) => p.inPlay?.some((c) => c.id === attacker.id))?.id ?? null;
     const attackerName = attacker?.name ?? null;
-    const evadeRoll = Math.floor(Math.random() * 10);
-    if (evadeRoll < getEffectiveEva(defender)) {
+    if (!attackHits(attacker, defender)) {
         pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'miss', defender.name, defender.currentHealth, defender.health, attackerName, null, attackerPlayerId);
         return { hit: false, damage: 0 };
     }
@@ -392,8 +412,7 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
                 dmg = result.damage;
             } else {
                 if (!effect.ignoreEvasion) {
-                    const roll = Math.floor(Math.random() * 10);
-                    if (roll < getEffectiveEva(target)) {
+                    if (!attackHits(caster, target)) {
                         pushHitEvent(state, targetPlayer.id, target.id, 0, 'miss', target.name, target.currentHealth, target.health, caster.name, abilityName, casterPlayer.id);
                         state.log.unshift(`${abilityName} missed!`);
                         return;
@@ -617,6 +636,7 @@ export {
     getStatus,
     getEffectiveDef,
     getEffectiveEva,
+    getEffectiveAgi,
     getEffectiveAtk,
     getEnemies,
     getAllies,

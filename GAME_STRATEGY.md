@@ -39,8 +39,8 @@ A card can attack a player directly **only when that player has no living cards 
 | `attack` | Base damage. Effective ATK = `attack + sum(atk_up values)` |
 | `defense` | Damage reduction. Effective DEF = `defense + def_up - def_down` (floor 0) |
 | `health` | Max HP. Tracked live as `currentHealth` |
-| `evasion` | Miss chance. Roll `rand(0–9) < effectiveEVA` → miss. Effective EVA = `evasion + eva_up` |
-| `agility` | Flavor/passive use only — no direct combat formula |
+| `evasion` | Reduces chance to be hit. **Hit chance = `max(0, 50 + 15 × (effectiveAGI − effectiveEVA))`**. Effective EVA = `evasion + eva_up` (floor 0). |
+| `agility` | Increases chance to hit. **Hit chance = `max(0, 50 + 15 × (effectiveAGI − effectiveEVA))`**. Effective AGI = `agility + agi_up − agi_down` (floor 0). |
 
 ### Basic Attack Formula
 ```
