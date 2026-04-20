@@ -125,6 +125,11 @@ const Auth = ({ initialMode = 'login' }) => {
                         />
                     </label>
 
+                    {mode === 'signup' && (
+                        <div className="auth-warning" style={{ color: '#e67e22', fontWeight: 500, marginBottom: 8, fontSize: '0.97em' }}>
+                            Beta Notice: For your security, please use a unique password you don’t use anywhere else. This game is in beta and not intended for sensitive credentials.
+                        </div>
+                    )}
                     <label className="auth-label">
                         Password
                         <input

@@ -765,6 +765,10 @@
     margin: 5rem auto 0;
     text-align: center;
     padding: 0 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .lobby-title {
@@ -869,7 +873,7 @@
 .lobby-invite-dm-form {
     width: 100%;
     max-width: 480px;
-    margin: 0 auto 1rem;
+    margin-bottom: 1.2rem;
     background: #181b26;
     border: 1px solid #2e3148;
     border-radius: 10px;

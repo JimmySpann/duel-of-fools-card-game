@@ -34,6 +34,7 @@ import Header from '../card-game/components/header/header.jsx';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import { getSocket } from '../../features/chat/socket';
 import './sessions.css';
+import Welcome from './Welcome.jsx';
 
 const POLL_INTERVAL = 3000;
 const SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
@@ -821,6 +822,17 @@ const Sessions = ({ initialModal } = {}) => {
                 'New Session',
                 <form className="sessions-form" onSubmit={handleCreate}>
                     <label className="sessions-label">
+                        Session Visibility
+                        <select
+                            className="sessions-input"
+                            value={newSessionIsPublic ? 'public' : 'private'}
+                            onChange={(e) => setNewSessionIsPublic(e.target.value === 'public')}
+                        >
+                            <option value="public">Public (listed in Sessions)</option>
+                            <option value="private">Private (hidden; join by code/link)</option>
+                        </select>
+                    </label>
+                    <label className="sessions-label">
                         Session Name
                         <input
                             className="sessions-input"
@@ -831,17 +843,6 @@ const Sessions = ({ initialModal } = {}) => {
                             required
                             autoFocus
                         />
-                    </label>
-                    <label className="sessions-label">
-                        Session Visibility
-                        <select
-                            className="sessions-input"
-                            value={newSessionIsPublic ? 'public' : 'private'}
-                            onChange={(e) => setNewSessionIsPublic(e.target.value === 'public')}
-                        >
-                            <option value="public">Public (listed in Sessions)</option>
-                            <option value="private">Private (hidden; join by code/link)</option>
-                        </select>
                     </label>
                     {error && <p className="sessions-error">{error}</p>}
                     <button className="sessions-submit" type="submit" disabled={loading}>
@@ -883,6 +884,8 @@ const Sessions = ({ initialModal } = {}) => {
     // ── Main list ────────────────────────────────────────────────────────────────
     return renderViewShell(
         <div className="sessions-page">
+            {/* Welcome panel at top of lobbies list */}
+            {view === 'list' && <Welcome />}
             <div className="sessions-actions">
                 <button className="sessions-action-btn primary" onClick={handleOpenCreate}>
                     + New Session
