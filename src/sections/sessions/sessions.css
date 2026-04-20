@@ -1,3 +1,18 @@
+/* --- Game Settings Row Alignment Fix --- */
+.game-settings-row {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.game-settings-row>* {
+    flex: 1 1 0;
+    min-width: 120px;
+    max-width: 180px;
+    box-sizing: border-box;
+}
+
 /* ── Shared backdrop ─────────────────────────────────────────────────────── */
 .sessions-backdrop {
     min-height: 100vh;
