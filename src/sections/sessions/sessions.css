@@ -1093,7 +1093,7 @@
     padding: 1rem 1.25rem;
     margin-bottom: 1.5rem;
     width: 100%;
-    max-width: 480px;
+    max-width: 660px;
 }
 
 .lobby-settings--readonly {
@@ -1114,9 +1114,9 @@
 }
 
 .lobby-settings-grid {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem 1rem;
 }
 
 .lobby-setting-label {
@@ -1125,8 +1125,7 @@
     gap: 0.3rem;
     font-size: 0.8rem;
     color: #9ca3bf;
-    flex: 1;
-    min-width: 100px;
+    min-width: 0;
 }
 
 .lobby-setting-input {
@@ -1137,6 +1136,8 @@
     padding: 0.4rem 0.5rem;
     font-size: 0.9rem;
     width: 100%;
+    box-sizing: border-box;
+    height: 2.2rem;
 }
 
 .lobby-setting-input:focus {
