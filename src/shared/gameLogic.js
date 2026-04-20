@@ -66,9 +66,15 @@ const getAllies = (state, playerId) => {
     return [me];
 };
 
+const getPlayerNameById = (state, playerId) =>
+    state.players.find((p) => p.id === playerId)?.name ?? 'Unknown';
+
+const getBattlerLabel = (state, playerId, cardName) =>
+    `${getPlayerNameById(state, playerId)}'s ${cardName ?? 'Battler'}`;
+
 // ── Event helpers ─────────────────────────────────────────────────────────────
 
-const pushHitEvent = (state, defenderPlayerId, cardId, damage, type, cardName, healthAfter, maxHealth, attackerName = null, abilityName = null) => {
+const pushHitEvent = (state, defenderPlayerId, cardId, damage, type, cardName, healthAfter, maxHealth, attackerName = null, abilityName = null, attackerPlayerId = null) => {
     state.lastHitEvents.push({ defenderPlayerId, cardId, damage, type });
     state.recapEvents.push({
         type, cardId,
@@ -79,6 +85,7 @@ const pushHitEvent = (state, defenderPlayerId, cardId, damage, type, cardName, h
         targetPlayerId: defenderPlayerId,
         ...(attackerName ? { attackerName } : {}),
         ...(abilityName ? { abilityName } : {}),
+        ...(attackerPlayerId ? { attackerPlayerId } : {}),
     });
 };
 
@@ -97,13 +104,14 @@ const cleanupDefeated = (state) => {
 // ── Damage / attack ───────────────────────────────────────────────────────────
 
 const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state, context = {}) => {
-    const { attackerName = null, abilityName = null } = context;
+    const { attackerName = null, abilityName = null, attackerPlayerId = null } = context;
     const defender = defenderPlayer.inPlay[targetIdx];
     if (!defender || defender.dying) return 0;
+    const defenderLabel = getBattlerLabel(state, defenderPlayer.id, defender.name);
 
     if (hasStatus(defender, 'invulnerable') || hasStatus(defender, 'invisible')) {
-        state.log.unshift(`${defender.name} is untouchable!`);
-        pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'blocked', defender.name, defender.currentHealth, defender.health, attackerName, abilityName);
+        state.log.unshift(`${defenderLabel} is untouchable!`);
+        pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'blocked', defender.name, defender.currentHealth, defender.health, attackerName, abilityName, attackerPlayerId);
         return 0;
     }
 
@@ -112,7 +120,7 @@ const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state, context 
     const dmgReduction = getStatus(defender, 'damage_reduction');
     if (dmgReduction) {
         damage = Math.floor(damage / 2);
-        state.log.unshift(`${defender.name}'s Wall halved the damage!`);
+        state.log.unshift(`${defenderLabel}'s Wall halved the damage!`);
     }
 
     const shield = getStatus(defender, 'shielded');
@@ -121,24 +129,26 @@ const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state, context 
         damage -= absorbed;
         shield.value -= absorbed;
         if (shield.value <= 0) removeStatus(defender, 'shielded');
-        if (absorbed > 0) state.log.unshift(`${defender.name}'s shield absorbed ${absorbed} damage!`);
+        if (absorbed > 0) state.log.unshift(`${defenderLabel}'s shield absorbed ${absorbed} damage!`);
     }
 
     defender.currentHealth = Math.max(0, defender.currentHealth - damage);
     if (defender.currentHealth <= 0) {
-        pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'defeat', defender.name, 0, defender.health, attackerName, abilityName);
+        pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'defeat', defender.name, 0, defender.health, attackerName, abilityName, attackerPlayerId);
         defender.dying = true;
-        state.log.unshift(`${defender.name} was defeated!`);
+        state.log.unshift(`${defenderLabel} was defeated after taking ${damage} damage!`);
     } else {
-        pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'hit', defender.name, defender.currentHealth, defender.health, attackerName, abilityName);
+        pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'hit', defender.name, defender.currentHealth, defender.health, attackerName, abilityName, attackerPlayerId);
     }
     return damage;
 };
 
 const resolveBasicAttack = (attacker, defender, defenderPlayer, state) => {
+    const attackerPlayerId = state.players.find((p) => p.inPlay?.some((c) => c.id === attacker.id))?.id ?? null;
+    const attackerName = attacker?.name ?? null;
     const evadeRoll = Math.floor(Math.random() * 10);
     if (evadeRoll < getEffectiveEva(defender)) {
-        pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'miss', defender.name, defender.currentHealth, defender.health);
+        pushHitEvent(state, defenderPlayer.id, defender.id, 0, 'miss', defender.name, defender.currentHealth, defender.health, attackerName, null, attackerPlayerId);
         return { hit: false, damage: 0 };
     }
 
@@ -148,7 +158,7 @@ const resolveBasicAttack = (attacker, defender, defenderPlayer, state) => {
     if (focused) {
         damage = Math.round(damage * 2.5);
         removeStatus(attacker, 'focused');
-        state.log.unshift(`${attacker.name} unleashes a focused strike!`);
+        state.log.unshift(`${attackerPlayerId ? getBattlerLabel(state, attackerPlayerId, attacker.name) : attacker.name} unleashes a focused strike!`);
     }
 
     return { hit: true, damage };
@@ -261,7 +271,8 @@ const getAbilityTargetType = getAbilityTarget;
 
 const isUntouchable = (card, state) => {
     if (hasStatus(card, 'invulnerable') || hasStatus(card, 'invisible')) {
-        state.log.unshift(`${card.name} can't be targeted!`);
+        const ownerId = state.players.find((p) => p.inPlay?.some((c) => c.id === card.id))?.id ?? null;
+        state.log.unshift(`${ownerId ? getBattlerLabel(state, ownerId, card.name) : card.name} can't be targeted!`);
         return true;
     }
     return false;
@@ -377,7 +388,7 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
                 if (!effect.ignoreEvasion) {
                     const roll = Math.floor(Math.random() * 10);
                     if (roll < getEffectiveEva(target)) {
-                        pushHitEvent(state, targetPlayer.id, target.id, 0, 'miss', target.name, target.currentHealth, target.health);
+                        pushHitEvent(state, targetPlayer.id, target.id, 0, 'miss', target.name, target.currentHealth, target.health, caster.name, abilityName, casterPlayer.id);
                         state.log.unshift(`${abilityName} missed!`);
                         return;
                     }
@@ -394,68 +405,68 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
                     : Math.max(0, getEffectiveDef(target) - (effect.defPiercing ?? 0));
                 dmg = Math.max(1, base - effDef);
             }
-            const actualDmg = applyDamageToCard(targetPlayer, targetCardIdx, dmg, state, { attackerName: caster.name, abilityName });
+            const actualDmg = applyDamageToCard(targetPlayer, targetCardIdx, dmg, state, { attackerName: caster.name, abilityName, attackerPlayerId: casterPlayer.id });
             if (actualDmg > 0 && !targetPlayer.inPlay[targetCardIdx]?.dying) {
-                state.log.unshift(`${target.name} takes ${actualDmg} damage from ${abilityName}!`);
+                state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)} takes ${actualDmg} damage from ${abilityName}!`);
             }
             if (effect.onHitStatus && actualDmg > 0) {
                 const live = targetPlayer.inPlay[targetCardIdx];
                 if (live && !live.dying) {
                     const { status, value, duration } = effect.onHitStatus;
                     addStatus(live, status, value, duration);
-                    state.log.unshift(`${target.name} is afflicted with ${status}! (${value} × ${duration} turns)`);
+                    state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)} is afflicted with ${status}! (${value} × ${duration} turns)`);
                 }
             }
             if (effect.lifesteal && actualDmg > 0) {
                 const lsMult = effect.lifeStealMultiplier ?? 1;
                 const healed = Math.max(1, Math.floor(actualDmg * lsMult));
                 caster.currentHealth = Math.min(caster.health, caster.currentHealth + healed);
-                state.log.unshift(`${caster.name} drains ${healed} HP!`);
+                state.log.unshift(`${getBattlerLabel(state, casterPlayer.id, caster.name)} drains ${healed} HP!`);
             }
             break;
         }
         case 'status': {
             const value = effect.valueFn === 'targetDef' ? (target.defense || 0) : effect.value;
             addStatus(target, effect.status, value, effect.duration);
-            state.log.unshift(`${target.name} gains ${effect.status}!`);
-            pushRecapEvent(state, { type: 'statusApplied', cardName: target.name, targetPlayerId: targetPlayer.id, status: effect.status, duration: effect.duration, attackerName: caster.name, abilityName });
+            state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)} gains ${effect.status}!`);
+            pushRecapEvent(state, { type: 'statusApplied', cardName: target.name, targetPlayerId: targetPlayer.id, status: effect.status, duration: effect.duration, attackerName: caster.name, attackerPlayerId: casterPlayer.id, abilityName });
             break;
         }
         case 'heal': {
             const prevHp = target.currentHealth;
             target.currentHealth = Math.min(target.health, target.currentHealth + effect.amount);
             const healed = target.currentHealth - prevHp;
-            state.log.unshift(`${target.name} is healed for ${healed} HP!`);
-            pushRecapEvent(state, { type: 'heal', cardName: target.name, targetPlayerId: targetPlayer.id, amount: healed, healthAfter: target.currentHealth, maxHealth: target.health, attackerName: caster.name, abilityName });
+            state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)} is healed for ${healed} HP!`);
+            pushRecapEvent(state, { type: 'heal', cardName: target.name, targetPlayerId: targetPlayer.id, amount: healed, healthAfter: target.currentHealth, maxHealth: target.health, attackerName: caster.name, attackerPlayerId: casterPlayer.id, abilityName });
             break;
         }
         case 'healSelf': {
             const prevHp = caster.currentHealth;
             caster.currentHealth = Math.min(caster.health, caster.currentHealth + effect.amount);
             const healed = caster.currentHealth - prevHp;
-            state.log.unshift(`${caster.name} restores ${healed} HP!`);
-            pushRecapEvent(state, { type: 'heal', cardName: caster.name, targetPlayerId: casterPlayer.id, amount: healed, healthAfter: caster.currentHealth, maxHealth: caster.health, attackerName: caster.name, abilityName });
+            state.log.unshift(`${getBattlerLabel(state, casterPlayer.id, caster.name)} restores ${healed} HP!`);
+            pushRecapEvent(state, { type: 'heal', cardName: caster.name, targetPlayerId: casterPlayer.id, amount: healed, healthAfter: caster.currentHealth, maxHealth: caster.health, attackerName: caster.name, attackerPlayerId: casterPlayer.id, abilityName });
             break;
         }
         case 'cleanse': {
             target.statusEffects = (target.statusEffects || []).filter((s) => !effect.debuffs.includes(s.type));
-            state.log.unshift(`${target.name} is cleansed!`);
+            state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)} is cleansed!`);
             break;
         }
         case 'resetCooldowns': {
             if (effect.firstOnly) {
                 if (target.actions[0]) target.actions[0] = { ...target.actions[0], usesRemaining: target.actions[0].limit };
-                state.log.unshift(`${target.name}'s first ability is partially refreshed!`);
+                state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)}'s first ability is partially refreshed!`);
             } else {
                 target.actions = target.actions.map((a) => ({ ...a, usesRemaining: a.limit }));
-                state.log.unshift(`${target.name}'s abilities are fully refreshed!`);
+                state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)}'s abilities are fully refreshed!`);
             }
             break;
         }
         case 'selfDestruct': {
             casterPlayer.discardPile.push({ ...caster });
             casterPlayer.inPlay.splice(casterCardIdx, 1);
-            state.log.unshift(`${caster.name} self-destructs!`);
+            state.log.unshift(`${getBattlerLabel(state, casterPlayer.id, caster.name)} self-destructs!`);
             break;
         }
     }
@@ -481,13 +492,13 @@ const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, target
     if (!def) {
         ability.usesRemaining -= 1;
         caster.acted = true;
-        state.log.unshift(`${caster.name} uses ${ability.name}! (no effect defined)`);
+        state.log.unshift(`${getBattlerLabel(state, casterPlayer.id, caster.name)} uses ${ability.name}! (no effect defined)`);
         return;
     }
 
     ability.usesRemaining -= 1;
     caster.acted = true;
-    state.log.unshift(`${caster.name} uses ${ability.name}!`);
+    state.log.unshift(`${getBattlerLabel(state, casterPlayer.id, caster.name)} uses ${ability.name}!`);
 
     const { targetType } = def;
     const effects = (microeventResult && ability.microevent)
@@ -564,20 +575,23 @@ const processStatusEffects = (player, state) => {
     for (let i = player.inPlay.length - 1; i >= 0; i--) {
         const card = player.inPlay[i];
         if (!card.statusEffects?.length) continue;
+        const cardLabel = getBattlerLabel(state, player.id, card.name);
+        let dotDamageThisTick = 0;
 
         // Apply DOTs
         for (const status of card.statusEffects) {
             if (DOT_TYPES.includes(status.type)) {
                 card.currentHealth = Math.max(0, card.currentHealth - status.value);
+                dotDamageThisTick += status.value;
                 pushRecapEvent(state, { type: 'dot', cardName: card.name, targetPlayerId: player.id, damage: status.value, dotType: status.type, healthAfter: card.currentHealth, maxHealth: card.health });
-                state.log.unshift(`${card.name} takes ${status.value} ${status.type} damage!`);
+                state.log.unshift(`${cardLabel} takes ${status.value} ${status.type} damage!`);
             }
         }
         if (card.currentHealth <= 0) {
             player.discardPile.push({ ...card });
             player.inPlay.splice(i, 1);
-            pushRecapEvent(state, { type: 'dotDefeat', cardName: card.name, targetPlayerId: player.id });
-            state.log.unshift(`${card.name} was defeated by status effects!`);
+            pushRecapEvent(state, { type: 'dotDefeat', cardName: card.name, targetPlayerId: player.id, damage: dotDamageThisTick, healthAfter: 0, maxHealth: card.health });
+            state.log.unshift(`${cardLabel} was defeated by status effects after taking ${dotDamageThisTick} damage!`);
             continue;
         }
 

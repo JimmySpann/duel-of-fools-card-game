@@ -23,6 +23,7 @@ const {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+const battlerLabel = (player, cardName) => `${player?.name ?? 'Unknown'}'s ${cardName ?? 'Battler'}`;
 
 const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
 
@@ -163,9 +164,9 @@ const actions = {
         const player = state.players.find((p) => p.id === state.currentTurn);
         const card = player?.inPlay[cardIndex];
         if (!card) return;
-        if (hasStatus(card, 'frozen')) { state.log.unshift(`${card.name} is Frozen and cannot act!`); return; }
-        if (card.acted) { state.log.unshift(`${card.name} has already acted this turn!`); return; }
-        if (card.justPlayed) { state.log.unshift(`${card.name} was just played and needs a turn to prepare!`); return; }
+        if (hasStatus(card, 'frozen')) { state.log.unshift(`${battlerLabel(player, card.name)} is Frozen and cannot act!`); return; }
+        if (card.acted) { state.log.unshift(`${battlerLabel(player, card.name)} has already acted this turn!`); return; }
+        if (card.justPlayed) { state.log.unshift(`${battlerLabel(player, card.name)} was just played and needs a turn to prepare!`); return; }
 
         const enemies = getEnemies(state, state.currentTurn);
         const allEnemiesEmpty = enemies.every((e) => e.inPlay.length === 0);
@@ -177,8 +178,8 @@ const actions = {
             const damage = Math.max(1, card.attack || 5);
             for (const enemy of enemies) {
                 enemy.health = Math.max(0, enemy.health - damage);
-                pushRecapEvent(state, { type: 'directHit', cardName: card.name, targetPlayerId: enemy.id, damage, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
-                state.log.unshift(`${card.name} attacks ${enemy.name} directly for ${damage} damage!`);
+                pushRecapEvent(state, { type: 'directHit', cardName: card.name, attackerPlayerId: player.id, targetPlayerId: enemy.id, damage, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
+                state.log.unshift(`${battlerLabel(player, card.name)} attacks ${enemy.name} directly for ${damage} damage!`);
             }
             checkWinCondition(state);
             return;
@@ -266,9 +267,9 @@ const actions = {
         const player = state.players.find((p) => p.id === state.currentTurn);
         const card = player?.inPlay[casterCardIndex];
         if (!card) return;
-        if (hasStatus(card, 'frozen')) { state.log.unshift(`${card.name} is Frozen and cannot act!`); return; }
-        if (card.acted) { state.log.unshift(`${card.name} has already acted this turn!`); return; }
-        if (card.justPlayed) { state.log.unshift(`${card.name} was just played and needs a turn to prepare!`); return; }
+        if (hasStatus(card, 'frozen')) { state.log.unshift(`${battlerLabel(player, card.name)} is Frozen and cannot act!`); return; }
+        if (card.acted) { state.log.unshift(`${battlerLabel(player, card.name)} has already acted this turn!`); return; }
+        if (card.justPlayed) { state.log.unshift(`${battlerLabel(player, card.name)} was just played and needs a turn to prepare!`); return; }
         const ability = card.actions[abilityIndex];
         if (!ability || ability.usesRemaining <= 0) { state.log.unshift(`${ability?.name ?? 'Ability'} has no uses left!`); return; }
 
@@ -288,8 +289,8 @@ const actions = {
                 const dmg = Math.max(1, card.attack || 5);
                 for (const enemy of enemies) {
                     enemy.health = Math.max(0, enemy.health - dmg);
-                    pushRecapEvent(state, { type: 'directHit', cardName: card.name, targetPlayerId: enemy.id, damage: dmg, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
-                    state.log.unshift(`${card.name} uses ${ability.name} on ${enemy.name} directly for ${dmg} damage!`);
+                    pushRecapEvent(state, { type: 'directHit', cardName: card.name, attackerPlayerId: player.id, targetPlayerId: enemy.id, damage: dmg, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
+                    state.log.unshift(`${battlerLabel(player, card.name)} uses ${ability.name} on ${enemy.name} directly for ${dmg} damage!`);
                 }
                 checkWinCondition(state);
                 return;
@@ -324,10 +325,10 @@ const actions = {
             const { hit, damage } = resolveBasicAttack(attacker, defender, defenderPlayer, state);
             attacker.acted = true;
             if (hit) {
-                applyDamageToCard(defenderPlayer, targetCardIndex, damage, state, { attackerName: attacker.name });
-                state.log.unshift(`${attacker.name} attacks ${defender.name} for ${damage} damage!`);
+                applyDamageToCard(defenderPlayer, targetCardIndex, damage, state, { attackerName: attacker.name, attackerPlayerId: attackerPlayer.id });
+                state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${battlerLabel(defenderPlayer, defender.name)} for ${damage} damage!`);
             } else {
-                state.log.unshift(`${attacker.name} attacked ${defender.name} but missed!`);
+                state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacked ${battlerLabel(defenderPlayer, defender.name)} but missed!`);
             }
         }
         state.pendingAction = null;
@@ -358,7 +359,7 @@ const actions = {
         for (const defenderPlayer of targets) {
             if (!defenderPlayer) continue;
             defenderPlayer.health = Math.max(0, defenderPlayer.health - damage);
-            state.log.unshift(`${attacker.name} attacks ${defenderPlayer.name} directly for ${damage} damage!`);
+            state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${defenderPlayer.name} directly for ${damage} damage!`);
         }
         state.pendingAction = null;
         state.phase = 'main';
@@ -379,7 +380,7 @@ const actions = {
         card.justPlayed = true;
         player.inPlay.push(card);
         state.cardPlayedThisTurn = true;
-        state.log.unshift(`${player.name} played ${card.name} to the board!`);
+        state.log.unshift(`${player.name} played ${battlerLabel(player, card.name)} to the board!`);
     },
 
     commitDefeats(state) {

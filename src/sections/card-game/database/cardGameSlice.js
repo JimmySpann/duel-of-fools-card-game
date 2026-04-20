@@ -14,6 +14,7 @@ const {
 const cards = [];
 
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+const battlerLabel = (player, cardName) => `${player?.name ?? 'Unknown'}'s ${cardName ?? 'Battler'}`;
 
 const buildPlayer = (id, name, image) => {
   const pool = shuffle(cards).map((c) => ({
@@ -71,9 +72,9 @@ export const cardGameSlice = createSlice({
       const cardIndex = typeof action.payload === 'object' ? action.payload.cardIndex : action.payload;
       const card = player?.inPlay[cardIndex];
       if (!card) return;
-      if (hasStatus(card, 'frozen')) { state.log.unshift(`${card.name} is Frozen and cannot act!`); return; }
-      if (card.acted) { state.log.unshift(`${card.name} has already acted this turn!`); return; }
-      if (card.justPlayed) { state.log.unshift(`${card.name} was just played and needs a turn to prepare!`); return; }
+      if (hasStatus(card, 'frozen')) { state.log.unshift(`${battlerLabel(player, card.name)} is Frozen and cannot act!`); return; }
+      if (card.acted) { state.log.unshift(`${battlerLabel(player, card.name)} has already acted this turn!`); return; }
+      if (card.justPlayed) { state.log.unshift(`${battlerLabel(player, card.name)} was just played and needs a turn to prepare!`); return; }
       state.pendingAction = { isAbility: false, casterCardIndex: cardIndex };
       state.phase = 'selectingTarget';
     },
@@ -89,9 +90,9 @@ export const cardGameSlice = createSlice({
       const player = state.players.find((p) => p.id === state.currentTurn);
       const card = player?.inPlay[casterCardIndex];
       if (!card) return;
-      if (hasStatus(card, 'frozen')) { state.log.unshift(`${card.name} is Frozen and cannot act!`); return; }
-      if (card.acted) { state.log.unshift(`${card.name} has already acted this turn!`); return; }
-      if (card.justPlayed) { state.log.unshift(`${card.name} was just played and needs a turn to prepare!`); return; }
+      if (hasStatus(card, 'frozen')) { state.log.unshift(`${battlerLabel(player, card.name)} is Frozen and cannot act!`); return; }
+      if (card.acted) { state.log.unshift(`${battlerLabel(player, card.name)} has already acted this turn!`); return; }
+      if (card.justPlayed) { state.log.unshift(`${battlerLabel(player, card.name)} was just played and needs a turn to prepare!`); return; }
       const ability = card.actions[abilityIndex];
       if (!ability || ability.usesRemaining <= 0) { state.log.unshift(`${ability?.name ?? 'Ability'} has no uses left!`); return; }
 
@@ -128,10 +129,10 @@ export const cardGameSlice = createSlice({
         const { hit, damage } = resolveBasicAttack(attacker, defender, defenderPlayer, state);
         attacker.acted = true;
         if (hit) {
-          applyDamageToCard(defenderPlayer, targetCardIndex, damage, state, { attackerName: attacker.name });
-          state.log.unshift(`${attacker.name} attacks ${defender.name} for ${damage} damage!`);
+          applyDamageToCard(defenderPlayer, targetCardIndex, damage, state, { attackerName: attacker.name, attackerPlayerId: attackerPlayer.id });
+          state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${battlerLabel(defenderPlayer, defender.name)} for ${damage} damage!`);
         } else {
-          state.log.unshift(`${attacker.name} attacked ${defender.name} but missed!`);
+          state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacked ${battlerLabel(defenderPlayer, defender.name)} but missed!`);
         }
       }
       state.pendingAction = null;
@@ -161,8 +162,8 @@ export const cardGameSlice = createSlice({
       attacker.acted = true;
       const damage = Math.max(1, attacker.attack || 5);
       defenderPlayer.health = Math.max(0, defenderPlayer.health - damage);
-      pushRecapEvent(state, { type: 'directHit', cardName: attacker.name, targetPlayerId: defenderPlayer.id, damage, healthAfter: defenderPlayer.health, maxHealth: defenderPlayer.maxHealth });
-      state.log.unshift(`${attacker.name} attacks ${defenderPlayer.name} directly for ${damage} damage!`);
+      pushRecapEvent(state, { type: 'directHit', cardName: attacker.name, attackerPlayerId: attackerPlayer.id, targetPlayerId: defenderPlayer.id, damage, healthAfter: defenderPlayer.health, maxHealth: defenderPlayer.maxHealth });
+      state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${defenderPlayer.name} directly for ${damage} damage!`);
       if (defenderPlayer.health <= 0) {
         defenderPlayer.eliminated = true;
         const alive = state.players.filter((p) => !p.eliminated && p.health > 0);
@@ -192,7 +193,7 @@ export const cardGameSlice = createSlice({
       card.justPlayed = true;
       player.inPlay.push(card);
       state.cardPlayedThisTurn = true;
-      state.log.unshift(`${player.name} played ${card.name} to the board!`);
+      state.log.unshift(`${player.name} played ${battlerLabel(player, card.name)} to the board!`);
     },
 
     commitDefeats: (state) => {

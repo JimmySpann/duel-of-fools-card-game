@@ -36,49 +36,55 @@ const HPBar = ({ current, max }) => {
 const RecapEvent = ({ event, index, playerNames, currentPlayerId }) => {
     const cfg = EVENT_CONFIG[event.type] ?? { icon: '❓', label: event.type, className: '' };
     const targetName = playerNames?.[event.targetPlayerId] ?? 'Player';
-    const isYou = event.targetPlayerId === currentPlayerId;
-    const targetLabel = isYou ? 'your' : `${targetName}'s`;
+    const battlerLabel = (playerId, cardName) => `${playerNames?.[playerId] ?? 'Unknown'}'s ${cardName ?? 'Battler'}`;
+    const targetBattler = battlerLabel(event.targetPlayerId, event.cardName);
+    const attackerBattler = event.attackerPlayerId
+        ? battlerLabel(event.attackerPlayerId, event.attackerName)
+        : event.attackerName;
 
     const buildMessage = () => {
         switch (event.type) {
             case 'hit': {
-                const via = event.abilityName ? ` from ${event.abilityName}` : event.attackerName ? ` by ${event.attackerName}` : '';
-                return `${event.cardName} took ${event.damage} damage${via} (${targetLabel} side)`;
+                const by = attackerBattler ? ` by ${attackerBattler}` : '';
+                const via = event.abilityName ? ` using ${event.abilityName}` : '';
+                return `${targetBattler} took ${event.damage} damage${by}${via}`;
             }
             case 'defeat': {
-                const by = event.attackerName ? ` by ${event.attackerName}` : '';
-                const via = event.abilityName ? ` (${event.abilityName})` : '';
-                return `${event.cardName} was defeated${by}${via} (${targetLabel} side)`;
+                const by = attackerBattler ? ` by ${attackerBattler}` : '';
+                const via = event.abilityName ? ` using ${event.abilityName}` : '';
+                return `${targetBattler} was defeated after taking ${event.damage ?? 0} damage${by}${via}`;
             }
             case 'miss': {
-                const src = event.abilityName ?? event.attackerName ?? 'Attack';
-                return `${src} missed ${event.cardName} (${targetLabel} side)`;
+                const src = attackerBattler ?? event.abilityName ?? 'Attack';
+                const via = attackerBattler && event.abilityName ? ` using ${event.abilityName}` : '';
+                return `${src}${via} missed ${targetBattler}`;
             }
             case 'blocked':
-                return `${event.cardName} was untouchable — attack blocked! (${targetLabel} side)`;
+                return `${targetBattler} was untouchable — attack blocked!`;
             case 'directHit':
-                return `${event.cardName} struck ${targetName} directly for ${event.damage} damage`;
+                return `${event.attackerPlayerId ? battlerLabel(event.attackerPlayerId, event.cardName) : event.cardName} struck ${targetName} directly for ${event.damage} damage`;
             case 'dot': {
                 const dotLabel = DOT_LABEL[event.dotType] ?? event.dotType;
-                return `${event.cardName} suffered ${dotLabel} (${event.damage} dmg, ${targetLabel} side)`;
+                return `${targetBattler} suffered ${dotLabel} (${event.damage} damage)`;
             }
             case 'dotDefeat':
-                return `${event.cardName} was defeated by status effects! (${targetLabel} side)`;
+                return `${targetBattler} was defeated by status effects after taking ${event.damage ?? 0} damage`;
             case 'statusApplied': {
-                const by = event.attackerName ? ` by ${event.attackerName}` : '';
+                const by = attackerBattler ? ` by ${attackerBattler}` : '';
                 const via = event.abilityName ? ` via ${event.abilityName}` : '';
-                return `${event.cardName} afflicted with ${event.status}${by}${via} (${targetLabel} side)`;
+                return `${targetBattler} was afflicted with ${event.status}${by}${via}`;
             }
             case 'heal': {
-                const by = event.abilityName ? ` via ${event.abilityName}` : '';
-                return `${event.cardName} healed for ${event.amount} HP${by}`;
+                const by = attackerBattler ? ` by ${attackerBattler}` : '';
+                const via = event.abilityName ? ` via ${event.abilityName}` : '';
+                return `${targetBattler} healed for ${event.amount} HP${by}${via}`;
             }
             default:
                 return JSON.stringify(event);
         }
     };
 
-    const showHealth = ['hit', 'directHit', 'dot', 'blocked', 'heal'].includes(event.type);
+    const showHealth = ['hit', 'defeat', 'directHit', 'dot', 'dotDefeat', 'blocked', 'heal'].includes(event.type);
 
     return (
         <div
