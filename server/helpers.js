@@ -53,6 +53,7 @@ const cloneCardForGame = (card) => ({
     attack: Number(card.attack) || 0,
     agility: Number(card.agility) || 0,
     category: card.category || 'unknown',
+    verified: !!card.verified,
 });
 
 const serializeCardForClient = (card) => ({
