@@ -5,6 +5,25 @@
     color: #dde0f0;
 }
 
+/* Full-page variant used by create/join forms (uses in-game Header) */
+.sessions-backdrop--page {
+    display: flex;
+    flex-direction: column;
+}
+
+.sessions-form-page {
+    max-width: 480px;
+    width: 100%;
+    margin: 5rem auto 0;
+    padding: 2rem 1.5rem 4rem;
+}
+
+.sessions-form-page .sessions-card-title {
+    margin: 0 0 1.5rem;
+    font-size: 1.6rem;
+    text-align: center;
+}
+
 /* ── Page layout ─────────────────────────────────────────────────────────── */
 .sessions-page {
     max-width: 760px;

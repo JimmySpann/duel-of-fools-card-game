@@ -131,38 +131,46 @@ const Header = ({
                 </div>
             </div>
             <div className="player-container">
-                <div className="player-buttons-container">
-                    <button
-                        className={`player-button player-button--brief${showBrief ? ' player-button--active' : ''}`}
-                        onClick={onBriefToggle}
-                        title="Game Brief & Rules"
-                    >
-                        📋 Brief
-                    </button>
-                    <button
-                        className={`player-button player-button--chat${showChat ? ' player-button--active' : ''}${(!showChat && hasUnreadChat) ? ' player-button--unread' : ''}`}
-                        onClick={onChatToggle}
-                        title="Lobby Chat"
-                    >
-                        💬 Chat{!showChat && hasUnreadChat ? <span className="player-button-dot" /> : null}
-                    </button>
-                </div>
-                <div className="player-card-container">
-                    <div className="player-name-card">
-                        <h2 className="player-name-title">
-                            {currentPlayerName}'s Turn
-                        </h2>
-                        {timeLeft !== null && (
-                            <p className={`turn-countdown${timeLeft <= 60000 ? ' turn-countdown--urgent' : ''}`}>
-                                ⏱ {formatCountdown(timeLeft)}
-                            </p>
+                {(onBriefToggle || onChatToggle) && (
+                    <div className="player-buttons-container">
+                        {onBriefToggle && (
+                            <button
+                                className={`player-button player-button--brief${showBrief ? ' player-button--active' : ''}`}
+                                onClick={onBriefToggle}
+                                title="Game Brief & Rules"
+                            >
+                                📋 Brief
+                            </button>
                         )}
-                        {msg && (
-                            <p className={`phase-subtitle${phase === 'selectingAllyTarget' ? ' phase-subtitle-ally' : ''}`}>
-                                {msg}
-                            </p>
+                        {onChatToggle && (
+                            <button
+                                className={`player-button player-button--chat${showChat ? ' player-button--active' : ''}${(!showChat && hasUnreadChat) ? ' player-button--unread' : ''}`}
+                                onClick={onChatToggle}
+                                title="Lobby Chat"
+                            >
+                                💬 Chat{!showChat && hasUnreadChat ? <span className="player-button-dot" /> : null}
+                            </button>
                         )}
                     </div>
+                )}
+                <div className="player-card-container">
+                    {currentPlayerName && (
+                        <div className="player-name-card">
+                            <h2 className="player-name-title">
+                                {currentPlayerName}'s Turn
+                            </h2>
+                            {timeLeft !== null && (
+                                <p className={`turn-countdown${timeLeft <= 60000 ? ' turn-countdown--urgent' : ''}`}>
+                                    ⏱ {formatCountdown(timeLeft)}
+                                </p>
+                            )}
+                            {msg && (
+                                <p className={`phase-subtitle${phase === 'selectingAllyTarget' ? ' phase-subtitle-ally' : ''}`}>
+                                    {msg}
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
