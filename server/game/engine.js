@@ -26,6 +26,11 @@ const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 const battlerLabel = (player, cardName) => `${player?.name ?? 'Unknown'}'s ${cardName ?? 'Battler'}`;
 
 const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+const formatAmount = (amount) => {
+    if (amount == null) return '0';
+    const rounded = Math.round((Number(amount) || 0) * 10) / 10;
+    return Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(1);
+};
 
 const AVATAR_URLS = [
     'https://i.pravatar.cc/150?img=3',
@@ -179,7 +184,7 @@ const actions = {
             for (const enemy of enemies) {
                 enemy.health = Math.max(0, enemy.health - damage);
                 pushRecapEvent(state, { type: 'directHit', cardName: card.name, attackerPlayerId: player.id, targetPlayerId: enemy.id, damage, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
-                state.log.unshift(`${battlerLabel(player, card.name)} attacks ${enemy.name} directly for ${damage} damage!`);
+                state.log.unshift(`${battlerLabel(player, card.name)} attacks ${enemy.name} directly for ${formatAmount(damage)} damage!`);
             }
             checkWinCondition(state);
             return;
@@ -290,7 +295,7 @@ const actions = {
                 for (const enemy of enemies) {
                     enemy.health = Math.max(0, enemy.health - dmg);
                     pushRecapEvent(state, { type: 'directHit', cardName: card.name, attackerPlayerId: player.id, targetPlayerId: enemy.id, damage: dmg, healthAfter: enemy.health, maxHealth: enemy.maxHealth });
-                    state.log.unshift(`${battlerLabel(player, card.name)} uses ${ability.name} on ${enemy.name} directly for ${dmg} damage!`);
+                    state.log.unshift(`${battlerLabel(player, card.name)} uses ${ability.name} on ${enemy.name} directly for ${formatAmount(dmg)} damage!`);
                 }
                 checkWinCondition(state);
                 return;
@@ -326,7 +331,7 @@ const actions = {
             attacker.acted = true;
             if (hit) {
                 applyDamageToCard(defenderPlayer, targetCardIndex, damage, state, { attackerName: attacker.name, attackerPlayerId: attackerPlayer.id });
-                state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${battlerLabel(defenderPlayer, defender.name)} for ${damage} damage!`);
+                state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${battlerLabel(defenderPlayer, defender.name)} for ${formatAmount(damage)} damage!`);
             } else {
                 state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacked ${battlerLabel(defenderPlayer, defender.name)} but missed!`);
             }
@@ -359,7 +364,7 @@ const actions = {
         for (const defenderPlayer of targets) {
             if (!defenderPlayer) continue;
             defenderPlayer.health = Math.max(0, defenderPlayer.health - damage);
-            state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${defenderPlayer.name} directly for ${damage} damage!`);
+            state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${defenderPlayer.name} directly for ${formatAmount(damage)} damage!`);
         }
         state.pendingAction = null;
         state.phase = 'main';

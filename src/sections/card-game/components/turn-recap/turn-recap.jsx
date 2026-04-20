@@ -21,6 +21,12 @@ const DOT_LABEL = {
     bleeding: '🩸 Bleed',
 };
 
+const formatAmount = (amount) => {
+    if (amount == null) return '0';
+    const rounded = Math.round((Number(amount) || 0) * 10) / 10;
+    return Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(1);
+};
+
 const HPBar = ({ current, max }) => {
     if (current == null || max == null) return null;
     const pct = Math.max(0, Math.min(100, (current / max) * 100));
@@ -47,12 +53,12 @@ const RecapEvent = ({ event, index, playerNames, currentPlayerId }) => {
             case 'hit': {
                 const by = attackerBattler ? ` by ${attackerBattler}` : '';
                 const via = event.abilityName ? ` using ${event.abilityName}` : '';
-                return `${targetBattler} took ${event.damage} damage${by}${via}`;
+                return `${targetBattler} took ${formatAmount(event.damage)} damage${by}${via}`;
             }
             case 'defeat': {
                 const by = attackerBattler ? ` by ${attackerBattler}` : '';
                 const via = event.abilityName ? ` using ${event.abilityName}` : '';
-                return `${targetBattler} was defeated after taking ${event.damage ?? 0} damage${by}${via}`;
+                return `${targetBattler} was defeated after taking ${formatAmount(event.damage ?? 0)} damage${by}${via}`;
             }
             case 'miss': {
                 const src = attackerBattler ?? event.abilityName ?? 'Attack';
@@ -62,13 +68,13 @@ const RecapEvent = ({ event, index, playerNames, currentPlayerId }) => {
             case 'blocked':
                 return `${targetBattler} was untouchable — attack blocked!`;
             case 'directHit':
-                return `${event.attackerPlayerId ? battlerLabel(event.attackerPlayerId, event.cardName) : event.cardName} struck ${targetName} directly for ${event.damage} damage`;
+                return `${event.attackerPlayerId ? battlerLabel(event.attackerPlayerId, event.cardName) : event.cardName} struck ${targetName} directly for ${formatAmount(event.damage)} damage`;
             case 'dot': {
                 const dotLabel = DOT_LABEL[event.dotType] ?? event.dotType;
-                return `${targetBattler} suffered ${dotLabel} (${event.damage} damage)`;
+                return `${targetBattler} suffered ${dotLabel} (${formatAmount(event.damage)} damage)`;
             }
             case 'dotDefeat':
-                return `${targetBattler} was defeated by status effects after taking ${event.damage ?? 0} damage`;
+                return `${targetBattler} was defeated by status effects after taking ${formatAmount(event.damage ?? 0)} damage`;
             case 'statusApplied': {
                 const by = attackerBattler ? ` by ${attackerBattler}` : '';
                 const via = event.abilityName ? ` via ${event.abilityName}` : '';
@@ -77,7 +83,7 @@ const RecapEvent = ({ event, index, playerNames, currentPlayerId }) => {
             case 'heal': {
                 const by = attackerBattler ? ` by ${attackerBattler}` : '';
                 const via = event.abilityName ? ` via ${event.abilityName}` : '';
-                return `${targetBattler} healed for ${event.amount} HP${by}${via}`;
+                return `${targetBattler} healed for ${formatAmount(event.amount)} HP${by}${via}`;
             }
             default:
                 return JSON.stringify(event);
@@ -161,7 +167,7 @@ const TurnRecap = ({ currentPlayer, players }) => {
                 {activeTab === 'brief' && (
                     <div className="recap-summary-row">
                         <div className="recap-stat">
-                            <span className="recap-stat-value recap-stat-damage">{damageTaken}</span>
+                            <span className="recap-stat-value recap-stat-damage">{formatAmount(damageTaken)}</span>
                             <span className="recap-stat-label">Damage Taken</span>
                         </div>
                         <div className="recap-stat">

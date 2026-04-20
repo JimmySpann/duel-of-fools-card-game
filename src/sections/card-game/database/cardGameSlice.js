@@ -15,6 +15,11 @@ const cards = [];
 
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 const battlerLabel = (player, cardName) => `${player?.name ?? 'Unknown'}'s ${cardName ?? 'Battler'}`;
+const formatAmount = (amount) => {
+  if (amount == null) return '0';
+  const rounded = Math.round((Number(amount) || 0) * 10) / 10;
+  return Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(1);
+};
 
 const buildPlayer = (id, name, image) => {
   const pool = shuffle(cards).map((c) => ({
@@ -130,7 +135,7 @@ export const cardGameSlice = createSlice({
         attacker.acted = true;
         if (hit) {
           applyDamageToCard(defenderPlayer, targetCardIndex, damage, state, { attackerName: attacker.name, attackerPlayerId: attackerPlayer.id });
-          state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${battlerLabel(defenderPlayer, defender.name)} for ${damage} damage!`);
+          state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${battlerLabel(defenderPlayer, defender.name)} for ${formatAmount(damage)} damage!`);
         } else {
           state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacked ${battlerLabel(defenderPlayer, defender.name)} but missed!`);
         }
@@ -163,7 +168,7 @@ export const cardGameSlice = createSlice({
       const damage = Math.max(1, attacker.attack || 5);
       defenderPlayer.health = Math.max(0, defenderPlayer.health - damage);
       pushRecapEvent(state, { type: 'directHit', cardName: attacker.name, attackerPlayerId: attackerPlayer.id, targetPlayerId: defenderPlayer.id, damage, healthAfter: defenderPlayer.health, maxHealth: defenderPlayer.maxHealth });
-      state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${defenderPlayer.name} directly for ${damage} damage!`);
+      state.log.unshift(`${battlerLabel(attackerPlayer, attacker.name)} attacks ${defenderPlayer.name} directly for ${formatAmount(damage)} damage!`);
       if (defenderPlayer.health <= 0) {
         defenderPlayer.eliminated = true;
         const alive = state.players.filter((p) => !p.eliminated && p.health > 0);

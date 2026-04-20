@@ -72,6 +72,12 @@ const getPlayerNameById = (state, playerId) =>
 const getBattlerLabel = (state, playerId, cardName) =>
     `${getPlayerNameById(state, playerId)}'s ${cardName ?? 'Battler'}`;
 
+const formatAmount = (amount) => {
+    if (amount == null) return '0';
+    const rounded = Math.round((Number(amount) || 0) * 10) / 10;
+    return Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(1);
+};
+
 // ── Event helpers ─────────────────────────────────────────────────────────────
 
 const pushHitEvent = (state, defenderPlayerId, cardId, damage, type, cardName, healthAfter, maxHealth, attackerName = null, abilityName = null, attackerPlayerId = null) => {
@@ -129,14 +135,14 @@ const applyDamageToCard = (defenderPlayer, targetIdx, rawDamage, state, context 
         damage -= absorbed;
         shield.value -= absorbed;
         if (shield.value <= 0) removeStatus(defender, 'shielded');
-        if (absorbed > 0) state.log.unshift(`${defenderLabel}'s shield absorbed ${absorbed} damage!`);
+        if (absorbed > 0) state.log.unshift(`${defenderLabel}'s shield absorbed ${formatAmount(absorbed)} damage!`);
     }
 
     defender.currentHealth = Math.max(0, defender.currentHealth - damage);
     if (defender.currentHealth <= 0) {
         pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'defeat', defender.name, 0, defender.health, attackerName, abilityName, attackerPlayerId);
         defender.dying = true;
-        state.log.unshift(`${defenderLabel} was defeated after taking ${damage} damage!`);
+        state.log.unshift(`${defenderLabel} was defeated after taking ${formatAmount(damage)} damage!`);
     } else {
         pushHitEvent(state, defenderPlayer.id, defender.id, damage, 'hit', defender.name, defender.currentHealth, defender.health, attackerName, abilityName, attackerPlayerId);
     }
@@ -407,7 +413,7 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
             }
             const actualDmg = applyDamageToCard(targetPlayer, targetCardIdx, dmg, state, { attackerName: caster.name, abilityName, attackerPlayerId: casterPlayer.id });
             if (actualDmg > 0 && !targetPlayer.inPlay[targetCardIdx]?.dying) {
-                state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)} takes ${actualDmg} damage from ${abilityName}!`);
+                state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)} takes ${formatAmount(actualDmg)} damage from ${abilityName}!`);
             }
             if (effect.onHitStatus && actualDmg > 0) {
                 const live = targetPlayer.inPlay[targetCardIdx];
@@ -421,7 +427,7 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
                 const lsMult = effect.lifeStealMultiplier ?? 1;
                 const healed = Math.max(1, Math.floor(actualDmg * lsMult));
                 caster.currentHealth = Math.min(caster.health, caster.currentHealth + healed);
-                state.log.unshift(`${getBattlerLabel(state, casterPlayer.id, caster.name)} drains ${healed} HP!`);
+                state.log.unshift(`${getBattlerLabel(state, casterPlayer.id, caster.name)} drains ${formatAmount(healed)} HP!`);
             }
             break;
         }
@@ -436,7 +442,7 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
             const prevHp = target.currentHealth;
             target.currentHealth = Math.min(target.health, target.currentHealth + effect.amount);
             const healed = target.currentHealth - prevHp;
-            state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)} is healed for ${healed} HP!`);
+            state.log.unshift(`${getBattlerLabel(state, targetPlayer.id, target.name)} is healed for ${formatAmount(healed)} HP!`);
             pushRecapEvent(state, { type: 'heal', cardName: target.name, targetPlayerId: targetPlayer.id, amount: healed, healthAfter: target.currentHealth, maxHealth: target.health, attackerName: caster.name, attackerPlayerId: casterPlayer.id, abilityName });
             break;
         }
@@ -444,7 +450,7 @@ const applySingleEffect = (effect, caster, casterPlayer, casterCardIdx, target, 
             const prevHp = caster.currentHealth;
             caster.currentHealth = Math.min(caster.health, caster.currentHealth + effect.amount);
             const healed = caster.currentHealth - prevHp;
-            state.log.unshift(`${getBattlerLabel(state, casterPlayer.id, caster.name)} restores ${healed} HP!`);
+            state.log.unshift(`${getBattlerLabel(state, casterPlayer.id, caster.name)} restores ${formatAmount(healed)} HP!`);
             pushRecapEvent(state, { type: 'heal', cardName: caster.name, targetPlayerId: casterPlayer.id, amount: healed, healthAfter: caster.currentHealth, maxHealth: caster.health, attackerName: caster.name, attackerPlayerId: casterPlayer.id, abilityName });
             break;
         }
@@ -584,14 +590,14 @@ const processStatusEffects = (player, state) => {
                 card.currentHealth = Math.max(0, card.currentHealth - status.value);
                 dotDamageThisTick += status.value;
                 pushRecapEvent(state, { type: 'dot', cardName: card.name, targetPlayerId: player.id, damage: status.value, dotType: status.type, healthAfter: card.currentHealth, maxHealth: card.health });
-                state.log.unshift(`${cardLabel} takes ${status.value} ${status.type} damage!`);
+                state.log.unshift(`${cardLabel} takes ${formatAmount(status.value)} ${status.type} damage!`);
             }
         }
         if (card.currentHealth <= 0) {
             player.discardPile.push({ ...card });
             player.inPlay.splice(i, 1);
             pushRecapEvent(state, { type: 'dotDefeat', cardName: card.name, targetPlayerId: player.id, damage: dotDamageThisTick, healthAfter: 0, maxHealth: card.health });
-            state.log.unshift(`${cardLabel} was defeated by status effects after taking ${dotDamageThisTick} damage!`);
+            state.log.unshift(`${cardLabel} was defeated by status effects after taking ${formatAmount(dotDamageThisTick)} damage!`);
             continue;
         }
 
