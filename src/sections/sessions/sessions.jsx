@@ -286,17 +286,6 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                             </select>
                         </label>
                         <label className="lobby-setting-label">
-                            Custom Cards
-                            <select
-                                className="lobby-setting-input"
-                                value={settings.allowCustomCards === false ? 'off' : 'on'}
-                                onChange={(e) => handleSettingChange('allowCustomCards', e.target.value === 'on')}
-                            >
-                                <option value="on">Enabled</option>
-                                <option value="off">Disabled</option>
-                            </select>
-                        </label>
-                        <label className="lobby-setting-label">
                             Verified Cards Only
                             <select
                                 className="lobby-setting-input"
@@ -432,7 +421,6 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                     <span>Mode: {teamMode === 'teams' ? 'Teams' : 'Free for All'}</span>
                     <span>Turn Limit: {settings.turnTimeLimit ? (() => { const h = Math.floor(settings.turnTimeLimit / 3600); const m = Math.floor((settings.turnTimeLimit % 3600) / 60); return h > 0 ? `${h}h` : `${m}m`; })() : 'None'}</span>
                     <span>Minigames: {['Easy', 'Normal', 'Hard', 'Expert', 'Brutal'][(settings.microgameDifficulty ?? 1) - 1]}</span>
-                    <span>Custom Cards: {settings.allowCustomCards === false ? 'Off' : 'On'}</span>
                     <span>Verified Cards: {settings.verifiedCardsOnly ? 'Required' : 'Any'}</span>
                 </div>
             )}
@@ -746,7 +734,7 @@ const Sessions = ({ initialModal } = {}) => {
                         </button>
                     </div>
                 </div>
-                <DMPanel />
+                <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
             </div>
         );
     }
@@ -789,7 +777,7 @@ const Sessions = ({ initialModal } = {}) => {
                         </button>
                     </form>
                 </div>
-                <DMPanel />
+                <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
             </div>
         );
     }
@@ -822,7 +810,7 @@ const Sessions = ({ initialModal } = {}) => {
                         </button>
                     </form>
                 </div>
-                <DMPanel />
+                <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
             </div>
         );
     }
