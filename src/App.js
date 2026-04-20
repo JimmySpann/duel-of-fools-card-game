@@ -11,7 +11,6 @@ import musicManager from './features/sound/musicManager';
 import Auth from './sections/auth/auth.jsx';
 import Sessions, { Lobby } from './sections/sessions/sessions.jsx';
 import CardGame from './sections/card-game/card-game.jsx';
-import DMPanel from './features/chat/DMPanel';
 import './App.css';
 
 const POLL_INTERVAL = 3000;
@@ -64,32 +63,29 @@ const GamePage = () => {
   };
 
   return (
-    <div className="sessions-backdrop">
-      <Lobby
-        session={activeSession}
-        username={username}
-        loading={loading}
-        error={null}
-        onBack={handleBack}
-        onStart={() => {
-          dispatch(startSession({ sessionId: id })).then((res) => {
-            if (res.payload?.state) dispatch(setGameState(res.payload.state));
-          });
-        }}
-        onLeave={() => {
-          dispatch(leaveSessionLobby({ sessionId: id })).then((res) => {
-            if (!res.error) handleBack();
-          });
-        }}
-        onDelete={() => {
-          dispatch(deleteSession({ sessionId: id })).then((res) => {
-            if (!res.error) handleBack();
-          });
-        }}
-        dispatch={dispatch}
-      />
-      <DMPanel />
-    </div>
+    <Lobby
+      session={activeSession}
+      username={username}
+      loading={loading}
+      error={null}
+      onBack={handleBack}
+      onStart={() => {
+        dispatch(startSession({ sessionId: id })).then((res) => {
+          if (res.payload?.state) dispatch(setGameState(res.payload.state));
+        });
+      }}
+      onLeave={() => {
+        dispatch(leaveSessionLobby({ sessionId: id })).then((res) => {
+          if (!res.error) handleBack();
+        });
+      }}
+      onDelete={() => {
+        dispatch(deleteSession({ sessionId: id })).then((res) => {
+          if (!res.error) handleBack();
+        });
+      }}
+      dispatch={dispatch}
+    />
   );
 };
 

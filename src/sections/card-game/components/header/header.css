@@ -96,6 +96,10 @@
 }
 
 .player-buttons-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     margin-bottom: 0px;
     pointer-events: auto;
     position: relative;
@@ -109,7 +113,7 @@
     height: 32px;
     padding: 0 14px;
     border-radius: 20px;
-    margin-left: 6px;
+    margin-left: 0;
     font-weight: 700;
     font-size: 0.82rem;
     letter-spacing: 0.3px;

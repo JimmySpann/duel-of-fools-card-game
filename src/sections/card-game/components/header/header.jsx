@@ -79,7 +79,7 @@ const Header = ({
     }, [turnTimeLimit, turnStartedAt]);
 
     return (
-        <div className="header-container" style={{ position: 'relative' }}>
+        <div className="header-container">
             <button
                 className="header-brand-btn"
                 onClick={onLobbies}

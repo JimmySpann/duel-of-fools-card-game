@@ -63,12 +63,17 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
     const playerCount = session.players.length + cpuSlots.length;
     const inviteLink = inviteLinkFromCode(session.joinCode);
     const unreadLobby = useSelector((s) => s.chat.unreadLobby[session._id] || 0);
+    const unreadDm = useSelector((s) => s.chat.unreadDm);
+    const { displayName, avatarUrl } = useSelector((s) => s.profile);
     const [showChat, setShowChat] = useState(false);
     const [showDeckBuilder, setShowDeckBuilder] = useState(false);
     const [cpuDeckSlot, setCpuDeckSlot] = useState(null); // slot string when editing a CPU deck
     const [inviteUsername, setInviteUsername] = useState('');
     const [inviteFeedback, setInviteFeedback] = useState('');
     const [inviteFeedbackType, setInviteFeedbackType] = useState('');
+    const [showProfile, setShowProfile] = useState(false);
+    const [showMessages, setShowMessages] = useState(false);
+    const hasUnreadMessages = Object.values(unreadDm).some((v) => v > 0);
 
     // My player entry (null for observers)
     const myPlayer = session.players.find((p) => p.username === username);
@@ -144,348 +149,362 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
     });
 
     return (
-        <div className="lobby-container">
-            <button className="sessions-back-btn" onClick={onBack}>← Back to Sessions</button>
-            <h2 className="lobby-title">{session.name}</h2>
-            <p className="lobby-code-label">Invite code</p>
-            <div className="lobby-code">{session.joinCode}</div>
-            <div className="lobby-visibility-row">
-                <span className={`lobby-visibility-chip ${isPublic ? 'public' : 'private'}`}>
-                    {isPublic ? '🌐 Public Session' : '🔒 Private Session'}
-                </span>
-                {isHost && (
+        <div className="sessions-backdrop">
+            <Header
+                onLobbies={onBack}
+                displayName={displayName}
+                avatarUrl={avatarUrl}
+                username={username}
+                onSignOut={() => dispatch(logout())}
+                onProfileOpen={() => setShowProfile(true)}
+                onMessagesToggle={setShowMessages}
+                hasUnreadMessages={hasUnreadMessages}
+            />
+            <div className="lobby-container">
+                <button className="sessions-back-btn" onClick={onBack}>← Back to Sessions</button>
+                <h2 className="lobby-title">{session.name}</h2>
+                <p className="lobby-code-label">Invite code</p>
+                <div className="lobby-code">{session.joinCode}</div>
+                <div className="lobby-visibility-row">
+                    <span className={`lobby-visibility-chip ${isPublic ? 'public' : 'private'}`}>
+                        {isPublic ? '🌐 Public Session' : '🔒 Private Session'}
+                    </span>
+                    {isHost && (
+                        <button
+                            className="lobby-visibility-toggle-btn"
+                            onClick={() => dispatch(updateSessionVisibility({ sessionId: session._id, isPublic: !isPublic }))}
+                            disabled={loading || session.status !== 'waiting'}
+                        >
+                            Make {isPublic ? 'Private' : 'Public'}
+                        </button>
+                    )}
+                </div>
+                <div className="lobby-invite-tools">
                     <button
-                        className="lobby-visibility-toggle-btn"
-                        onClick={() => dispatch(updateSessionVisibility({ sessionId: session._id, isPublic: !isPublic }))}
-                        disabled={loading || session.status !== 'waiting'}
+                        className="lobby-invite-tool-btn"
+                        type="button"
+                        onClick={() => copyToClipboard(inviteLink, 'Invite link copied.')}
                     >
-                        Make {isPublic ? 'Private' : 'Public'}
+                        🔗 Copy Invite Link
                     </button>
-                )}
-            </div>
-            <div className="lobby-invite-tools">
-                <button
-                    className="lobby-invite-tool-btn"
-                    type="button"
-                    onClick={() => copyToClipboard(inviteLink, 'Invite link copied.')}
-                >
-                    🔗 Copy Invite Link
-                </button>
-                <button
-                    className="lobby-invite-tool-btn"
-                    type="button"
-                    onClick={() => copyToClipboard(session.joinCode, 'Join code copied.')}
-                >
-                    📋 Copy Join Code
-                </button>
-            </div>
-            <form className="lobby-invite-dm-form" onSubmit={handleSendInviteDm}>
-                <label className="lobby-invite-dm-label" htmlFor="invite-username">
-                    Send invite in messages
-                </label>
-                <div className="lobby-invite-dm-row">
-                    <input
-                        id="invite-username"
-                        className="lobby-invite-dm-input"
-                        type="text"
-                        placeholder="Username..."
-                        value={inviteUsername}
-                        onChange={(e) => setInviteUsername(e.target.value)}
-                        maxLength={40}
-                    />
-                    <button className="lobby-invite-dm-send" type="submit">Send Invite</button>
+                    <button
+                        className="lobby-invite-tool-btn"
+                        type="button"
+                        onClick={() => copyToClipboard(session.joinCode, 'Join code copied.')}
+                    >
+                        📋 Copy Join Code
+                    </button>
                 </div>
-                {inviteFeedback && (
-                    <p className={`lobby-invite-feedback ${inviteFeedbackType}`}>{inviteFeedback}</p>
-                )}
-            </form>
-
-            {/* Settings — host-only */}
-            {isHost && (
-                <div className="lobby-settings">
-                    <h3 className="lobby-settings-title">Game Settings</h3>
-                    <div className="lobby-settings-grid">
-                        <label className="lobby-setting-label">
-                            Starting HP
-                            <input
-                                className="lobby-setting-input"
-                                type="number"
-                                min={1}
-                                max={999}
-                                defaultValue={settings.startingHp ?? 20}
-                                onBlur={(e) => handleSettingChange('startingHp', Number(e.target.value))}
-                            />
-                        </label>
-                        <label className="lobby-setting-label">
-                            Max In Play
-                            <input
-                                className="lobby-setting-input"
-                                type="number"
-                                min={1}
-                                max={20}
-                                placeholder={`Auto (${defaultMaxBattlers(playerCount)})`}
-                                defaultValue={settings.maxBattlers ?? ''}
-                                onBlur={(e) => {
-                                    const v = e.target.value.trim();
-                                    handleSettingChange('maxBattlers', v === '' ? null : Number(v));
-                                }}
-                            />
-                        </label>
-                        <label className="lobby-setting-label">
-                            Deck Size
-                            <input
-                                className="lobby-setting-input"
-                                type="number"
-                                min={4}
-                                max={50}
-                                placeholder="All cards"
-                                defaultValue={settings.deckSize ?? ''}
-                                onBlur={(e) => {
-                                    const v = e.target.value.trim();
-                                    handleSettingChange('deckSize', v === '' ? null : Number(v));
-                                }}
-                            />
-                        </label>
-                        <label className="lobby-setting-label">
-                            Mode
-                            <select
-                                className="lobby-setting-input"
-                                value={teamMode}
-                                onChange={(e) => handleSettingChange('teamMode', e.target.value)}
-                            >
-                                <option value="ffa">Free for All</option>
-                                <option value="teams">Teams</option>
-                            </select>
-                        </label>
-                        <label className="lobby-setting-label">
-                            Turn Time Limit
-                            <select
-                                className="lobby-setting-input"
-                                value={settings.turnTimeLimit ?? 86400}
-                                onChange={(e) => handleSettingChange('turnTimeLimit', e.target.value === 'null' ? null : Number(e.target.value))}
-                            >
-                                <option value="null">No Limit</option>
-                                <option value={3600}>1 Hour</option>
-                                <option value={21600}>6 Hours</option>
-                                <option value={43200}>12 Hours</option>
-                                <option value={86400}>24 Hours</option>
-                            </select>
-                        </label>
-                        <label className="lobby-setting-label">
-                            Minigame Difficulty
-                            <select
-                                className="lobby-setting-input"
-                                value={settings.microgameDifficulty ?? 1}
-                                onChange={(e) => handleSettingChange('microgameDifficulty', Number(e.target.value))}
-                            >
-                                <option value={1}>Easy</option>
-                                <option value={2}>Normal</option>
-                                <option value={3}>Hard</option>
-                                <option value={4}>Expert</option>
-                                <option value={5}>Brutal</option>
-                            </select>
-                        </label>
-                        <label className="lobby-setting-label">
-                            Verified Cards Only
-                            <select
-                                className="lobby-setting-input"
-                                value={settings.verifiedCardsOnly ? 'on' : 'off'}
-                                onChange={(e) => handleSettingChange('verifiedCardsOnly', e.target.value === 'on')}
-                            >
-                                <option value="off">Any Card</option>
-                                <option value="on">Verified Only</option>
-                            </select>
-                        </label>
+                <form className="lobby-invite-dm-form" onSubmit={handleSendInviteDm}>
+                    <label className="lobby-invite-dm-label" htmlFor="invite-username">
+                        Send invite in messages
+                    </label>
+                    <div className="lobby-invite-dm-row">
+                        <input
+                            id="invite-username"
+                            className="lobby-invite-dm-input"
+                            type="text"
+                            placeholder="Username..."
+                            value={inviteUsername}
+                            onChange={(e) => setInviteUsername(e.target.value)}
+                            maxLength={40}
+                        />
+                        <button className="lobby-invite-dm-send" type="submit">Send Invite</button>
                     </div>
-                </div>
-            )}
+                    {inviteFeedback && (
+                        <p className={`lobby-invite-feedback ${inviteFeedbackType}`}>{inviteFeedback}</p>
+                    )}
+                </form>
 
-            {/* Player slots */}
-            <div className="lobby-slots">
-                {SLOTS.map((slot, i) => {
-                    const player = session.players.find((p) => p.slot === slot);
-                    const cpu = cpuSlots.find((c) => c.slot === slot);
-                    const slotNum = i + 1;
-                    const isCpu = !!cpu;
-                    const isFilled = !!player || isCpu;
-                    const isMe = player?.username === username;
-                    const isEmpty = !isFilled;
-                    return (
-                        <div key={slot} className={`lobby-slot ${isFilled ? (isCpu ? 'cpu' : 'filled') : 'empty'}`}>
-                            <span className="lobby-slot-label">Player {slotNum}</span>
-                            <span className="lobby-slot-name">
-                                {isCpu ? `🤖 ${cpu.name}` : player ? player.username : 'Open'}
-                            </span>
-                            {/* Deck status badge for human players */}
-                            {player && !isCpu && (
-                                <span className={`lobby-slot-status${player.deckStatus === 'ready' ? ' ready' : ' prep'}`}>
-                                    {player.deckStatus === 'ready' ? '✓ Ready' : '⏳ Preparation'}
-                                </span>
-                            )}
-                            {/* Build / Edit Deck button for the current user */}
-                            {isMe && (
-                                <button
-                                    className={`lobby-build-deck-btn${myDeckStatus === 'ready' ? ' edit' : ''}`}
-                                    onClick={() => setShowDeckBuilder(true)}
-                                    disabled={loading}
+                {/* Settings — host-only */}
+                {isHost && (
+                    <div className="lobby-settings">
+                        <h3 className="lobby-settings-title">Game Settings</h3>
+                        <div className="lobby-settings-grid">
+                            <label className="lobby-setting-label">
+                                Starting HP
+                                <input
+                                    className="lobby-setting-input"
+                                    type="number"
+                                    min={1}
+                                    max={999}
+                                    defaultValue={settings.startingHp ?? 20}
+                                    onBlur={(e) => handleSettingChange('startingHp', Number(e.target.value))}
+                                />
+                            </label>
+                            <label className="lobby-setting-label">
+                                Max In Play
+                                <input
+                                    className="lobby-setting-input"
+                                    type="number"
+                                    min={1}
+                                    max={20}
+                                    placeholder={`Auto (${defaultMaxBattlers(playerCount)})`}
+                                    defaultValue={settings.maxBattlers ?? ''}
+                                    onBlur={(e) => {
+                                        const v = e.target.value.trim();
+                                        handleSettingChange('maxBattlers', v === '' ? null : Number(v));
+                                    }}
+                                />
+                            </label>
+                            <label className="lobby-setting-label">
+                                Deck Size
+                                <input
+                                    className="lobby-setting-input"
+                                    type="number"
+                                    min={4}
+                                    max={50}
+                                    placeholder="All cards"
+                                    defaultValue={settings.deckSize ?? ''}
+                                    onBlur={(e) => {
+                                        const v = e.target.value.trim();
+                                        handleSettingChange('deckSize', v === '' ? null : Number(v));
+                                    }}
+                                />
+                            </label>
+                            <label className="lobby-setting-label">
+                                Mode
+                                <select
+                                    className="lobby-setting-input"
+                                    value={teamMode}
+                                    onChange={(e) => handleSettingChange('teamMode', e.target.value)}
                                 >
-                                    {myDeckStatus === 'ready' ? '✏ Edit Deck' : '🃏 Build Deck'}
-                                </button>
-                            )}
-                            {isCpu && isHost && (
-                                <div className="lobby-cpu-actions">
-                                    <span className={`lobby-slot-status${cpu.selectedDeck?.length >= 3 ? ' ready' : ' prep'}`}>
-                                        {cpu.selectedDeck?.length >= 3 ? `✓ ${cpu.selectedDeck.length} cards` : '⏳ Random deck'}
+                                    <option value="ffa">Free for All</option>
+                                    <option value="teams">Teams</option>
+                                </select>
+                            </label>
+                            <label className="lobby-setting-label">
+                                Turn Time Limit
+                                <select
+                                    className="lobby-setting-input"
+                                    value={settings.turnTimeLimit ?? 86400}
+                                    onChange={(e) => handleSettingChange('turnTimeLimit', e.target.value === 'null' ? null : Number(e.target.value))}
+                                >
+                                    <option value="null">No Limit</option>
+                                    <option value={3600}>1 Hour</option>
+                                    <option value={21600}>6 Hours</option>
+                                    <option value={43200}>12 Hours</option>
+                                    <option value={86400}>24 Hours</option>
+                                </select>
+                            </label>
+                            <label className="lobby-setting-label">
+                                Minigame Difficulty
+                                <select
+                                    className="lobby-setting-input"
+                                    value={settings.microgameDifficulty ?? 1}
+                                    onChange={(e) => handleSettingChange('microgameDifficulty', Number(e.target.value))}
+                                >
+                                    <option value={1}>Easy</option>
+                                    <option value={2}>Normal</option>
+                                    <option value={3}>Hard</option>
+                                    <option value={4}>Expert</option>
+                                    <option value={5}>Brutal</option>
+                                </select>
+                            </label>
+                            <label className="lobby-setting-label">
+                                Verified Cards Only
+                                <select
+                                    className="lobby-setting-input"
+                                    value={settings.verifiedCardsOnly ? 'on' : 'off'}
+                                    onChange={(e) => handleSettingChange('verifiedCardsOnly', e.target.value === 'on')}
+                                >
+                                    <option value="off">Any Card</option>
+                                    <option value="on">Verified Only</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                )}
+
+                {/* Player slots */}
+                <div className="lobby-slots">
+                    {SLOTS.map((slot, i) => {
+                        const player = session.players.find((p) => p.slot === slot);
+                        const cpu = cpuSlots.find((c) => c.slot === slot);
+                        const slotNum = i + 1;
+                        const isCpu = !!cpu;
+                        const isFilled = !!player || isCpu;
+                        const isMe = player?.username === username;
+                        const isEmpty = !isFilled;
+                        return (
+                            <div key={slot} className={`lobby-slot ${isFilled ? (isCpu ? 'cpu' : 'filled') : 'empty'}`}>
+                                <span className="lobby-slot-label">Player {slotNum}</span>
+                                <span className="lobby-slot-name">
+                                    {isCpu ? `🤖 ${cpu.name}` : player ? player.username : 'Open'}
+                                </span>
+                                {/* Deck status badge for human players */}
+                                {player && !isCpu && (
+                                    <span className={`lobby-slot-status${player.deckStatus === 'ready' ? ' ready' : ' prep'}`}>
+                                        {player.deckStatus === 'ready' ? '✓ Ready' : '⏳ Preparation'}
                                     </span>
+                                )}
+                                {/* Build / Edit Deck button for the current user */}
+                                {isMe && (
                                     <button
-                                        className="lobby-build-deck-btn edit"
-                                        onClick={() => setCpuDeckSlot(slot)}
+                                        className={`lobby-build-deck-btn${myDeckStatus === 'ready' ? ' edit' : ''}`}
+                                        onClick={() => setShowDeckBuilder(true)}
                                         disabled={loading}
                                     >
-                                        {cpu.selectedDeck?.length >= 3 ? '✏ Edit Deck' : '🃏 Set Deck'}
+                                        {myDeckStatus === 'ready' ? '✏ Edit Deck' : '🃏 Build Deck'}
                                     </button>
-                                    <div className="lobby-cpu-skill">
-                                        <span className="lobby-cpu-skill-label">{CPU_SKILL_LABELS[cpu.cpuSkill ?? 2]}</span>
-                                        <input
-                                            type="range"
-                                            min="1"
-                                            max="5"
-                                            value={cpu.cpuSkill ?? 2}
-                                            onChange={(e) => dispatch(setCpuSkill({ sessionId: session._id, slot, cpuSkill: Number(e.target.value) }))}
-                                            className="lobby-cpu-skill-slider"
-                                            title="CPU difficulty"
-                                        />
+                                )}
+                                {isCpu && isHost && (
+                                    <div className="lobby-cpu-actions">
+                                        <span className={`lobby-slot-status${cpu.selectedDeck?.length >= 3 ? ' ready' : ' prep'}`}>
+                                            {cpu.selectedDeck?.length >= 3 ? `✓ ${cpu.selectedDeck.length} cards` : '⏳ Random deck'}
+                                        </span>
+                                        <button
+                                            className="lobby-build-deck-btn edit"
+                                            onClick={() => setCpuDeckSlot(slot)}
+                                            disabled={loading}
+                                        >
+                                            {cpu.selectedDeck?.length >= 3 ? '✏ Edit Deck' : '🃏 Set Deck'}
+                                        </button>
+                                        <div className="lobby-cpu-skill">
+                                            <span className="lobby-cpu-skill-label">{CPU_SKILL_LABELS[cpu.cpuSkill ?? 2]}</span>
+                                            <input
+                                                type="range"
+                                                min="1"
+                                                max="5"
+                                                value={cpu.cpuSkill ?? 2}
+                                                onChange={(e) => dispatch(setCpuSkill({ sessionId: session._id, slot, cpuSkill: Number(e.target.value) }))}
+                                                className="lobby-cpu-skill-slider"
+                                                title="CPU difficulty"
+                                            />
+                                        </div>
+                                        <button
+                                            className="lobby-slot-remove-cpu"
+                                            onClick={() => dispatch(removeCpu({ sessionId: session._id, slot }))}
+                                            title="Remove CPU"
+                                        >✕</button>
                                     </div>
+                                )}
+                                {/* Add CPU button in the first empty slot if host, not full, and not loading */}
+                                {isHost && isEmpty && i === firstEmptySlotIndex && session.players.length + cpuSlots.length < 6 && !loading && (
                                     <button
-                                        className="lobby-slot-remove-cpu"
-                                        onClick={() => dispatch(removeCpu({ sessionId: session._id, slot }))}
-                                        title="Remove CPU"
-                                    >✕</button>
-                                </div>
-                            )}
-                            {/* Add CPU button in the first empty slot if host, not full, and not loading */}
-                            {isHost && isEmpty && i === firstEmptySlotIndex && session.players.length + cpuSlots.length < 6 && !loading && (
-                                <button
-                                    className="lobby-add-cpu-btn"
-                                    onClick={() => dispatch(addCpu({ sessionId: session._id }))}
-                                    title="Add a CPU opponent"
-                                >
-                                    🤖 Add CPU
-                                </button>
-                            )}
-                            {teamMode === 'teams' && player && (
-                                isHost ? (
-                                    <select
-                                        className="lobby-team-select"
-                                        value={player.team || ''}
-                                        onChange={(e) => handleTeamChange(slot, e.target.value || null)}
-                                        style={{ borderColor: player.team ? TEAM_COLORS[player.team] : undefined }}
+                                        className="lobby-add-cpu-btn"
+                                        onClick={() => dispatch(addCpu({ sessionId: session._id }))}
+                                        title="Add a CPU opponent"
                                     >
-                                        <option value="">No Team</option>
-                                        <option value="A">Team A</option>
-                                        <option value="B">Team B</option>
-                                        <option value="C">Team C</option>
-                                    </select>
-                                ) : (
-                                    <span
-                                        className="lobby-team-badge"
-                                        style={{ background: player.team ? TEAM_COLORS[player.team] : '#555' }}
-                                    >
-                                        {player.team ? `Team ${player.team}` : '—'}
-                                    </span>
-                                )
-                            )}
-                        </div>
-                    );
-                })}
+                                        🤖 Add CPU
+                                    </button>
+                                )}
+                                {teamMode === 'teams' && player && (
+                                    isHost ? (
+                                        <select
+                                            className="lobby-team-select"
+                                            value={player.team || ''}
+                                            onChange={(e) => handleTeamChange(slot, e.target.value || null)}
+                                            style={{ borderColor: player.team ? TEAM_COLORS[player.team] : undefined }}
+                                        >
+                                            <option value="">No Team</option>
+                                            <option value="A">Team A</option>
+                                            <option value="B">Team B</option>
+                                            <option value="C">Team C</option>
+                                        </select>
+                                    ) : (
+                                        <span
+                                            className="lobby-team-badge"
+                                            style={{ background: player.team ? TEAM_COLORS[player.team] : '#555' }}
+                                        >
+                                            {player.team ? `Team ${player.team}` : '—'}
+                                        </span>
+                                    )
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Deck reminder for players who haven't built their deck */}
+                {myPlayer && myDeckStatus !== 'ready' && (
+                    <div className="lobby-deck-reminder">
+                        <span>🃏 Please build your deck before the game can start</span>
+                        <button
+                            className="lobby-deck-reminder-btn"
+                            onClick={() => setShowDeckBuilder(true)}
+                        >
+                            Build Deck
+                        </button>
+                    </div>
+                )}
+
+                {!isHost && (
+                    <div className="lobby-settings lobby-settings--readonly">
+                        <span>HP: {settings.startingHp ?? 20}</span>
+                        <span>Max In Play: {settings.maxBattlers ?? `Auto (${defaultMaxBattlers(playerCount)})`}</span>
+                        <span>Deck: {settings.deckSize ?? 'All'}</span>
+                        <span>Mode: {teamMode === 'teams' ? 'Teams' : 'Free for All'}</span>
+                        <span>Turn Limit: {settings.turnTimeLimit ? (() => { const h = Math.floor(settings.turnTimeLimit / 3600); const m = Math.floor((settings.turnTimeLimit % 3600) / 60); return h > 0 ? `${h}h` : `${m}m`; })() : 'None'}</span>
+                        <span>Minigames: {['Easy', 'Normal', 'Hard', 'Expert', 'Brutal'][(settings.microgameDifficulty ?? 1) - 1]}</span>
+                        <span>Verified Cards: {settings.verifiedCardsOnly ? 'Required' : 'Any'}</span>
+                    </div>
+                )}
+
+                {error && <p className="sessions-error">{error}</p>}
+
+                {isHost ? (
+                    <div className="lobby-actions">
+                        <button
+                            className="lobby-start-btn"
+                            onClick={onStart}
+                            disabled={playerCount < 2 || !allReady || loading}
+                            title={!allReady ? 'Waiting for all players to build their deck' : undefined}
+                        >
+                            {loading ? 'Starting…' : playerCount < 2 ? 'Need at least 2 players…' : !allReady ? 'Waiting for players…' : 'Start Game'}
+                        </button>
+                        <button className="lobby-delete-btn" onClick={onDelete} disabled={loading}>
+                            Delete Session
+                        </button>
+                    </div>
+                ) : (
+                    <div className="lobby-actions">
+                        <p className="lobby-waiting-msg">
+                            {myDeckStatus !== 'ready'
+                                ? 'Choose your deck to get ready!'
+                                : 'Waiting for the host to start the game…'}
+                        </p>
+                        <button className="lobby-leave-btn" onClick={onLeave} disabled={loading}>
+                            Leave Session
+                        </button>
+                    </div>
+                )}
+
+                <button
+                    className={`lobby-chat-btn${showChat ? ' lobby-chat-btn--active' : ''}${(!showChat && unreadLobby > 0) ? ' lobby-chat-btn--unread' : ''}`}
+                    onClick={() => setShowChat((v) => !v)}
+                >
+                    💬 Lobby Chat{!showChat && unreadLobby > 0 && <span className="lobby-chat-badge">{unreadLobby}</span>}
+                </button>
+                {showChat && <LobbyChat sessionId={session._id} isWatching={true} />}
+
+                {/* Deck builder modal — current player */}
+                {showDeckBuilder && (
+                    <DeckBuilderModal
+                        onClose={() => setShowDeckBuilder(false)}
+                        onConfirm={handleDeckConfirm}
+                        initialDeck={myPlayer?.selectedDeck || []}
+                        loading={loading}
+                        error={error}
+                        verifiedCardsOnly={!!settings.verifiedCardsOnly}
+                    />
+                )}
+
+                {/* Deck builder modal — CPU slot */}
+                {cpuDeckSlot && (
+                    <DeckBuilderModal
+                        onClose={() => setCpuDeckSlot(null)}
+                        onConfirm={handleCpuDeckConfirm}
+                        initialDeck={cpuSlots.find((c) => c.slot === cpuDeckSlot)?.selectedDeck || []}
+                        loading={loading}
+                        error={error}
+                        verifiedCardsOnly={!!settings.verifiedCardsOnly}
+                    />
+                )}
+
             </div>
-
-            {/* Deck reminder for players who haven't built their deck */}
-            {myPlayer && myDeckStatus !== 'ready' && (
-                <div className="lobby-deck-reminder">
-                    <span>🃏 Please build your deck before the game can start</span>
-                    <button
-                        className="lobby-deck-reminder-btn"
-                        onClick={() => setShowDeckBuilder(true)}
-                    >
-                        Build Deck
-                    </button>
-                </div>
-            )}
-
-            {!isHost && (
-                <div className="lobby-settings lobby-settings--readonly">
-                    <span>HP: {settings.startingHp ?? 20}</span>
-                    <span>Max In Play: {settings.maxBattlers ?? `Auto (${defaultMaxBattlers(playerCount)})`}</span>
-                    <span>Deck: {settings.deckSize ?? 'All'}</span>
-                    <span>Mode: {teamMode === 'teams' ? 'Teams' : 'Free for All'}</span>
-                    <span>Turn Limit: {settings.turnTimeLimit ? (() => { const h = Math.floor(settings.turnTimeLimit / 3600); const m = Math.floor((settings.turnTimeLimit % 3600) / 60); return h > 0 ? `${h}h` : `${m}m`; })() : 'None'}</span>
-                    <span>Minigames: {['Easy', 'Normal', 'Hard', 'Expert', 'Brutal'][(settings.microgameDifficulty ?? 1) - 1]}</span>
-                    <span>Verified Cards: {settings.verifiedCardsOnly ? 'Required' : 'Any'}</span>
-                </div>
-            )}
-
-            {error && <p className="sessions-error">{error}</p>}
-
-            {isHost ? (
-                <div className="lobby-actions">
-                    <button
-                        className="lobby-start-btn"
-                        onClick={onStart}
-                        disabled={playerCount < 2 || !allReady || loading}
-                        title={!allReady ? 'Waiting for all players to build their deck' : undefined}
-                    >
-                        {loading ? 'Starting…' : playerCount < 2 ? 'Need at least 2 players…' : !allReady ? 'Waiting for players…' : 'Start Game'}
-                    </button>
-                    <button className="lobby-delete-btn" onClick={onDelete} disabled={loading}>
-                        Delete Session
-                    </button>
-                </div>
-            ) : (
-                <div className="lobby-actions">
-                    <p className="lobby-waiting-msg">
-                        {myDeckStatus !== 'ready'
-                            ? 'Choose your deck to get ready!'
-                            : 'Waiting for the host to start the game…'}
-                    </p>
-                    <button className="lobby-leave-btn" onClick={onLeave} disabled={loading}>
-                        Leave Session
-                    </button>
-                </div>
-            )}
-
-            <button
-                className={`lobby-chat-btn${showChat ? ' lobby-chat-btn--active' : ''}${(!showChat && unreadLobby > 0) ? ' lobby-chat-btn--unread' : ''}`}
-                onClick={() => setShowChat((v) => !v)}
-            >
-                💬 Lobby Chat{!showChat && unreadLobby > 0 && <span className="lobby-chat-badge">{unreadLobby}</span>}
-            </button>
-            {showChat && <LobbyChat sessionId={session._id} isWatching={true} />}
-
-            {/* Deck builder modal — current player */}
-            {showDeckBuilder && (
-                <DeckBuilderModal
-                    onClose={() => setShowDeckBuilder(false)}
-                    onConfirm={handleDeckConfirm}
-                    initialDeck={myPlayer?.selectedDeck || []}
-                    loading={loading}
-                    error={error}
-                    verifiedCardsOnly={!!settings.verifiedCardsOnly}
-                />
-            )}
-
-            {/* Deck builder modal — CPU slot */}
-            {cpuDeckSlot && (
-                <DeckBuilderModal
-                    onClose={() => setCpuDeckSlot(null)}
-                    onConfirm={handleCpuDeckConfirm}
-                    initialDeck={cpuSlots.find((c) => c.slot === cpuDeckSlot)?.selectedDeck || []}
-                    loading={loading}
-                    error={error}
-                    verifiedCardsOnly={!!settings.verifiedCardsOnly}
-                />
-            )}
-
+            {showProfile && <Profile onClose={() => setShowProfile(false)} />}
+            <DMPanel open={showMessages} onOpenChange={setShowMessages} hideToggle />
         </div>
     );
 };
