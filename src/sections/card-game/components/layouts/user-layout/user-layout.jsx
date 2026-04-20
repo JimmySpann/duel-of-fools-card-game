@@ -43,7 +43,7 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, onForfeit, di
     };
 
     const handleAttack = () => {
-        dispatch(selectAttacker(selectedBattlerIndex));
+        dispatch(selectAttacker({ cardIndex: selectedBattlerIndex }));
         handleBattlerClose();
     };
 

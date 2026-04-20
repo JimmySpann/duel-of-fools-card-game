@@ -68,12 +68,13 @@ export const cardGameSlice = createSlice({
     selectAttacker: (state, action) => {
       if (state.phase !== 'main' || state.gameOver) return;
       const player = state.players.find((p) => p.id === state.currentTurn);
-      const card = player?.inPlay[action.payload];
+      const cardIndex = typeof action.payload === 'object' ? action.payload.cardIndex : action.payload;
+      const card = player?.inPlay[cardIndex];
       if (!card) return;
       if (hasStatus(card, 'frozen')) { state.log.unshift(`${card.name} is Frozen and cannot act!`); return; }
       if (card.acted) { state.log.unshift(`${card.name} has already acted this turn!`); return; }
       if (card.justPlayed) { state.log.unshift(`${card.name} was just played and needs a turn to prepare!`); return; }
-      state.pendingAction = { isAbility: false, casterCardIndex: action.payload };
+      state.pendingAction = { isAbility: false, casterCardIndex: cardIndex };
       state.phase = 'selectingTarget';
     },
 
