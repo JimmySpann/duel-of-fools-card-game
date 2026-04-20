@@ -220,6 +220,7 @@ module.exports = (gameActions) => {
                     team: null,
                     slot: c.slot,
                     isBot: true,
+                    cpuSkill: c.cpuSkill ?? 2,
                     selectedDeck: (c.selectedDeck || []).length >= 3
                         ? (c.selectedDeck || []).map((id) => cardById.get(id)).filter(Boolean)
                         : [],
@@ -232,6 +233,7 @@ module.exports = (gameActions) => {
                 image: p.image,
                 team: session.settings?.teamMode === 'teams' ? (p.team || null) : null,
                 isBot: p.isBot,
+                cpuSkill: p.isBot ? (p.cpuSkill ?? 2) : undefined,
                 selectedDeck: p.selectedDeck,
             }));
 
@@ -513,6 +515,33 @@ module.exports = (gameActions) => {
         } catch (err) {
             console.error('PATCH /api/sessions/:id/cpu/:slot/deck error:', err);
             res.status(500).json({ error: 'Failed to set CPU deck' });
+        }
+    });
+
+    /**
+     * PATCH /api/sessions/:id/cpu/:slot/skill
+     */
+    router.patch('/:id/cpu/:slot/skill', requireAuth, async (req, res) => {
+        try {
+            const session = await Session.findById(req.params.id);
+            if (!session) return res.status(404).json({ error: 'Session not found' });
+            if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can change CPU skill' });
+            if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change CPU skill after game starts' });
+
+            const cpu = (session.cpuSlots || []).find((c) => c.slot === req.params.slot);
+            if (!cpu) return res.status(404).json({ error: 'CPU slot not found' });
+
+            const skill = parseInt(req.body.cpuSkill, 10);
+            if (!skill || skill < 1 || skill > 5) return res.status(400).json({ error: 'cpuSkill must be 1–5' });
+
+            cpu.cpuSkill = skill;
+            session.markModified('cpuSlots');
+            await session.save();
+
+            res.json({ session });
+        } catch (err) {
+            console.error('PATCH /api/sessions/:id/cpu/:slot/skill error:', err);
+            res.status(500).json({ error: 'Failed to set CPU skill' });
         }
     });
 

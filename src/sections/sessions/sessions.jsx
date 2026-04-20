@@ -13,6 +13,7 @@ import {
     addCpu,
     removeCpu,
     setCpuDeck,
+    setCpuSkill,
     leaveSessionLobby,
     deleteSession,
     submitDeck,
@@ -36,6 +37,7 @@ import './sessions.css';
 const POLL_INTERVAL = 3000;
 const SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
 const TEAM_COLORS = { A: '#e74c3c', B: '#3498db', C: '#2ecc71' };
+const CPU_SKILL_LABELS = ['', 'Easy', 'Normal', 'Hard', 'Very Hard', 'Insane'];
 
 const statusLabel = (status) => {
     if (status === 'waiting') return 'Waiting';
@@ -345,6 +347,18 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                                     >
                                         {cpu.selectedDeck?.length >= 3 ? '✏ Edit Deck' : '🃏 Set Deck'}
                                     </button>
+                                    <div className="lobby-cpu-skill">
+                                        <span className="lobby-cpu-skill-label">{CPU_SKILL_LABELS[cpu.cpuSkill ?? 2]}</span>
+                                        <input
+                                            type="range"
+                                            min="1"
+                                            max="5"
+                                            value={cpu.cpuSkill ?? 2}
+                                            onChange={(e) => dispatch(setCpuSkill({ sessionId: session._id, slot, cpuSkill: Number(e.target.value) }))}
+                                            className="lobby-cpu-skill-slider"
+                                            title="CPU difficulty"
+                                        />
+                                    </div>
                                     <button
                                         className="lobby-slot-remove-cpu"
                                         onClick={() => dispatch(removeCpu({ sessionId: session._id, slot }))}

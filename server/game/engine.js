@@ -42,7 +42,7 @@ const defaultMaxBattlers = (playerCount) => {
     return 4;
 };
 
-const buildPlayer = (id, name, image, startingHp = 20, team = null, deckSize = null, isBot = false, selectedDeck = []) => {
+const buildPlayer = (id, name, image, startingHp = 20, team = null, deckSize = null, isBot = false, selectedDeck = [], cpuSkill = 2) => {
     // Use the player's chosen card list if provided, otherwise use all cards.
     // selectedDeck can be an array of card IDs or fully-hydrated card objects.
     const cardPool = (selectedDeck && selectedDeck.length >= 3)
@@ -76,6 +76,7 @@ const buildPlayer = (id, name, image, startingHp = 20, team = null, deckSize = n
         statusEffects: [],
         eliminated: false,
         isBot,
+        cpuSkill: isBot ? cpuSkill : undefined,
     };
 };
 
@@ -89,8 +90,8 @@ const createInitialState = (playerConfigs, settings = {}) => {
     const maxBattlers = settings.maxBattlers ?? defaultMaxBattlers(playerCount);
     const deckSize = settings.deckSize ?? null;
 
-    const players = playerConfigs.map(({ id, name, image, team, isBot, selectedDeck }, i) =>
-        buildPlayer(id, name, image ?? AVATAR_URLS[i] ?? AVATAR_URLS[0], startingHp, teamMode === 'teams' ? (team ?? null) : null, deckSize, isBot ?? false, selectedDeck ?? [])
+    const players = playerConfigs.map(({ id, name, image, team, isBot, cpuSkill, selectedDeck }, i) =>
+        buildPlayer(id, name, image ?? AVATAR_URLS[i] ?? AVATAR_URLS[0], startingHp, teamMode === 'teams' ? (team ?? null) : null, deckSize, isBot ?? false, selectedDeck ?? [], cpuSkill ?? 2)
     );
 
     const turnOrder = players.map((p) => p.id);
@@ -511,60 +512,339 @@ const dispatch = (state, type, payload = {}) => {
 };
 
 /**
+ * Simulate a CPU mini-game outcome based on skill level.
+ * @param {'binary'|'scaled'} outcomeType
+ * @param {number} cpuSkill  1–5
+ * @returns {{ success: boolean, score: number }}
+ */
+const cpuAutoResolve = (outcomeType, cpuSkill) => {
+    const skill = Math.max(1, Math.min(5, cpuSkill ?? 2));
+    // successRates[1..5] for binary outcomes
+    const successRates = [0, 0.25, 0.45, 0.65, 0.80, 0.92];
+    // scaled score ranges [min, max] per skill level
+    const scaledRanges = [null, [0.10, 0.45], [0.30, 0.60], [0.50, 0.78], [0.65, 0.88], [0.80, 0.97]];
+
+    if (outcomeType === 'binary') {
+        const success = Math.random() < successRates[skill];
+        return { success, score: success ? 1 : 0 };
+    }
+    // scaled
+    const [lo, hi] = scaledRanges[skill];
+    const score = lo + Math.random() * (hi - lo);
+    return { success: score >= 0.5, score };
+};
+
+/**
  * Compute and execute a full CPU turn, returning the resulting state.
- * The CPU plays one card from hand (if below maxBattlers), attacks with all
- * eligible battlers targeting random enemy cards, then ends its turn.
- * @param {object} state - current game state (not mutated)
- * @returns {object} new state after CPU's turn
+ * At skill 1–2: random ability/target selection.
+ * At skill 3–5: scored ability and target selection.
+ * If an ability with a microevent is triggered, returns { state, cpuMicroevent }
+ * so the caller can auto-resolve the mini-game server-side.
+ * @param {object} state  current game state (not mutated)
+ * @returns {{ state: object, cpuMicroevent: object|null }}
  */
 const computeCpuTurn = (state) => {
     let s = deepClone(state);
-    if (s.gameOver) return s;
+    if (s.gameOver) return { state: s, cpuMicroevent: null };
 
     const cpuId = s.currentTurn;
+    const getCpu = () => s.players.find((p) => p.id === cpuId);
+    const cpuSkill = getCpu()?.cpuSkill ?? 2;
 
-    // Play one card from hand if not already played and under maxBattlers
-    const getCpuPlayer = () => s.players.find((p) => p.id === cpuId);
-    if (!s.cardPlayedThisTurn && getCpuPlayer().hand.length > 0) {
+    // Ability preference rates per skill level (index 1–5)
+    const abilityPrefRates = [0, 0.25, 0.45, 0.65, 0.80, 0.92];
+    const abilityPref = abilityPrefRates[cpuSkill] ?? 0.45;
+    const useScoring = cpuSkill >= 3;
+
+    // ── Play one card from hand ───────────────────────────────────────────────
+    if (!s.cardPlayedThisTurn && getCpu().hand.length > 0) {
         const maxBattlers = s.settings?.maxBattlers ?? 8;
-        if (getCpuPlayer().inPlay.length < maxBattlers) {
-            const { state: ns } = dispatch(s, 'playCardFromHand', { cardIndex: 0 });
+        if (getCpu().inPlay.length < maxBattlers) {
+            let cardIndex = 0;
+            if (useScoring && getCpu().hand.length > 1) {
+                const enemies = getEnemies(s, cpuId).flatMap((e) => e.inPlay);
+                const maxEnemyAtk = enemies.reduce((m, c) => Math.max(m, c.attack ?? 0), 0);
+                const allyBelow30 = getCpu().inPlay.some((c) => c.currentHealth / c.health < 0.3);
+                const scores = getCpu().hand.map((card) => {
+                    let score = (card.attack ?? 0) + (card.health ?? 0);
+                    if ((card.attack ?? 0) <= 4 && allyBelow30) score += 5;
+                    if ((card.actions || []).some((a) => (a.limit ?? 99) === 1)) score += 4;
+                    if (getCpu().inPlay.length >= 4) score -= 3;
+                    if ((card.health ?? 0) <= 5 && maxEnemyAtk >= 7) score -= 2;
+                    return score;
+                });
+                cardIndex = scores.indexOf(Math.max(...scores));
+            }
+            const { state: ns } = dispatch(s, 'playCardFromHand', { cardIndex });
             s = ns;
         }
     }
 
-    // Attack with each eligible card in order
-    const inPlayCount = getCpuPlayer().inPlay.length;
+    // ── Act with each eligible card ───────────────────────────────────────────
+    const inPlayCount = getCpu().inPlay.length;
     for (let i = 0; i < inPlayCount; i++) {
         if (s.gameOver) break;
 
         const card = s.players.find((p) => p.id === cpuId)?.inPlay[i];
-        if (!card || card.acted || card.justPlayed) continue;
+        if (!card || card.acted || card.justPlayed || hasStatus(card, 'frozen')) continue;
 
+        // Decide whether to use an ability this card action
+        const usableAbilities = (card.actions || []).filter(
+            (a) => (a.usesRemaining ?? 0) > 0
+        );
+        const tryAbility = usableAbilities.length > 0 && Math.random() < abilityPref;
+
+        if (tryAbility) {
+            // Pick ability
+            let chosenAbilityIndex;
+            if (useScoring) {
+                // Score each usable ability
+                const enemies = getEnemies(s, cpuId).flatMap((e) => e.inPlay.filter((c) => !c.dying));
+                const allies = getCpu().inPlay;
+                const scores = usableAbilities.map((ability) => {
+                    const def = getAbilityDefinition(ability.name, ability.customConfig);
+                    if (!def) return -Infinity;
+                    let score = 0;
+                    for (const eff of (def.effects || [])) {
+                        if (eff.type === 'damage') {
+                            const mult = eff.multiplier ?? 1;
+                            const atk = getEffectiveAtk(card);
+                            const target = enemies[0];
+                            if (target) {
+                                const defVal = eff.ignoreDef ? 0 : getEffectiveDef(target);
+                                score += Math.max(1, atk * mult - defVal) * (eff.repeat ?? 1);
+                            }
+                        } else if (eff.type === 'status') {
+                            const st = eff.status;
+                            if (st === 'frozen') score += 10;
+                            else if (st === 'invulnerable' || st === 'invisible') score += 8;
+                            else if (st === 'shielded') score += (eff.value ?? 0) * 1.2;
+                            else if (st === 'atk_up') score += (eff.value ?? 0) * 2;
+                            else if (st === 'def_up' || st === 'eva_up') score += (eff.value ?? 0) * 1.5;
+                            else if (st === 'def_down') score += (eff.value ?? 0) * 1.5;
+                            else if (st === 'burned' || st === 'poisoned' || st === 'bleeding') {
+                                score += (eff.value ?? 0) * Math.min(eff.duration ?? 1, 3) * 0.8;
+                            }
+                        } else if (eff.type === 'healSelf') {
+                            const missing = card.health - card.currentHealth;
+                            score += Math.min(eff.amount ?? 0, missing) * 1.2;
+                        } else if (eff.type === 'heal') {
+                            const mostHurt = allies.reduce((best, c) => (c.currentHealth < best.currentHealth ? c : best), allies[0] || card);
+                            const missing = (mostHurt?.health ?? 0) - (mostHurt?.currentHealth ?? 0);
+                            score += Math.min(eff.amount ?? 0, missing) * 1.2;
+                        } else if (eff.type === 'cleanse') {
+                            const debuffTypes = eff.debuffs || [];
+                            const activeCount = allies.reduce((n, c) =>
+                                n + debuffTypes.filter((d) => hasStatus(c, d)).length, 0);
+                            score += activeCount * 3;
+                        } else if (eff.type === 'resetCooldowns') {
+                            score += 7;
+                        } else if (eff.type === 'selfDestruct') {
+                            score -= 5;
+                        }
+                    }
+                    // Modifiers
+                    if ((ability.usesRemaining ?? 0) === 1 && (ability.limit ?? 99) <= 2) score += 2;
+                    if (card.currentHealth / card.health < 0.3) score += 3;
+                    return score;
+                });
+                const bestScore = Math.max(...scores);
+                const bestIdx = scores.indexOf(bestScore);
+                chosenAbilityIndex = card.actions.indexOf(usableAbilities[bestIdx]);
+            } else {
+                // Random ability
+                const pick = usableAbilities[Math.floor(Math.random() * usableAbilities.length)];
+                chosenAbilityIndex = card.actions.indexOf(pick);
+            }
+
+            const chosenAbility = card.actions[chosenAbilityIndex];
+            const def = getAbilityDefinition(chosenAbility?.name, chosenAbility?.customConfig);
+            if (!def) {
+                // Fallback to basic attack
+                const { state: ns } = dispatch(s, 'selectAttacker', { cardIndex: i });
+                s = ns;
+                if (s.phase === 'selectingTarget') {
+                    const enemies = getEnemies(s, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
+                    if (enemies.length > 0) {
+                        const randEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                        const validCards = randEnemy.inPlay.filter((c) => !c.dying);
+                        const target = validCards[Math.floor(Math.random() * validCards.length)];
+                        const { state: ns2 } = dispatch(s, 'resolveOnEnemyCard', {
+                            targetCardIndex: randEnemy.inPlay.indexOf(target),
+                            targetPlayerId: randEnemy.id,
+                        });
+                        s = ns2;
+                    } else {
+                        const { state: ns2 } = dispatch(s, 'cancelSelection', {});
+                        s = ns2;
+                    }
+                }
+                continue;
+            }
+
+            const target = getAbilityTarget(def);
+            let targetCardIndex = null;
+            let targetPlayerId = null;
+
+            if (target === ABILITY_TARGETS.ENEMY_CARD || target === ABILITY_TARGETS.ALL_ENEMIES) {
+                const enemies = getEnemies(s, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying && !isUntouchable(c)).length > 0);
+                if (enemies.length === 0) {
+                    // No valid targets — skip ability, do basic attack
+                    const { state: ns } = dispatch(s, 'selectAttacker', { cardIndex: i });
+                    s = ns;
+                    if (s.phase === 'selectingTarget') {
+                        const anyEnemies = getEnemies(s, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
+                        if (anyEnemies.length > 0) {
+                            const randEnemy = anyEnemies[Math.floor(Math.random() * anyEnemies.length)];
+                            const validCards = randEnemy.inPlay.filter((c) => !c.dying);
+                            const t = validCards[Math.floor(Math.random() * validCards.length)];
+                            const { state: ns2 } = dispatch(s, 'resolveOnEnemyCard', {
+                                targetCardIndex: randEnemy.inPlay.indexOf(t),
+                                targetPlayerId: randEnemy.id,
+                            });
+                            s = ns2;
+                        } else {
+                            const { state: ns2 } = dispatch(s, 'cancelSelection', {});
+                            s = ns2;
+                        }
+                    }
+                    continue;
+                }
+                if (target === ABILITY_TARGETS.ENEMY_CARD) {
+                    let chosenEnemy, chosenCard;
+                    if (useScoring) {
+                        // Score each candidate target
+                        const estimatedDmg = Math.max(1, getEffectiveAtk(card) - 1);
+                        let best = -Infinity;
+                        for (const ep of enemies) {
+                            for (const ec of ep.inPlay.filter((c) => !c.dying && !isUntouchable(c))) {
+                                let score = 1;
+                                if (ec.currentHealth <= estimatedDmg) score += 10;
+                                if (ec.currentHealth / ec.health < 0.3) score += 5;
+                                if (hasStatus(ec, 'focused')) score += 4;
+                                if (hasStatus(ec, 'def_down')) score += 3;
+                                if ((ec.attack ?? 0) >= 7) score += 2;
+                                if (score > best) { best = score; chosenEnemy = ep; chosenCard = ec; }
+                            }
+                        }
+                    } else {
+                        chosenEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                        const validCards = chosenEnemy.inPlay.filter((c) => !c.dying && !isUntouchable(c));
+                        chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
+                    }
+                    if (chosenEnemy && chosenCard) {
+                        targetPlayerId = chosenEnemy.id;
+                        targetCardIndex = chosenEnemy.inPlay.indexOf(chosenCard);
+                    }
+                }
+                // allEnemies needs no target index
+            } else if (target === ABILITY_TARGETS.ALLY_CARD || target === ABILITY_TARGETS.ALL_ALLIES) {
+                const allies = getCpu().inPlay.filter((c) => !c.dying);
+                if (target === ABILITY_TARGETS.ALLY_CARD && allies.length > 0) {
+                    let chosenAlly;
+                    if (useScoring) {
+                        let best = -Infinity;
+                        for (const ac of allies) {
+                            let score = 1;
+                            if (ac.currentHealth / ac.health > 0.8) score -= 4;
+                            if (hasStatus(ac, 'burned') || hasStatus(ac, 'poisoned') || hasStatus(ac, 'bleeding')) score += 5;
+                            if (hasStatus(ac, 'frozen')) score += 6;
+                            if (ac.currentHealth / ac.health < 0.3) score += 8;
+                            if (score > best) { best = score; chosenAlly = ac; }
+                        }
+                    } else {
+                        chosenAlly = allies[Math.floor(Math.random() * allies.length)];
+                    }
+                    if (chosenAlly) {
+                        targetPlayerId = cpuId;
+                        targetCardIndex = getCpu().inPlay.indexOf(chosenAlly);
+                    }
+                }
+            }
+            // SELF target needs no index
+
+            // If ability has a microevent, hold and return for async resolution
+            if (chosenAbility.microevent) {
+                const { state: heldState } = dispatch(s, 'holdMicroevent', {
+                    casterCardIndex: i,
+                    abilityIndex: chosenAbilityIndex,
+                    targetCardIndex: targetCardIndex ?? null,
+                    targetPlayerId: targetPlayerId ?? null,
+                });
+                return {
+                    state: heldState,
+                    cpuMicroevent: {
+                        casterCardIndex: i,
+                        abilityIndex: chosenAbilityIndex,
+                        targetCardIndex: targetCardIndex ?? null,
+                        targetPlayerId: targetPlayerId ?? null,
+                        microevent: chosenAbility.microevent,
+                        cpuSkill,
+                    },
+                };
+            }
+
+            // No microevent — execute ability directly
+            const { state: afterAbility, error: abilityErr } = dispatch(s, 'useAbility', {
+                casterCardIndex: i,
+                abilityIndex: chosenAbilityIndex,
+                targetCardIndex,
+                targetPlayerId,
+            });
+            if (!abilityErr) {
+                s = afterAbility;
+                continue;
+            }
+            // Ability failed — fall through to basic attack
+        }
+
+        // Basic attack
         const { state: afterSelect } = dispatch(s, 'selectAttacker', { cardIndex: i });
         s = afterSelect;
         if (s.gameOver) break;
 
-        // If selectAttacker went to selectingTarget, pick a random enemy card
         if (s.phase === 'selectingTarget') {
             const enemies = getEnemies(s, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
             if (enemies.length > 0) {
-                const randEnemy = enemies[Math.floor(Math.random() * enemies.length)];
-                const validCards = randEnemy.inPlay.filter((c) => !c.dying);
-                const target = validCards[Math.floor(Math.random() * validCards.length)];
-                const targetCardIndex = randEnemy.inPlay.indexOf(target);
-                const { state: afterAttack } = dispatch(s, 'resolveOnEnemyCard', {
-                    targetCardIndex,
-                    targetPlayerId: randEnemy.id,
-                });
-                s = afterAttack;
+                let chosenEnemy, chosenCard;
+                if (useScoring) {
+                    const estimatedDmg = Math.max(1, getEffectiveAtk(card) - 1);
+                    let best = -Infinity;
+                    for (const ep of enemies) {
+                        for (const ec of ep.inPlay.filter((c) => !c.dying)) {
+                            if (isUntouchable(ec)) continue;
+                            let score = 1;
+                            if (ec.currentHealth <= estimatedDmg) score += 10;
+                            if (ec.currentHealth / ec.health < 0.3) score += 5;
+                            if (hasStatus(ec, 'focused')) score += 4;
+                            if (hasStatus(ec, 'def_down')) score += 3;
+                            if ((ec.attack ?? 0) >= 7) score += 2;
+                            if (getEffectiveEva(ec) >= 7) score -= 3;
+                            if (score > best) { best = score; chosenEnemy = ep; chosenCard = ec; }
+                        }
+                    }
+                    if (!chosenEnemy) {
+                        chosenEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                        const validCards = chosenEnemy.inPlay.filter((c) => !c.dying);
+                        chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
+                    }
+                } else {
+                    chosenEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                    const validCards = chosenEnemy.inPlay.filter((c) => !c.dying);
+                    chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
+                }
+                if (chosenEnemy && chosenCard) {
+                    const { state: afterAttack } = dispatch(s, 'resolveOnEnemyCard', {
+                        targetCardIndex: chosenEnemy.inPlay.indexOf(chosenCard),
+                        targetPlayerId: chosenEnemy.id,
+                    });
+                    s = afterAttack;
+                }
             } else {
-                // Fallback: cancel (shouldn't normally happen)
                 const { state: cancelled } = dispatch(s, 'cancelSelection', {});
                 s = cancelled;
             }
         }
-        // If phase is still 'main', selectAttacker handled the attack directly
     }
 
     if (!s.gameOver) {
@@ -572,8 +852,8 @@ const computeCpuTurn = (state) => {
         s = afterEnd;
     }
 
-    return s;
+    return { state: s, cpuMicroevent: null };
 };
 
-module.exports = { createGame, dispatch, computeCpuTurn, ABILITY_TARGETS, getAbilityTarget };
+module.exports = { createGame, dispatch, computeCpuTurn, cpuAutoResolve, ABILITY_TARGETS, getAbilityTarget };
 

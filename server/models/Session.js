@@ -22,6 +22,7 @@ const cpuSlotSchema = new mongoose.Schema(
         slot: { type: String, enum: VALID_SLOTS, required: true },
         name: { type: String, default: 'CPU', maxlength: 20 },
         selectedDeck: { type: [String], default: [] },
+        cpuSkill: { type: Number, default: 2, min: 1, max: 5 },
     },
     { _id: false }
 );

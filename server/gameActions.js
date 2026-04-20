@@ -11,7 +11,7 @@
 module.exports = (io) => {
     const https = require('https');
     const webpush = require('web-push');
-    const { dispatch, computeCpuTurn, getAbilityTarget } = require('./game/engine');
+    const { dispatch, computeCpuTurn, cpuAutoResolve, getAbilityTarget } = require('./game/engine');
     const Game = require('./models/Game');
     const Session = require('./models/Session');
     const User = require('./models/User');
@@ -257,10 +257,46 @@ module.exports = (io) => {
 
             await new Promise((r) => setTimeout(r, 1500));
 
-            const cpuState = computeCpuTurn(game.state);
+            const { state: cpuState, cpuMicroevent } = computeCpuTurn(game.state);
 
+            // Re-fetch before writing to avoid stale overwrites
             game = await Game.findOne({ gameId });
             if (!game) return;
+
+            if (cpuMicroevent) {
+                // Persist the held (microevent phase) state first
+                game.state = cpuState;
+                game.markModified('state');
+                await game.save();
+                io.to(`game:${gameId}`).emit('game:state', cpuState);
+                io.to(`game:${gameId}`).emit('game:cpu:microevent', { microevent: cpuMicroevent.microevent });
+
+                // Auto-resolve after a brief pause so clients can see the animation trigger
+                await new Promise((r) => setTimeout(r, 800));
+
+                const { microevent: me, cpuSkill } = cpuMicroevent;
+                const outcomeType = (me.outcomeType === 'scaled') ? 'scaled' : 'binary';
+                const microeventResult = cpuAutoResolve(outcomeType, cpuSkill);
+
+                game = await Game.findOne({ gameId });
+                if (!game) return;
+                const { state: resolvedState } = dispatch(game.state, 'applyAbilityWithMicroevent', { microeventResult });
+                game.state = resolvedState;
+                game.markModified('state');
+                await game.save();
+
+                await Session.findOneAndUpdate(
+                    { gameId },
+                    { currentTurn: resolvedState.currentTurn, turnStartedAt: resolvedState.turnStartedAt ? new Date(resolvedState.turnStartedAt) : null }
+                ).catch(() => { });
+                io.to(`game:${gameId}`).emit('game:state', resolvedState);
+                scheduleTimer(gameId, resolvedState);
+                if (resolvedState.gameOver) break;
+
+                // After a microevent the turn is not yet over; loop again to finish remaining actions
+                continue;
+            }
+
             game.state = cpuState;
             game.markModified('state');
             await game.save();
