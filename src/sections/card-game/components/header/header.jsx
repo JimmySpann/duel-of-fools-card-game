@@ -107,12 +107,14 @@ const Header = ({
                             >
                                 🏠 Lobbies
                             </button>
-                            <button
-                                className="header-profile-dropdown-item"
-                                onClick={() => { setShowProfileMenu(false); onMessagesToggle?.(true); }}
-                            >
-                                💬 Messages{hasUnreadMessages ? <span className="header-dropdown-badge" /> : null}
-                            </button>
+                            {onMessagesToggle && (
+                                <button
+                                    className="header-profile-dropdown-item"
+                                    onClick={() => { setShowProfileMenu(false); onMessagesToggle(true); }}
+                                >
+                                    💬 Messages{hasUnreadMessages ? <span className="header-dropdown-badge" /> : null}
+                                </button>
+                            )}
                             <button
                                 className="header-profile-dropdown-item"
                                 onClick={() => { setShowProfileMenu(false); onProfileOpen?.(); }}

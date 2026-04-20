@@ -459,7 +459,7 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                 className={`lobby-chat-btn${showChat ? ' lobby-chat-btn--active' : ''}${(!showChat && unreadLobby > 0) ? ' lobby-chat-btn--unread' : ''}`}
                 onClick={() => setShowChat((v) => !v)}
             >
-                💬 Chat{!showChat && unreadLobby > 0 && <span className="lobby-chat-badge">{unreadLobby}</span>}
+                💬 Lobby Chat{!showChat && unreadLobby > 0 && <span className="lobby-chat-badge">{unreadLobby}</span>}
             </button>
             {showChat && <LobbyChat sessionId={session._id} isWatching={true} />}
 
