@@ -1,3 +1,26 @@
+.custom-card-library,
+.custom-card-list {
+    scrollbar-width: thin;
+    scrollbar-color: #3a4268 #0f1117;
+}
+
+.custom-card-library::-webkit-scrollbar,
+.custom-card-list::-webkit-scrollbar {
+    width: 7px;
+}
+
+.custom-card-library::-webkit-scrollbar-track,
+.custom-card-list::-webkit-scrollbar-track {
+    background: #0f1117;
+    border-radius: 8px;
+}
+
+.custom-card-library::-webkit-scrollbar-thumb,
+.custom-card-list::-webkit-scrollbar-thumb {
+    background: #3a4268;
+    border-radius: 8px;
+    border: 1px solid #0f1117;
+}
 /* --- Game Settings Row Alignment Fix --- */
 .game-settings-row {
     display: flex;
@@ -2769,7 +2792,7 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.4rem;
-    max-height: 400px;
+    max-height: 150px;
     overflow-y: auto;
     padding-right: 0.3rem;
 }
