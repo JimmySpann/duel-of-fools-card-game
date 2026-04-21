@@ -3291,6 +3291,7 @@
 /* ── My Abilities: single-column list ───────────────────────────────── */
 .custom-card-ability-list--mine {
     grid-template-columns: 1fr;
+    max-height: 380px;
 }
 
 /* ── My Abilities: inline edit form ─────────────────────────────────── */
@@ -3299,6 +3300,60 @@
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+}
+
+/* ── Applied / selected state for My Abilities items ────────────────── */
+.custom-card-saved-ability.applied {
+    border-color: #7a3ea0;
+    background: #1e0f2a;
+    box-shadow: 0 0 0 1px #7a3ea044 inset;
+}
+
+.custom-card-saved-ability.applied .custom-card-saved-ability-info > span {
+    color: #d8a8f8;
+}
+
+/* ── Selected abilities chips bar ────────────────────────────────── */
+.custom-card-selected-abilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding: 0.35rem 0 0.1rem;
+}
+
+.custom-card-selected-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: #1a1230;
+    border: 1px solid #7a3ea0;
+    border-radius: 20px;
+    color: #d8a8f8;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem 0.15rem 0.6rem;
+    white-space: nowrap;
+}
+
+.custom-card-selected-chip.custom {
+    border-color: #4a6ea0;
+    color: #a8c8f8;
+    background: #0f1a30;
+}
+
+.custom-card-selected-chip button {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    opacity: 0.7;
+    padding: 0 0.1rem;
+}
+
+.custom-card-selected-chip button:hover {
+    opacity: 1;
 }
 
 /* ── Ability limit snackbar ─────────────────────────────────────────────── */
