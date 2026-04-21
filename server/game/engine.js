@@ -11,7 +11,7 @@ const cards = require('./cards');
 
 const {
     addStatus, removeStatus, hasStatus, getStatus,
-    getEffectiveDef, getEffectiveEva, getEffectiveAtk,
+    getEffectiveDef, getEffectiveEva, getEffectiveAtk, getEffectiveAgi,
     getEnemies, getAllies,
     pushHitEvent, pushRecapEvent, cleanupDefeated,
     applyDamageToCard, resolveBasicAttack,
@@ -523,20 +523,26 @@ const dispatch = (state, type, payload = {}) => {
  * @param {number} cpuSkill  1–5
  * @returns {{ success: boolean, score: number }}
  */
+// Map skill 1–5 to a continuous 0–1 difficulty parameter.
+// All CPU params are derived from t so adding new skill levels or tweaking balance
+// only requires changing this table.
+const SKILL_T = { 1: 0.10, 2: 0.30, 3: 0.55, 4: 0.75, 5: 1.0 };
+
 const cpuAutoResolve = (outcomeType, cpuSkill) => {
     const skill = Math.max(1, Math.min(5, cpuSkill ?? 2));
-    // successRates[1..5] for binary outcomes
-    const successRates = [0, 0.25, 0.45, 0.65, 0.80, 0.92];
-    // scaled score ranges [min, max] per skill level
-    const scaledRanges = [null, [0.10, 0.45], [0.30, 0.60], [0.50, 0.78], [0.65, 0.88], [0.80, 0.97]];
+    const t = SKILL_T[skill] ?? 0.30;
+    // t-based binary success: 0.28 (Easy) → 1.0 (Insane)
+    const binarySuccess = Math.min(1, 0.20 + t * 0.80);
+    // t-based scaled range: lo = 0.08 + t*0.89, hi = lo + 0.12 (clamped)
+    const scaledLo = 0.08 + t * 0.89;
+    const scaledHi = Math.min(1.0, scaledLo + 0.12);
 
     if (outcomeType === 'binary') {
-        const success = Math.random() < successRates[skill];
+        const success = Math.random() < binarySuccess;
         return { success, score: success ? 1 : 0 };
     }
     // scaled
-    const [lo, hi] = scaledRanges[skill];
-    const score = lo + Math.random() * (hi - lo);
+    const score = scaledLo + Math.random() * (scaledHi - scaledLo);
     return { success: score >= 0.5, score };
 };
 
@@ -557,10 +563,13 @@ const computeCpuTurn = (state) => {
     const getCpu = () => s.players.find((p) => p.id === cpuId);
     const cpuSkill = getCpu()?.cpuSkill ?? 2;
 
-    // Ability preference rates per skill level (index 1–5)
-    const abilityPrefRates = [0, 0.25, 0.45, 0.65, 0.80, 0.92];
-    const abilityPref = abilityPrefRates[cpuSkill] ?? 0.45;
-    const useScoring = cpuSkill >= 3;
+    // Derive all difficulty params from t (0–1 continuous scale)
+    const t = SKILL_T[Math.max(1, Math.min(5, cpuSkill))] ?? 0.30;
+    const abilityPref = 0.15 + t * 0.84;           // 0.24 … 0.99
+    const useScoring = t >= 0.5;                    // skill 3+
+    const lookaheadBreadth = Math.round(t * 4);     // 0, 1, 2, 3, 4
+    const killShotBonus = Math.round(6 + t * 14);   // 6 … 20
+    const elimBonus = Math.round(15 + t * 30);      // 15 … 45
 
     // ── Play one card from hand ───────────────────────────────────────────────
     if (!s.cardPlayedThisTurn && getCpu().hand.length > 0) {
@@ -568,11 +577,17 @@ const computeCpuTurn = (state) => {
         if (getCpu().inPlay.length < maxBattlers) {
             let cardIndex = 0;
             if (useScoring && getCpu().hand.length > 1) {
-                const enemies = getEnemies(s, cpuId).flatMap((e) => e.inPlay);
+                const allEnemyPlayers = getEnemies(s, cpuId);
+                const enemies = allEnemyPlayers.flatMap((e) => e.inPlay);
                 const maxEnemyAtk = enemies.reduce((m, c) => Math.max(m, c.attack ?? 0), 0);
                 const allyBelow30 = getCpu().inPlay.some((c) => c.currentHealth / c.health < 0.3);
+                // Board-state modifier: scale aggression based on HP advantage
+                const cpuTotalHp = getCpu().inPlay.reduce((sum, c) => sum + (c.currentHealth ?? 0), 0);
+                const enemyTotalHp = enemies.reduce((sum, c) => sum + (c.currentHealth ?? 0), 0);
+                const boardMod = cpuTotalHp > enemyTotalHp * 1.5 ? -5
+                    : cpuTotalHp < enemyTotalHp * 0.6 ? 8 : 0;
                 const scores = getCpu().hand.map((card) => {
-                    let score = (card.attack ?? 0) + (card.health ?? 0);
+                    let score = (card.attack ?? 0) + (card.health ?? 0) + boardMod;
                     if ((card.attack ?? 0) <= 4 && allyBelow30) score += 5;
                     if ((card.actions || []).some((a) => (a.limit ?? 99) === 1)) score += 4;
                     if (getCpu().inPlay.length >= 4) score -= 3;
@@ -587,41 +602,85 @@ const computeCpuTurn = (state) => {
     }
 
     // ── Act with each eligible card ───────────────────────────────────────────
-    const inPlayCount = getCpu().inPlay.length;
-    for (let i = 0; i < inPlayCount; i++) {
-        if (s.gameOver) break;
 
-        const card = s.players.find((p) => p.id === cpuId)?.inPlay[i];
-        if (!card || card.acted || card.justPlayed || hasStatus(card, 'frozen')) continue;
+    // Score a board state for greedy lookahead simulation.
+    // Lower enemy HP + bonuses for kills/eliminations = better score.
+    const evaluateBoardState = (state, initEnemyPlayerCount, initEnemyCardCount) => {
+        const eps = getEnemies(state, cpuId);
+        const totalEnemyHp = eps.flatMap((e) => e.inPlay.filter((c) => !c.dying))
+            .reduce((sum, c) => sum + (c.currentHealth ?? 0), 0);
+        const remPlayers = eps.filter((e) => e.inPlay.some((c) => !c.dying)).length;
+        const remCards = eps.flatMap((e) => e.inPlay.filter((c) => !c.dying)).length;
+        return -totalEnemyHp
+            + 100 * (initEnemyPlayerCount - remPlayers)
+            + 30 * (initEnemyCardCount - remCards);
+    };
 
-        // Decide whether to use an ability this card action
-        const usableAbilities = (card.actions || []).filter(
-            (a) => (a.usesRemaining ?? 0) > 0
-        );
-        const tryAbility = usableAbilities.length > 0 && Math.random() < abilityPref;
+    // Execute one card's full turn action (ability or basic attack) on a state snapshot.
+    // sim=true: auto-resolves microevents as perfect success (used for lookahead scoring).
+    // sim=false: returns { microevent } when an ability has a microevent (suspends turn).
+    const executeCardAction = (ws, cardIdx, sim) => {
+        const getCpuWs = () => ws.players.find((p) => p.id === cpuId);
+        const card = getCpuWs()?.inPlay[cardIdx];
+        if (!card || card.acted || card.justPlayed || hasStatus(card, 'frozen')) return { state: ws, microevent: null };
+
+        const usableAbilities = (card.actions || []).filter((a) => (a.usesRemaining ?? 0) > 0);
+        // In sim mode always try the best ability; in real mode use abilityPref roll
+        const tryAbility = usableAbilities.length > 0 && (sim ? true : Math.random() < abilityPref);
 
         if (tryAbility) {
-            // Pick ability
             let chosenAbilityIndex;
             if (useScoring) {
-                // Score each usable ability
-                const enemies = getEnemies(s, cpuId).flatMap((e) => e.inPlay.filter((c) => !c.dying));
-                const allies = getCpu().inPlay;
+                const enemies = getEnemies(ws, cpuId).flatMap((e) => e.inPlay.filter((c) => !c.dying));
+                const allies = getCpuWs().inPlay;
+                const allEnemyPlayers = getEnemies(ws, cpuId);
                 const scores = usableAbilities.map((ability) => {
                     const def = getAbilityDefinition(ability.name, ability.customConfig);
                     if (!def) return -Infinity;
                     let score = 0;
+                    const atk = getEffectiveAtk(card);
                     for (const eff of (def.effects || [])) {
                         if (eff.type === 'damage') {
                             const mult = eff.multiplier ?? 1;
-                            const atk = getEffectiveAtk(card);
-                            const target = enemies[0];
-                            if (target) {
-                                const defVal = eff.ignoreDef ? 0 : getEffectiveDef(target);
-                                score += Math.max(1, atk * mult - defVal) * (eff.repeat ?? 1);
+                            const flatBonus = eff.flatBonus ?? 0;
+                            const repeat = eff.repeat ?? 1;
+                            if (eff.targetType === 'allEnemies') {
+                                let totalDmg = 0;
+                                let kills = 0;
+                                for (const ep of allEnemyPlayers) {
+                                    for (const ec of ep.inPlay.filter((c) => !c.dying && !isUntouchable(c))) {
+                                        const defVal = eff.ignoreDef ? 0 : Math.max(0, getEffectiveDef(ec) - (eff.defPiercing ?? 0));
+                                        const dmg = Math.max(1, atk * mult + flatBonus - defVal) * repeat;
+                                        totalDmg += dmg;
+                                        if (ec.currentHealth <= dmg) kills++;
+                                    }
+                                }
+                                score += totalDmg;
+                                score += kills * killShotBonus;
+                            } else {
+                                let bestDmg = 0;
+                                let killShot = false;
+                                let eliminatesPlayer = false;
+                                for (const ep of allEnemyPlayers) {
+                                    for (const ec of ep.inPlay.filter((c) => !c.dying && !isUntouchable(c))) {
+                                        const defVal = eff.ignoreDef ? 0 : Math.max(0, getEffectiveDef(ec) - (eff.defPiercing ?? 0));
+                                        const dmg = Math.max(1, atk * mult + flatBonus - defVal) * repeat;
+                                        if (dmg > bestDmg) {
+                                            bestDmg = dmg;
+                                            killShot = ec.currentHealth <= dmg;
+                                            eliminatesPlayer = killShot && ep.inPlay.filter((c) => !c.dying).length === 1;
+                                        }
+                                    }
+                                }
+                                score += bestDmg;
+                                if (killShot) score += killShotBonus;
+                                if (eliminatesPlayer) score += elimBonus;
                             }
                         } else if (eff.type === 'status') {
                             const st = eff.status;
+                            const bestTarget = enemies[0];
+                            const alreadyHas = bestTarget && hasStatus(bestTarget, st);
+                            if (alreadyHas) score -= 4;
                             if (st === 'frozen') score += 10;
                             else if (st === 'invulnerable' || st === 'invisible') score += 8;
                             else if (st === 'shielded') score += (eff.value ?? 0) * 1.2;
@@ -633,11 +692,15 @@ const computeCpuTurn = (state) => {
                             }
                         } else if (eff.type === 'healSelf') {
                             const missing = card.health - card.currentHealth;
-                            score += Math.min(eff.amount ?? 0, missing) * 1.2;
+                            const healScore = Math.min(eff.amount ?? 0, missing) * 1.2;
+                            const anyAllyCritical = allies.some((c) => c.currentHealth / c.health < 0.25);
+                            score += healScore + (anyAllyCritical ? 15 : 0);
                         } else if (eff.type === 'heal') {
                             const mostHurt = allies.reduce((best, c) => (c.currentHealth < best.currentHealth ? c : best), allies[0] || card);
                             const missing = (mostHurt?.health ?? 0) - (mostHurt?.currentHealth ?? 0);
-                            score += Math.min(eff.amount ?? 0, missing) * 1.2;
+                            const healScore = Math.min(eff.amount ?? 0, missing) * 1.2;
+                            const anyAllyCritical = allies.some((c) => c.currentHealth / c.health < 0.25);
+                            score += healScore + (anyAllyCritical ? 15 : 0);
                         } else if (eff.type === 'cleanse') {
                             const debuffTypes = eff.debuffs || [];
                             const activeCount = allies.reduce((n, c) =>
@@ -649,16 +712,22 @@ const computeCpuTurn = (state) => {
                             score -= 5;
                         }
                     }
-                    // Modifiers
                     if ((ability.usesRemaining ?? 0) === 1 && (ability.limit ?? 99) <= 2) score += 2;
-                    if (card.currentHealth / card.health < 0.3) score += 3;
+                    if (card.currentHealth / card.health < 0.25) {
+                        const hasHealOrInvuln = (def.effects || []).some(
+                            (e) => e.type === 'healSelf' || e.type === 'heal' ||
+                                (e.type === 'status' && (e.status === 'invulnerable' || e.status === 'shielded'))
+                        );
+                        if (hasHealOrInvuln) score += 30;
+                    } else if (card.currentHealth / card.health < 0.3) {
+                        score += 3;
+                    }
                     return score;
                 });
                 const bestScore = Math.max(...scores);
                 const bestIdx = scores.indexOf(bestScore);
                 chosenAbilityIndex = card.actions.indexOf(usableAbilities[bestIdx]);
             } else {
-                // Random ability
                 const pick = usableAbilities[Math.floor(Math.random() * usableAbilities.length)];
                 chosenAbilityIndex = card.actions.indexOf(pick);
             }
@@ -667,65 +736,78 @@ const computeCpuTurn = (state) => {
             const def = getAbilityDefinition(chosenAbility?.name, chosenAbility?.customConfig);
             if (!def) {
                 // Fallback to basic attack
-                const { state: ns } = dispatch(s, 'selectAttacker', { cardIndex: i });
-                s = ns;
-                if (s.phase === 'selectingTarget') {
-                    const enemies = getEnemies(s, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
-                    if (enemies.length > 0) {
-                        const randEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                const { state: ns } = dispatch(ws, 'selectAttacker', { cardIndex: cardIdx });
+                ws = ns;
+                if (ws.phase === 'selectingTarget') {
+                    const fallbackEnemies = getEnemies(ws, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
+                    if (fallbackEnemies.length > 0) {
+                        const randEnemy = fallbackEnemies[Math.floor(Math.random() * fallbackEnemies.length)];
                         const validCards = randEnemy.inPlay.filter((c) => !c.dying);
-                        const target = validCards[Math.floor(Math.random() * validCards.length)];
-                        const { state: ns2 } = dispatch(s, 'resolveOnEnemyCard', {
-                            targetCardIndex: randEnemy.inPlay.indexOf(target),
+                        const fallbackTarget = validCards[Math.floor(Math.random() * validCards.length)];
+                        const { state: ns2 } = dispatch(ws, 'resolveOnEnemyCard', {
+                            targetCardIndex: randEnemy.inPlay.indexOf(fallbackTarget),
                             targetPlayerId: randEnemy.id,
                         });
-                        s = ns2;
+                        ws = ns2;
                     } else {
-                        const { state: ns2 } = dispatch(s, 'cancelSelection', {});
-                        s = ns2;
+                        const { state: ns2 } = dispatch(ws, 'cancelSelection', {});
+                        ws = ns2;
                     }
                 }
-                continue;
+                return { state: ws, microevent: null };
             }
 
-            const target = getAbilityTarget(def);
+            const abilityTarget = getAbilityTarget(def);
             let targetCardIndex = null;
             let targetPlayerId = null;
 
-            if (target === ABILITY_TARGETS.ENEMY_CARD || target === ABILITY_TARGETS.ALL_ENEMIES) {
-                const enemies = getEnemies(s, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying && !isUntouchable(c)).length > 0);
-                if (enemies.length === 0) {
+            if (abilityTarget === ABILITY_TARGETS.ENEMY_CARD || abilityTarget === ABILITY_TARGETS.ALL_ENEMIES) {
+                const enemyCandidates = getEnemies(ws, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying && !isUntouchable(c)).length > 0);
+                if (enemyCandidates.length === 0) {
                     // No valid targets — skip ability, do basic attack
-                    const { state: ns } = dispatch(s, 'selectAttacker', { cardIndex: i });
-                    s = ns;
-                    if (s.phase === 'selectingTarget') {
-                        const anyEnemies = getEnemies(s, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
+                    const { state: ns } = dispatch(ws, 'selectAttacker', { cardIndex: cardIdx });
+                    ws = ns;
+                    if (ws.phase === 'selectingTarget') {
+                        const anyEnemies = getEnemies(ws, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
                         if (anyEnemies.length > 0) {
                             const randEnemy = anyEnemies[Math.floor(Math.random() * anyEnemies.length)];
                             const validCards = randEnemy.inPlay.filter((c) => !c.dying);
                             const t = validCards[Math.floor(Math.random() * validCards.length)];
-                            const { state: ns2 } = dispatch(s, 'resolveOnEnemyCard', {
+                            const { state: ns2 } = dispatch(ws, 'resolveOnEnemyCard', {
                                 targetCardIndex: randEnemy.inPlay.indexOf(t),
                                 targetPlayerId: randEnemy.id,
                             });
-                            s = ns2;
+                            ws = ns2;
                         } else {
-                            const { state: ns2 } = dispatch(s, 'cancelSelection', {});
-                            s = ns2;
+                            const { state: ns2 } = dispatch(ws, 'cancelSelection', {});
+                            ws = ns2;
                         }
                     }
-                    continue;
+                    return { state: ws, microevent: null };
                 }
-                if (target === ABILITY_TARGETS.ENEMY_CARD) {
+                if (abilityTarget === ABILITY_TARGETS.ENEMY_CARD) {
                     let chosenEnemy, chosenCard;
                     if (useScoring) {
-                        // Score each candidate target
-                        const estimatedDmg = Math.max(1, getEffectiveAtk(card) - 1);
+                        const dmgEff = def?.effects?.find((e) => e.type === 'damage');
+                        const atk = getEffectiveAtk(card);
                         let best = -Infinity;
-                        for (const ep of enemies) {
+                        for (const ep of enemyCandidates) {
                             for (const ec of ep.inPlay.filter((c) => !c.dying && !isUntouchable(c))) {
+                                let estimatedDmg;
+                                if (dmgEff) {
+                                    const mult = dmgEff.multiplier ?? 1;
+                                    const flatBonus = dmgEff.flatBonus ?? 0;
+                                    const defVal = dmgEff.ignoreDef ? 0 : Math.max(0, getEffectiveDef(ec) - (dmgEff.defPiercing ?? 0));
+                                    estimatedDmg = Math.max(1, atk * mult + flatBonus - defVal) * (dmgEff.repeat ?? 1);
+                                } else {
+                                    estimatedDmg = Math.max(1, atk - getEffectiveDef(ec));
+                                }
+                                const killShot = ec.currentHealth <= estimatedDmg;
+                                const eliminatesPlayer = killShot && ep.inPlay.filter((c) => !c.dying).length === 1;
                                 let score = 1;
-                                if (ec.currentHealth <= estimatedDmg) score += 10;
+                                score += estimatedDmg * 0.5;
+                                if (killShot) score += killShotBonus;
+                                if (eliminatesPlayer) score += elimBonus;
                                 if (ec.currentHealth / ec.health < 0.3) score += 5;
                                 if (hasStatus(ec, 'focused')) score += 4;
                                 if (hasStatus(ec, 'def_down')) score += 3;
@@ -734,7 +816,7 @@ const computeCpuTurn = (state) => {
                             }
                         }
                     } else {
-                        chosenEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                        chosenEnemy = enemyCandidates[Math.floor(Math.random() * enemyCandidates.length)];
                         const validCards = chosenEnemy.inPlay.filter((c) => !c.dying && !isUntouchable(c));
                         chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
                     }
@@ -744,43 +826,50 @@ const computeCpuTurn = (state) => {
                     }
                 }
                 // allEnemies needs no target index
-            } else if (target === ABILITY_TARGETS.ALLY_CARD || target === ABILITY_TARGETS.ALL_ALLIES) {
-                const allies = getCpu().inPlay.filter((c) => !c.dying);
-                if (target === ABILITY_TARGETS.ALLY_CARD && allies.length > 0) {
+            } else if (abilityTarget === ABILITY_TARGETS.ALLY_CARD || abilityTarget === ABILITY_TARGETS.ALL_ALLIES) {
+                const allyCards = getCpuWs().inPlay.filter((c) => !c.dying);
+                if (abilityTarget === ABILITY_TARGETS.ALLY_CARD && allyCards.length > 0) {
                     let chosenAlly;
                     if (useScoring) {
                         let best = -Infinity;
-                        for (const ac of allies) {
+                        for (const ac of allyCards) {
                             let score = 1;
                             if (ac.currentHealth / ac.health > 0.8) score -= 4;
                             if (hasStatus(ac, 'burned') || hasStatus(ac, 'poisoned') || hasStatus(ac, 'bleeding')) score += 5;
                             if (hasStatus(ac, 'frozen')) score += 6;
-                            if (ac.currentHealth / ac.health < 0.3) score += 8;
+                            if (ac.currentHealth / ac.health < 0.25) score += 10;
+                            else if (ac.currentHealth / ac.health < 0.3) score += 6;
                             if (score > best) { best = score; chosenAlly = ac; }
                         }
                     } else {
-                        chosenAlly = allies[Math.floor(Math.random() * allies.length)];
+                        chosenAlly = allyCards[Math.floor(Math.random() * allyCards.length)];
                     }
                     if (chosenAlly) {
                         targetPlayerId = cpuId;
-                        targetCardIndex = getCpu().inPlay.indexOf(chosenAlly);
+                        targetCardIndex = getCpuWs().inPlay.indexOf(chosenAlly);
                     }
                 }
             }
             // SELF target needs no index
 
-            // If ability has a microevent, hold and return for async resolution
             if (chosenAbility.microevent) {
-                const { state: heldState } = dispatch(s, 'holdMicroevent', {
-                    casterCardIndex: i,
+                const { state: heldState } = dispatch(ws, 'holdMicroevent', {
+                    casterCardIndex: cardIdx,
                     abilityIndex: chosenAbilityIndex,
                     targetCardIndex: targetCardIndex ?? null,
                     targetPlayerId: targetPlayerId ?? null,
                 });
+                if (sim) {
+                    // Auto-resolve as perfect success during lookahead simulation
+                    const { state: resolved } = dispatch(heldState, 'applyAbilityWithMicroevent', {
+                        microeventResult: { success: true, score: 1.0 },
+                    });
+                    return { state: resolved, microevent: null };
+                }
                 return {
                     state: heldState,
-                    cpuMicroevent: {
-                        casterCardIndex: i,
+                    microevent: {
+                        casterCardIndex: cardIdx,
                         abilityIndex: chosenAbilityIndex,
                         targetCardIndex: targetCardIndex ?? null,
                         targetPlayerId: targetPlayerId ?? null,
@@ -790,65 +879,138 @@ const computeCpuTurn = (state) => {
                 };
             }
 
-            // No microevent — execute ability directly
-            const { state: afterAbility, error: abilityErr } = dispatch(s, 'useAbility', {
-                casterCardIndex: i,
+            const { state: afterAbility, error: abilityErr } = dispatch(ws, 'useAbility', {
+                casterCardIndex: cardIdx,
                 abilityIndex: chosenAbilityIndex,
                 targetCardIndex,
                 targetPlayerId,
             });
             if (!abilityErr) {
-                s = afterAbility;
-                continue;
+                return { state: afterAbility, microevent: null };
             }
             // Ability failed — fall through to basic attack
         }
 
         // Basic attack
-        const { state: afterSelect } = dispatch(s, 'selectAttacker', { cardIndex: i });
-        s = afterSelect;
-        if (s.gameOver) break;
+        const { state: afterSelect } = dispatch(ws, 'selectAttacker', { cardIndex: cardIdx });
+        ws = afterSelect;
+        if (ws.gameOver) return { state: ws, microevent: null };
 
-        if (s.phase === 'selectingTarget') {
-            const enemies = getEnemies(s, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
-            if (enemies.length > 0) {
+        if (ws.phase === 'selectingTarget') {
+            const attackEnemies = getEnemies(ws, cpuId).filter((e) => e.inPlay.filter((c) => !c.dying).length > 0);
+            if (attackEnemies.length > 0) {
                 let chosenEnemy, chosenCard;
                 if (useScoring) {
-                    const estimatedDmg = Math.max(1, getEffectiveAtk(card) - 1);
+                    const atk = getEffectiveAtk(card);
                     let best = -Infinity;
-                    for (const ep of enemies) {
+                    for (const ep of attackEnemies) {
                         for (const ec of ep.inPlay.filter((c) => !c.dying)) {
                             if (isUntouchable(ec)) continue;
+                            const hitChance = Math.max(0, 50 + 15 * (getEffectiveAgi(card) - getEffectiveEva(ec)));
+                            if (hitChance === 0) continue;
+                            const estimatedDmg = Math.max(1, atk - getEffectiveDef(ec));
+                            const killShot = ec.currentHealth <= estimatedDmg;
+                            const eliminatesPlayer = killShot && ep.inPlay.filter((c) => !c.dying).length === 1;
                             let score = 1;
-                            if (ec.currentHealth <= estimatedDmg) score += 10;
+                            score += estimatedDmg * 0.5;
+                            if (killShot) score += killShotBonus;
+                            if (eliminatesPlayer) score += elimBonus;
                             if (ec.currentHealth / ec.health < 0.3) score += 5;
                             if (hasStatus(ec, 'focused')) score += 4;
                             if (hasStatus(ec, 'def_down')) score += 3;
                             if ((ec.attack ?? 0) >= 7) score += 2;
-                            if (getEffectiveEva(ec) >= 7) score -= 3;
+                            if (hitChance < 40) score -= 4;
                             if (score > best) { best = score; chosenEnemy = ep; chosenCard = ec; }
                         }
                     }
                     if (!chosenEnemy) {
-                        chosenEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                        chosenEnemy = attackEnemies[Math.floor(Math.random() * attackEnemies.length)];
                         const validCards = chosenEnemy.inPlay.filter((c) => !c.dying);
                         chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
                     }
                 } else {
-                    chosenEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                    chosenEnemy = attackEnemies[Math.floor(Math.random() * attackEnemies.length)];
                     const validCards = chosenEnemy.inPlay.filter((c) => !c.dying);
                     chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
                 }
                 if (chosenEnemy && chosenCard) {
-                    const { state: afterAttack } = dispatch(s, 'resolveOnEnemyCard', {
+                    const { state: afterAttack } = dispatch(ws, 'resolveOnEnemyCard', {
                         targetCardIndex: chosenEnemy.inPlay.indexOf(chosenCard),
                         targetPlayerId: chosenEnemy.id,
                     });
-                    s = afterAttack;
+                    ws = afterAttack;
                 }
             } else {
-                const { state: cancelled } = dispatch(s, 'cancelSelection', {});
-                s = cancelled;
+                const { state: cancelled } = dispatch(ws, 'cancelSelection', {});
+                ws = cancelled;
+            }
+        }
+        return { state: ws, microevent: null };
+    }; // end executeCardAction
+
+    // ── Sort card action order: debuffers first, pure attackers last (skill 3+) ─
+    const inPlayCount = getCpu().inPlay.length;
+    const getComboOrder = (idx) => {
+        const c = getCpu().inPlay[idx];
+        if (!c || c.acted || c.justPlayed) return 99;
+        const usable = (c.actions || []).filter((a) => (a.usesRemaining ?? 0) > 0);
+        if (usable.length === 0) return 1; // pure attacker — act last
+        const hasDebuff = usable.some((a) => {
+            const d = getAbilityDefinition(a.name, a.customConfig);
+            return (d?.effects || []).some((e) =>
+                e.type === 'status' && ['def_down', 'atk_down', 'focused', 'frozen'].includes(e.status)
+            );
+        });
+        return hasDebuff ? -2 : 0;
+    };
+    const actionOrder = Array.from({ length: inPlayCount }, (_, idx) => idx);
+    if (useScoring) actionOrder.sort((a, b) => getComboOrder(a) - getComboOrder(b));
+
+    if (lookaheadBreadth > 0) {
+        // ── Greedy sequential simulation (skill 3+) ───────────────────────────
+        // For each iteration: simulate each remaining card acting, pick the card
+        // whose action produces the best board state, execute it for real.
+        // This finds the optimal action order within a turn (e.g. debuff → attack).
+        const initEnemyPlayers = getEnemies(s, cpuId);
+        const initEnemyPlayerCount = initEnemyPlayers.length;
+        const initEnemyCardCount = initEnemyPlayers.flatMap((e) => e.inPlay.filter((c) => !c.dying)).length;
+        const remainingIndices = new Set(actionOrder);
+
+        while (remainingIndices.size > 0 && !s.gameOver) {
+            let bestSimScore = -Infinity;
+            let bestCardIdx = -1;
+
+            for (const cardIdx of remainingIndices) {
+                const card = s.players.find((p) => p.id === cpuId)?.inPlay[cardIdx];
+                if (!card || card.acted || card.justPlayed || hasStatus(card, 'frozen')) {
+                    remainingIndices.delete(cardIdx);
+                    continue;
+                }
+                const { state: simAfter } = executeCardAction(deepClone(s), cardIdx, true);
+                const simScore = evaluateBoardState(simAfter, initEnemyPlayerCount, initEnemyCardCount);
+                if (simScore > bestSimScore) {
+                    bestSimScore = simScore;
+                    bestCardIdx = cardIdx;
+                }
+            }
+
+            if (bestCardIdx === -1) break;
+            remainingIndices.delete(bestCardIdx);
+
+            const { state: afterAction, microevent } = executeCardAction(s, bestCardIdx, false);
+            s = afterAction;
+            if (microevent) {
+                return { state: s, cpuMicroevent: microevent };
+            }
+        }
+    } else {
+        // ── Standard combo-ordered execution (skill 1–2) ─────────────────────
+        for (const i of actionOrder) {
+            if (s.gameOver) break;
+            const { state: afterAction, microevent } = executeCardAction(s, i, false);
+            s = afterAction;
+            if (microevent) {
+                return { state: s, cpuMicroevent: microevent };
             }
         }
     }

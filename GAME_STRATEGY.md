@@ -188,96 +188,143 @@ Removes the caster from `inPlay` immediately — no damage, just gone.
 
 ---
 
-## 6. CPU AI Scoring System (PROPOSAL — tweak before implementing)
+## 6. CPU AI System
 
-The current engine uses a flat 60% ability preference with random ability and target selection. The goal is to replace this with a scored system across 5 skill levels.
+Each CPU player has a `cpuSkill` value (1–5) stored on their player slot. All parameters are derived from a continuous `t` value (0–1) mapped from the skill level, so the system scales smoothly.
 
-### 6.1 Skill Levels
+### 6.1 Skill Level Parameter Table
 
-| Level | Name | `cpuSkill` | Ability Pref | Ability Pick | Target Pick |
-|---|---|---|---|---|---|
-| 1 | Easy | 1 | 25% | Random | Random |
-| 2 | Normal | 2 | 45% | Random | Slight HP bias |
-| 3 | Hard | 3 | 65% | Scored | Full scoring |
-| 4 | Very Hard | 4 | 80% | Scored + modifiers | Full scoring |
-| 5 | Insane | 5 | 92% | Scored + modifiers | Full scoring |
+| Level | Name | t | abilityPref | killBonus | elimBonus | Mini-game binary | Lookahead breadth |
+|---|---|---|---|---|---|---|---|
+| 1 | Easy | 0.10 | 24% | 7 | 18 | 28% | 0 (random) |
+| 2 | Normal | 0.30 | 40% | 10 | 24 | 44% | 0 (light bias) |
+| 3 | Hard | 0.55 | 61% | 14 | 32 | 64% | top 2 per card |
+| 4 | Very Hard | 0.75 | 78% | 17 | 38 | 80% | top 3 per card |
+| 5 | Insane | 1.00 | 99% | 20 | 45 | 100% | top 4 per card |
 
-`cpuSkill` would live on each CPU player slot individually, not in global settings.
+`t` formulas:
+- `abilityPref = 0.15 + t × 0.84`
+- `killShotBonus = round(6 + t × 14)`
+- `elimBonus = round(15 + t × 30)`
+- `useScoring = t >= 0.5` (Hard+)
+- `lookaheadBreadth = round(t × 4)`
 
 ### 6.2 Mini-game Performance
 
-| Skill | Binary success | Scaled score range |
+| Level | Binary success | Scaled score range |
 |---|---|---|
-| Easy (1) | 25% | 0.10 – 0.45 |
-| Normal (2) | 45% | 0.30 – 0.60 |
-| Hard (3) | 65% | 0.50 – 0.78 |
-| Very Hard (4) | 80% | 0.65 – 0.88 |
-| Insane (5) | 92% | 0.80 – 0.97 |
+| Easy (1) | 28% | 0.17 – 0.29 |
+| Normal (2) | 44% | 0.35 – 0.47 |
+| Hard (3) | 64% | 0.57 – 0.69 |
+| Very Hard (4) | 80% | 0.75 – 0.87 |
+| Insane (5) | 100% | 0.97 – 1.00 |
 
-### 6.3 Enemy Card Target Scoring
+Derived from `t`:
+- `binarySuccess = min(1, 0.20 + t × 0.80)`
+- `scaledLo = 0.08 + t × 0.89`, `scaledHi = min(1.0, scaledLo + 0.12)`
 
-Higher score = prefer this target.
+Insane always wins mini-games perfectly.
+
+### 6.3 Turn Execution Flow
+
+**1. Card play (all skill levels)**
+- Skip if a card was already played this turn, or the board is full
+- Easy/Normal: play `hand[0]`
+- Hard+: score each hand card (see §6.9); play the highest-scoring one, adjusted by board-state modifier
+
+**2. Card action loop**
+
+At **Easy/Normal** (`lookaheadBreadth = 0`): each card acts greedily and independently in index order. Ability/target selection is random at skill 1; lightly HP-biased at skill 2.
+
+At **Hard+** (`lookaheadBreadth > 0`): **greedy sequential simulation** — cards do NOT act independently:
+1. Build `remainingIndices` = all un-acted card indices, pre-sorted with debuffers first
+2. For each remaining card, simulate its best action on a `deepClone` of the current state; auto-resolve any microevent as perfect success
+3. Score each resulting board state with `evaluateBoardState`
+4. Apply the globally best (card, action) pair to the real state; remove that card from `remainingIndices`
+5. Repeat until all cards have acted
+
+This means at Hard+ the CPU always finds the optimal **action order** within a turn — debuffing before the damage dealer swings, finishing weakened targets first, etc.
+
+**3. End turn**
+
+### 6.4 Multi-card Combo Ordering (Hard+)
+
+Before the action loop, `inPlay` indices are sorted by combo priority:
+- Cards with a usable debuff ability (`def_down`, `atk_down`, `focused`, `frozen`) → act **first** (priority −2)
+- Pure attackers with no usable abilities → act **last** (priority +1)
+- Others → middle (priority 0)
+
+Combined with the greedy lookahead, this ensures debuffers consistently amplify damage dealers in the same turn.
+
+### 6.5 Board Evaluation (`evaluateBoardState`)
+
+Used during lookahead simulation to score a candidate resulting state:
+
+```
+score = −1 × totalEnemyHP
+      + 100 × eliminated enemy players
+      + 30  × killed enemy cards (this turn)
+```
+
+Minimising enemy HP is the base signal; eliminating players is overwhelmingly preferred; individual kill-shots are a secondary reward.
+
+### 6.6 Enemy Card Target Scoring (Hard+)
 
 | Condition | Score |
 |---|---|
-| Target is `invulnerable` or `invisible` | **−100** (never target) |
+| Target is `invulnerable` or `invisible` | skipped (untouchable) |
 | Base | +1 |
-| Kill shot (HP ≤ estimated damage) | +10 |
+| Estimated damage × 0.5 | scaled |
+| Kill shot (HP ≤ estimated damage) | +`killShotBonus` (14–20) |
+| Kill eliminates that player | +`elimBonus` (32–45) |
 | HP < 30% of max | +5 |
-| Has `focused` status (about to hit hard) | +4 |
+| Has `focused` status | +4 |
 | Has `def_down` already applied | +3 |
-| `attack` ≥ 7 (high threat card) | +2 |
-| Basic attack only: `effectiveEVA` ≥ 7 | −3 |
+| `attack` ≥ 7 (high threat) | +2 |
+| Basic attack only: `hitChance < 40%` | −4 |
+| Basic attack only: `hitChance = 0%` | skipped entirely |
 
-### 6.4 Ally Card Target Scoring
+Hit chance uses the live combat formula: `hitChance = 50 + 15 × (effectiveAGI − effectiveEVA)`.
 
-Higher score = prefer this ally for heal/buff/cleanse.
+### 6.7 Ally Card Target Scoring (Hard+)
 
 | Condition | Score |
 |---|---|
-| HP > 80% of max (wasteful heal) | −4 |
+| HP > 80% of max | −4 |
 | Base | +1 |
 | Has active DOT (burned/poisoned/bleeding) | +5 |
-| Has `frozen` (cleanse urgency) | +6 |
-| HP < 30% of max | +8 |
+| Has `frozen` | +6 |
+| HP < 30% of max | +6 |
+| HP < 25% of max | +10 |
 
-### 6.5 Ability Scoring
+**Defensive urgency override:** If the acting card itself is at <25% HP and has a heal or invulnerable ability, that ability receives a forced +30 to its score.
 
-Base score per effect type:
+### 6.8 Ability Scoring (Hard+)
 
 | Effect | Score |
 |---|---|
-| `damage` standard | `max(1, effectiveATK × multiplier − effectiveDEF)` |
-| `damage` with `ignoreDef` | ATK × multiplier (no DEF) |
-| `damage` `allEnemies` | sum estimated damage across all living enemy cards |
-| `status: frozen` | 10 |
-| `status: invulnerable` / `invisible` | 8 |
-| `status: focused` | net gain over basic attack |
+| `damage` single target | `max(1, ATK×mult+flat−DEF)×repeat` against best candidate target |
+| `damage` allEnemies | sum of above across all living enemy cards |
+| Kill shot on any target | +`killShotBonus` |
+| Kill eliminates player | +`elimBonus` |
+| `status: frozen` | +10 |
+| `status: invulnerable` / `invisible` | +8 |
 | `status: shielded` | value × 1.2 |
-| `status: damage_reduction` | estimated incoming damage × 0.5 |
-| `status: def_down` | value × 1.5 |
-| `status: burned` / `poisoned` / `bleeding` | value × min(duration, 3) × 0.8 |
 | `status: atk_up` | value × 2 |
 | `status: def_up` / `eva_up` | value × 1.5 |
-| `healSelf` | min(amount, missingHP) × 1.2 |
-| `heal` (ally) | min(amount, targetMissingHP) × 1.2 |
-| `cleanse` | count of active debuffs removed × 3 |
-| `resetCooldowns` | 7 flat |
-| `selfDestruct` | −5 penalty |
-
-Modifiers on top of base ability score:
-
-| Condition | Modifier |
-|---|---|
-| Ability kills the target card | +8 |
-| Ability eliminates an enemy player | +20 |
+| `status: def_down` | value × 1.5 |
+| `status: burned/poisoned/bleeding` | value × min(duration, 3) × 0.8 |
+| `healSelf` | min(amount, missingHP) × 1.2; +15 if any ally <25% HP |
+| `heal` ally | min(amount, targetMissingHP) × 1.2; +15 if any ally <25% HP |
+| `cleanse` | active matching debuffs removed × 3 |
+| `resetCooldowns` | +7 |
+| `selfDestruct` | −5 |
 | Target already has the same status | −4 |
-| `usesRemaining === 1` and `limit ≤ 2` (last use of a nuke) | +2 |
-| Caster HP < 30% of max (self-preservation urgency) | +3 |
+| Last use of a low-limit ability | +2 |
+| Caster HP < 25% (with heal/invulnerable) | +30 (defensive urgency) |
+| Caster HP 25–30% | +3 |
 
-### 6.6 Hand Card Scoring (Hard+ only)
-
-At Easy/Normal, always play `hand[0]`. At Hard+, score each card:
+### 6.9 Hand Card Scoring (Hard+)
 
 | Condition | Score |
 |---|---|
@@ -286,6 +333,8 @@ At Easy/Normal, always play `hand[0]`. At Hard+, score each card:
 | Has a `limit: 1` finisher ability | +4 |
 | Board already has 4+ cards in play | −3 |
 | `health ≤ 5` AND max enemy ATK ≥ 7 | −2 |
+| CPU HP winning by 50%+ (hold strong cards) | −5 |
+| CPU HP losing by 40%+ (rush best card) | +8 |
 
 ---
 
