@@ -3219,6 +3219,93 @@
     padding: 0.35rem 0.5rem;
 }
 
+/* Custom ability: accordion layout (flex-col, no center alignment) */
+.custom-card-saved-ability.accordion {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+    gap: 0;
+}
+
+.custom-card-saved-ability-accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+    color: inherit;
+    text-align: left;
+    transition: background 0.13s;
+}
+
+.custom-card-saved-ability-accordion-header:hover {
+    background: #1e2235;
+}
+
+.custom-card-saved-ability-chevron {
+    color: #7880a8;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    width: 0.85rem;
+    text-align: center;
+}
+
+.custom-card-saved-ability-accordion-name {
+    flex: 1;
+    min-width: 0;
+    color: #dde0f0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.custom-card-saved-ability-applied-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #a060e8;
+    flex-shrink: 0;
+}
+
+.custom-card-saved-ability-power-badge {
+    font-size: 0.67rem;
+    font-weight: 700;
+    color: #7de8a0;
+    background: #0d1f14;
+    border: 1px solid #1e4a30;
+    border-radius: 10px;
+    padding: 0.1rem 0.4rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.custom-card-saved-ability-power-badge.over {
+    color: #f87575;
+    background: #2a0d0d;
+    border-color: #6b2020;
+}
+
+.custom-card-saved-ability-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0 0.5rem 0.45rem;
+    border-top: 1px solid #2a2e45;
+}
+
+.custom-card-saved-ability-desc {
+    font-size: 0.72rem;
+    color: #7880a8;
+    margin: 0;
+    padding-top: 0.3rem;
+}
+
 .custom-card-saved-ability-info {
     flex: 1;
     min-width: 0;
