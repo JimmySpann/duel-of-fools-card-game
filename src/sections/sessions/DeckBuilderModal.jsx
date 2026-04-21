@@ -36,8 +36,9 @@ const PRESET_OPTIONS = [
  *   initialDeck?: string[]
  *   loading?: boolean
  *   error?: string | null
+ *   isSessionDeckBuilder?: boolean
  */
-const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, verifiedCardsOnly = false }) => {
+const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, verifiedCardsOnly = false, isSessionDeckBuilder = false }) => {
     const token = useSelector((s) => s.auth.token);
     const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
     const [selected, setSelected] = useState(() => new Set(initialDeck || []));
@@ -324,15 +325,19 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
                 {error && <p className="db-error">{error}</p>}
 
                 <div className="db-footer">
-                    <button className="db-cancel-btn" onClick={onClose}>Cancel</button>
-                    <button
-                        className="db-confirm-btn"
-                        onClick={() => onConfirm([...selected])}
-                        disabled={!canConfirm}
-                        title={selectedCount < 3 ? 'Select at least 3 cards' : ''}
-                    >
-                        {loading ? 'Saving…' : `Confirm Deck (${selectedCount})`}
+                    <button className="db-cancel-btn" onClick={onClose}>
+                        {isSessionDeckBuilder ? 'Back' : 'Cancel'}
                     </button>
+                    {!isSessionDeckBuilder && (
+                        <button
+                            className="db-confirm-btn"
+                            onClick={() => onConfirm([...selected])}
+                            disabled={!canConfirm}
+                            title={selectedCount < 3 ? 'Select at least 3 cards' : ''}
+                        >
+                            {loading ? 'Saving…' : `Confirm Deck (${selectedCount})`}
+                        </button>
+                    )}
                 </div>
             </div>
 
