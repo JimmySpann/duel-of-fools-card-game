@@ -400,7 +400,6 @@ const randomizeCustomAbilitiesWithinBudget = ({ slots, officialNames }) => {
 const CustomCardModal = ({ onClose }) => {
     const token = useSelector((s) => s.auth.token);
     const username = useSelector((s) => s.auth.username);
-    const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
     const isAdmin = username === 'Acinder';
 
     const [cards, setCards] = useState([]);
@@ -422,8 +421,7 @@ const CustomCardModal = ({ onClose }) => {
     const [abilityNames, setAbilityNames] = useState([]);
     const [customAbilities, setCustomAbilities] = useState([]);
     const [abilitySearch, setAbilitySearch] = useState('');
-    const [adultOnly, setAdultOnly] = useState(false);
-    const [visibility, setVisibility] = useState('public');
+    const [visibility, setVisibility] = useState('private');
     const [imagePreviewError, setImagePreviewError] = useState(false);
     const [aiPrompt, setAiPrompt] = useState('');
     const [aiModelId, setAiModelId] = useState(AI_MODEL_PRESETS[0]?.id || '');
@@ -438,7 +436,7 @@ const CustomCardModal = ({ onClose }) => {
     const usedPoints = computePoints(stats);
 
     const builtinImages = useMemo(
-        () => [...new Set(cards.map((c) => c.image).filter(Boolean))],
+        () => [...new Set(cards.filter((c) => c.official).map((c) => c.image).filter(Boolean))],
         [cards]
     );
 
@@ -650,7 +648,6 @@ const CustomCardModal = ({ onClose }) => {
                 health: stats.health,
                 abilityNames,
                 customAbilities,
-                adultOnly,
                 visibility,
             };
             const res = await fetch(editingCardId ? `/api/cards/${encodeURIComponent(editingCardId)}` : '/api/cards', {
@@ -672,8 +669,7 @@ const CustomCardModal = ({ onClose }) => {
             setElements(initialElements);
             setAbilityNames([]);
             setCustomAbilities([]);
-            setAdultOnly(false);
-            setVisibility('public');
+            setVisibility('private');
             setEditingCardId(null);
         } catch (err) {
             setError(err.message || 'Failed to save card');
@@ -709,8 +705,7 @@ const CustomCardModal = ({ onClose }) => {
                 microevent: a.microevent || null,
             }))
             .slice(0, 3));
-        setAdultOnly(!!card.adultOnly);
-        setVisibility(card.visibility || 'public');
+        setVisibility(card.visibility || 'private');
     };
 
     const cancelEdit = () => {
@@ -722,8 +717,7 @@ const CustomCardModal = ({ onClose }) => {
         setElements(initialElements);
         setAbilityNames([]);
         setCustomAbilities([]);
-        setAdultOnly(false);
-        setVisibility('public');
+        setVisibility('private');
         setAiConcept(null);
         setAiError('');
     };
@@ -1443,11 +1437,6 @@ const CustomCardModal = ({ onClose }) => {
                             </button>
                         </div>
 
-                        <label className="custom-card-toggle-row">
-                            <input type="checkbox" checked={adultOnly} onChange={(e) => setAdultOnly(e.target.checked)} title="Marks this card as 18+ and hides it for users with adult content filtering." />
-                            Adults-only card
-                        </label>
-
                         <label className="custom-card-label">
                             Visibility
                             <select
@@ -1501,17 +1490,16 @@ const CustomCardModal = ({ onClose }) => {
                             <div className="custom-card-list">
                                 {filteredCards.map((card) => (
                                     <div key={card.id} className="custom-card-row">
-                                        <img src={card.adultOnly && censorAdultCards ? (cards[0]?.image || '') : card.image} alt={card.name} className="custom-card-thumb" />
+                                        <img src={card.image} alt={card.name} className="custom-card-thumb" />
                                         <div className="custom-card-row-info">
                                             <div className="custom-card-row-name">
-                                                {card.adultOnly && censorAdultCards ? 'Adults-only Card' : card.name}
+                                                {card.name}
                                                 {card.visibility === 'private' && <span className="custom-card-private-badge">🔒 Private</span>}
                                                 {!card.official && card.verified && <span className="custom-card-verified-badge">✓ Verified</span>}
                                                 {!card.official && !card.verified && <span className="custom-card-unverified-badge">⚠ Unverified</span>}
                                             </div>
                                             <div className="custom-card-row-meta">
                                                 {card.official ? 'Official' : `By ${card.createdBy || 'Unknown'}`}
-                                                {card.adultOnly ? ' · Adults-only' : ''}
                                                 {card.createdBy === username ? ' · Yours' : ''}
                                                 {card.reportCount > 0 ? ` · Reports: ${card.reportCount}` : ''}
                                             </div>
