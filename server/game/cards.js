@@ -17,7 +17,7 @@ const cards = [
             { name: 'Nimbus 2000 Retro', actionInfo: 'Evasion +5', description: 'Hopping on the vintage broom for a quick getaway.', limit: 8, usesRemaining: 8, microevent: { type: 'route', outcome: 'scaled' } },
             { name: 'Wand Flex', actionInfo: 'Magic Damage', description: 'Points the gold-plated wand and lets the drip do the talking. No cap.', limit: 12, usesRemaining: 12, microevent: { type: 'arrow', outcome: 'scaled', shots: 1 } },
         ],
-        defense: 5, agility: 8, attack: 7, evasion: 7, health: 10, category: 'dripwarts', verified: true,
+        defense: 5, agility: 8, attack: 7, evasion: 7, health: 10, category: 'dripwarts', verified: true, createdBy: 'GriffinDrippin',
     },
     {
         id: 'hustleGranger',
@@ -34,7 +34,7 @@ const cards = [
             { name: 'Wingardium Lev-I-O-Sa', actionInfo: 'Displace Enemy', description: "It's Levi-O-sa, not Levi-o-SA. Puts the enemy in their place.", limit: 10, usesRemaining: 10, microevent: { type: 'rhythm', outcome: 'scaled', beats: 3 } },
             { name: 'Study Break', actionInfo: 'Heal 4 HP / Cleanse', description: 'Takes a second to regroup and look over the stats.', limit: 5, usesRemaining: 5, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'easy', questionType: 'multiple' } },
         ],
-        defense: 6, agility: 6, attack: 6, evasion: 5, health: 9, category: 'dripwarts', verified: true,
+        defense: 6, agility: 6, attack: 6, evasion: 5, health: 9, category: 'dripwarts', verified: true, createdBy: 'GriffinDrippin',
     },
     {
         id: 'lilSnape',
@@ -51,7 +51,7 @@ const cards = [
             { name: 'Sectum-Sempra-Drip', actionInfo: 'Bleed Damage', description: 'A stylish cut that leaves the enemy faded.', limit: 6, usesRemaining: 6, microevent: { type: 'parry', outcome: 'binary' } },
             { name: 'Potions Master', actionInfo: 'Random Buff', description: 'Mixes a concoction that boosts a random stat.', limit: 12, usesRemaining: 12, microevent: { type: 'sigil', outcome: 'binary' } },
         ],
-        defense: 7, agility: 5, attack: 9, evasion: 4, health: 11, category: 'dripwarts', verified: true,
+        defense: 7, agility: 5, attack: 9, evasion: 4, health: 11, category: 'dripwarts', verified: true, createdBy: 'GriffinDrippin',
     },
     {
         id: 'voldyDon',
@@ -68,7 +68,7 @@ const cards = [
             { name: 'Avada Kedavra', actionInfo: 'Massive DMG (Low Accuracy)', description: 'The forbidden drip. Very lethal, very rare.', limit: 1, usesRemaining: 1, microevent: { type: 'pattern', outcome: 'scaled' } },
             { name: 'Snake Walk', actionInfo: 'Invisibility 1 turn', description: 'Slithers through the shadows in style.', limit: 4, usesRemaining: 4, microevent: { type: 'sigil', outcome: 'binary' } },
         ],
-        defense: 4, agility: 7, attack: 10, evasion: 8, health: 8, category: 'dripwarts', verified: true,
+        defense: 4, agility: 7, attack: 10, evasion: 8, health: 8, category: 'dripwarts', verified: true, createdBy: 'GriffinDrippin',
     },
     {
         id: 'dumbledrip',
@@ -85,7 +85,7 @@ const cards = [
             { name: 'Firework Show', actionInfo: 'AOE Fire Damage', description: 'A dazzling display of pyrotechnic dominance.', limit: 5, usesRemaining: 5, microevent: { type: 'pattern', outcome: 'scaled' } },
             { name: 'Points to Gryffindor', actionInfo: 'Buff ATK +3', description: 'Bias has never looked this good.', limit: 3, usesRemaining: 3, microevent: { type: 'qte', outcome: 'binary' } },
         ],
-        defense: 7, agility: 4, attack: 8, evasion: 6, health: 12, category: 'dripwarts', verified: true,
+        defense: 7, agility: 4, attack: 8, evasion: 6, health: 12, category: 'dripwarts', verified: true, createdBy: 'GriffinDrippin',
     },
     {
         id: 'swagrid',
@@ -102,7 +102,7 @@ const cards = [
             { name: 'Umbrella Poke', actionInfo: 'Melee Damage', description: "Don't let the pink umbrella fool you.", limit: 15, usesRemaining: 15, microevent: { type: 'mash', outcome: 'scaled' } },
             { name: 'Release the Hounds', actionInfo: 'Bleed Damage', description: 'Sends out a pack of diamond-collared wolves.', limit: 5, usesRemaining: 5, microevent: { type: 'mash', outcome: 'scaled' } },
         ],
-        defense: 9, agility: 3, attack: 6, evasion: 2, health: 18, category: 'dripwarts', verified: true,
+        defense: 9, agility: 3, attack: 6, evasion: 2, health: 18, category: 'dripwarts', verified: true, createdBy: 'GriffinDrippin',
     },
     {
         id: 'dobbyTheFree',
@@ -120,7 +120,7 @@ const cards = [
             { name: 'Tactical Apparition', actionInfo: 'Invulnerable 1 turn', description: "Teleports behind the enemy. 'Nothing personal, sir.'", limit: 5, usesRemaining: 5, microevent: { type: 'sigil', outcome: 'binary' } },
             { name: 'Mag Dump', actionInfo: 'Massive AOE Damage', description: 'Spray and pray, but with elven precision.', limit: 2, usesRemaining: 2, microevent: { type: 'mash', outcome: 'scaled' } },
         ],
-        defense: 3, agility: 10, attack: 9, evasion: 9, health: 6, category: 'dripwarts', verified: true,
+        defense: 3, agility: 10, attack: 9, evasion: 9, health: 6, category: 'dripwarts', verified: true, createdBy: 'GriffinDrippin',
     },
     {
         id: 'malfoyMogul',
@@ -137,7 +137,7 @@ const cards = [
             { name: 'Silver Tongue', actionInfo: 'Confusion', description: 'Insults so sharp they cause mental damage.', limit: 8, usesRemaining: 8, microevent: { type: 'rhythm', outcome: 'scaled', beats: 3 } },
             { name: 'Cane Strike', actionInfo: 'Ice Damage', description: 'A cold strike from a hidden wand.', limit: 12, usesRemaining: 12, microevent: { type: 'parry', outcome: 'binary' } },
         ],
-        defense: 5, agility: 7, attack: 7, evasion: 5, health: 9, category: 'dripwarts', verified: true,
+        defense: 5, agility: 7, attack: 7, evasion: 5, health: 9, category: 'dripwarts', verified: true, createdBy: 'GriffinDrippin',
     },
     {
         id: 'bellatrixBaddie',
@@ -154,7 +154,7 @@ const cards = [
             { name: 'Crucial Strike', actionInfo: 'High Magic DMG', description: 'A painful hex delivered with a wink.', limit: 8, usesRemaining: 8, microevent: { type: 'rhythm', outcome: 'scaled', beats: 4 } },
             { name: 'Dagger Toss', actionInfo: 'Ranged Damage', description: 'She never misses a target.', limit: 10, usesRemaining: 10, microevent: { type: 'arrow', outcome: 'scaled', shots: 1 } },
         ],
-        defense: 4, agility: 8, attack: 9, evasion: 6, health: 8, category: 'dripwarts', verified: true,
+        defense: 4, agility: 8, attack: 9, evasion: 6, health: 8, category: 'dripwarts', verified: true, createdBy: 'GriffinDrippin',
     },
     {
         "id": "ronRiches",
@@ -171,7 +171,7 @@ const cards = [
             { "name": "Slug Vomit Trap", "actionInfo": "Poison + Skip Turn", "description": "A classic hex with a designer twist. Disgusting but effective.", "limit": 4, "usesRemaining": 4, "microevent": { "type": "qte", "outcome": "binary" } },
             { "name": "Broken Wand Blast", "actionInfo": "High Variance DMG", "description": "It might backfire, or it might be a crit. High risk, high drip.", "limit": 10, "usesRemaining": 10, "microevent": { "type": "mash", "outcome": "scaled" } }
         ],
-        "defense": 6, "agility": 5, "attack": 7, "evasion": 4, "health": 12, "category": "dripwarts", "verified": true
+        "defense": 6, "agility": 5, "attack": 7, "evasion": 4, "health": 12, "category": "dripwarts", "verified": true, "createdBy": "GriffinDrippin"
     },
     {
         id: 'vanguardKnight',
@@ -188,7 +188,7 @@ const cards = [
             { name: 'Guardian Strike', actionInfo: 'Physical Damage', description: 'A reliable melee attack.', limit: 10, usesRemaining: 10 },
             { name: 'Guard Up', actionInfo: 'DEF +2 (Self)', description: 'Raises own defense for 2 turns.', limit: 5, usesRemaining: 5 },
         ],
-        defense: 7, agility: 5, attack: 6, evasion: 5, health: 11, category: 'official v1', verified: true, official: true,
+        defense: 7, agility: 5, attack: 6, evasion: 5, health: 11, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
     {
         id: 'coldKilla',
@@ -206,7 +206,7 @@ const cards = [
             { name: 'Freeze', actionInfo: 'Stun for 1 turn', description: 'Freezes an enemy for 1 turn', limit: 3, usesRemaining: 3 },
             { name: 'Blizzard', actionInfo: 'Invulnerable for 1 turn', description: 'Hides within a snowstorm', limit: 5, usesRemaining: 5 }
         ],
-        defense: 5, agility: 7, attack: 8, evasion: 6, health: 9, category: 'official v1', verified: true, official: true,
+        defense: 5, agility: 7, attack: 8, evasion: 6, health: 9, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
     {
         id: 'pyroWarden',
@@ -224,7 +224,7 @@ const cards = [
             { name: 'Wall of Fire', actionInfo: 'Damage Reduction 50%', description: 'Reduces incoming damage by 50% for 1 turn', limit: 10, usesRemaining: 10, type: 'fire' },
             { name: 'Supernova', actionInfo: 'Massive DMG / Self-Destruct', description: 'Deals massive damage but kills user', limit: 1, usesRemaining: 1, type: 'fire', microevent: { type: 'qte', outcome: 'binary' } }
         ],
-        defense: 10, agility: 3, attack: 5, evasion: 2, health: 15, category: 'official v1', verified: true, official: true,
+        defense: 10, agility: 3, attack: 5, evasion: 2, health: 15, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
     {
         id: 'voltStinger',
@@ -242,7 +242,7 @@ const cards = [
             { name: 'Thunder Dash', actionInfo: 'Evasion +4 for 2 turns', description: 'Moves like a flash of light', limit: 5, usesRemaining: 5 },
             { name: 'Short Circuit', actionInfo: 'Enemy DEF to 0', description: 'Disables enemy armor for 1 turn', limit: 3, usesRemaining: 3, microevent: { type: 'route', outcome: 'scaled' } }
         ],
-        defense: 3, agility: 10, attack: 7, evasion: 9, health: 6, category: 'official v1', verified: true, official: true,
+        defense: 3, agility: 10, attack: 7, evasion: 9, health: 6, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
     {
         id: 'terraTitan',
@@ -260,7 +260,7 @@ const cards = [
             { name: 'Rock Toss', actionInfo: 'Ranged Damage', description: 'A heavy ranged projectile', limit: 10, usesRemaining: 10, microevent: { type: 'route', outcome: 'scaled' } },
             { name: 'Fossilize', actionInfo: 'Heal 5 HP / DEF +2', description: 'Turns to stone to recover', limit: 3, usesRemaining: 3, microevent: { type: 'quiz', outcome: 'binary', difficulty: 'easy', questionType: 'boolean' } }
         ],
-        defense: 9, agility: 2, attack: 6, evasion: 1, health: 12, category: 'official v1', verified: true, official: true,
+        defense: 9, agility: 2, attack: 6, evasion: 1, health: 12, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
     {
         id: 'shadowStalker',
@@ -278,7 +278,7 @@ const cards = [
             { name: 'Vanish', actionInfo: 'Invisibility for 1 turn', description: 'Becomes invisible for 1 turn', limit: 4, usesRemaining: 4 },
             { name: 'Soul Reap', actionInfo: 'Lifesteal', description: 'Heals based on damage dealt', limit: 6, usesRemaining: 6, microevent: { type: 'rhythm', outcome: 'scaled', beats: 4 } }
         ],
-        defense: 4, agility: 8, attack: 9, evasion: 8, health: 7, category: 'official v1', verified: true, official: true,
+        defense: 4, agility: 8, attack: 9, evasion: 8, health: 7, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
     {
         id: 'aquaticSage',
@@ -296,7 +296,7 @@ const cards = [
             { name: 'Bubble Shield', actionInfo: '3 DMG Shield', description: 'Grants an ally a 3-damage shield', limit: 10, usesRemaining: 10 },
             { name: 'Mind Wash', actionInfo: 'Reset Cooldowns', description: 'Resets all cooldowns for an ally', limit: 2, usesRemaining: 2, microevent: { type: 'sigil', outcome: 'binary' } }
         ],
-        defense: 6, agility: 5, attack: 3, evasion: 5, health: 8, category: 'official v1', verified: true, official: true,
+        defense: 6, agility: 5, attack: 3, evasion: 5, health: 8, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
     {
         id: 'ironMonarch',
@@ -314,7 +314,7 @@ const cards = [
             { name: 'Fortify', actionInfo: 'Allies DEF +2', description: 'Increases the defense of all allies', limit: 5, usesRemaining: 5, microevent: { type: 'sigil', outcome: 'binary' } },
             { name: 'Rallying Cry', actionInfo: 'Cleanse Debuffs', description: 'Removes all debuffs from the team', limit: 3, usesRemaining: 3 }
         ],
-        defense: 8, agility: 4, attack: 7, evasion: 3, health: 11, category: 'official v1', verified: true, official: true,
+        defense: 8, agility: 4, attack: 7, evasion: 3, health: 11, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
     {
         id: 'zephyrArcher',
@@ -332,7 +332,7 @@ const cards = [
             { name: 'Volley', actionInfo: 'Multi-Target', description: 'Deals small damage to 3 random enemies', limit: 6, usesRemaining: 6, microevent: { type: 'arrow', outcome: 'scaled', shots: 3 } },
             { name: 'Focus', actionInfo: 'Next Attack 2.5x DMG', description: 'Concentrates for a lethal shot', limit: 4, usesRemaining: 4 }
         ],
-        defense: 4, agility: 9, attack: 6, evasion: 7, health: 7, category: 'official v1', verified: true, official: true,
+        defense: 4, agility: 9, attack: 6, evasion: 7, health: 7, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
     {
         id: 'toxicChimera',
@@ -350,7 +350,7 @@ const cards = [
             { name: 'Lacerate', actionInfo: 'Bleed Damage', description: 'Deals damage and applies bleed', limit: 10, usesRemaining: 10, microevent: { type: 'rhythm', outcome: 'scaled', beats: 4 } },
             { name: 'Noxious Cloud', actionInfo: 'AOE Poison', description: 'Covers the field in toxic gas', limit: 2, usesRemaining: 2, microevent: { type: 'rhythm', outcome: 'scaled', beats: 4 } }
         ],
-        defense: 4, agility: 6, attack: 7, evasion: 4, health: 10, category: 'official v1', verified: true, official: true,
+        defense: 4, agility: 6, attack: 7, evasion: 4, health: 10, category: 'official v1', verified: true, official: true, createdBy: 'Official',
     },
 ];
 

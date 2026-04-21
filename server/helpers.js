@@ -352,30 +352,33 @@ const validateCustomCardPayload = (payload) => {
 // ── Seed official cards on startup ────────────────────────────────────────────
 
 const seedOfficialCards = async () => {
-    const snapshots = officialCards.map((card) => cloneCardForGame(card));
-    const officialIds = snapshots.map((c) => c.id);
+    const cardEntries = officialCards.map((card) => ({
+        snapshot: cloneCardForGame(card),
+        createdBy: card.createdBy || card.official ? 'Official' : 'Unknown',
+        official: !!card.official,
+    }));
+    const officialIds = cardEntries.map((c) => c.snapshot.id);
 
     if (officialIds.length === 0) {
-        await Card.deleteMany({ createdBy: '69e17f88c9f0001d6a4dda7e', official: false });
+        await Card.deleteMany({ official: true });
         return;
     }
 
     await Card.deleteMany({
-        createdBy: '69e17f88c9f0001d6a4dda7e',
-        official: false,
+        official: true,
         id: { $nin: officialIds },
     });
 
-    for (const snapshot of snapshots) {
+    for (const entry of cardEntries) {
         await Card.updateOne(
-            { id: snapshot.id },
+            { id: entry.snapshot.id },
             {
                 $set: {
-                    ...snapshot,
-                    official: false,
+                    ...entry.snapshot,
+                    official: entry.official,
                     adultOnly: false,
                     visibility: 'public',
-                    createdBy: '69e17f88c9f0001d6a4dda7e',
+                    createdBy: entry.createdBy,
                     sourceCardId: null,
                 },
             },
