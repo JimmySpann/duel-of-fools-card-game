@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { AI_MODEL_PRESETS, generateCardConcept, generateCardDraft } from './ai/cardAIGenerator';
 import { FEATURES } from '../../config/features';
 import { authHeader } from '../../utils/api';
+import FullCard from '../card-game/components/card-layouts/full-card/full-card';
 
 const clampInt = (value, min, max) => {
     const n = Number(value);
@@ -421,8 +422,13 @@ const CustomCardModal = ({ onClose }) => {
     const [abilityNames, setAbilityNames] = useState([]);
     const [customAbilities, setCustomAbilities] = useState([]);
     const [abilitySearch, setAbilitySearch] = useState('');
+    const [savedAbilities, setSavedAbilities] = useState([]);
+    const [activeAbilityTab, setActiveAbilityTab] = useState('official');
+    const [expandedAbilityCardId, setExpandedAbilityCardId] = useState(null);
+    const [savingAbility, setSavingAbility] = useState(null);
     const [visibility, setVisibility] = useState('private');
     const [imagePreviewError, setImagePreviewError] = useState(false);
+    const [showFullPreview, setShowFullPreview] = useState(false);
     const [aiPrompt, setAiPrompt] = useState('');
     const [aiModelId, setAiModelId] = useState(AI_MODEL_PRESETS[0]?.id || '');
     const [aiConcept, setAiConcept] = useState(null);
@@ -489,13 +495,15 @@ const CustomCardModal = ({ onClose }) => {
             setLoading(true);
             setError('');
             try {
-                const [cardsRes, abilitiesRes] = await Promise.all([
+                const [cardsRes, abilitiesRes, savedAbilitiesRes] = await Promise.all([
                     fetch('/api/cards', { headers: authHeader(token, false) }),
                     fetch('/api/cards/ability-options', { headers: authHeader(token, false) }),
+                    fetch('/api/profile/abilities', { headers: authHeader(token, false) }),
                 ]);
 
                 const cardsJson = await cardsRes.json();
                 const abilitiesJson = await abilitiesRes.json();
+                const savedAbilitiesJson = await savedAbilitiesRes.json();
 
                 if (!cardsRes.ok) throw new Error(cardsJson.error || 'Failed to load card library');
                 if (!abilitiesRes.ok) throw new Error(abilitiesJson.error || 'Failed to load abilities');
@@ -503,6 +511,7 @@ const CustomCardModal = ({ onClose }) => {
                 if (!mounted) return;
                 setCards(cardsJson.cards || []);
                 setAbilities(abilitiesJson.abilities || []);
+                if (savedAbilitiesRes.ok) setSavedAbilities(savedAbilitiesJson.abilities || []);
             } catch (err) {
                 if (mounted) setError(err.message || 'Failed to load custom card builder');
             } finally {
@@ -619,6 +628,60 @@ const CustomCardModal = ({ onClose }) => {
                 },
             ];
         });
+    };
+
+    const applyFromSaved = (saved) => {
+        if (!saved?.customConfig) return;
+        setCustomAbilities((prev) => {
+            if (abilityNames.length + prev.length >= 3) return prev;
+            return [
+                ...prev,
+                {
+                    name: saved.name || '',
+                    targetType: saved.customConfig.targetType || 'enemyCard',
+                    limit: clampInt(saved.limit ?? 2, 1, 10),
+                    effects: Array.isArray(saved.customConfig.effects) && saved.customConfig.effects.length
+                        ? saved.customConfig.effects.map((e) => ({ ...e }))
+                        : [createDamageEffect()],
+                    microevent: saved.microevent || null,
+                },
+            ];
+        });
+    };
+
+    const saveAbility = async (action) => {
+        if (!action?.customConfig) return;
+        setSavingAbility(action.name);
+        try {
+            const res = await fetch('/api/profile/abilities', {
+                method: 'POST',
+                headers: { ...authHeader(token, false), 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: action.name,
+                    actionInfo: action.actionInfo || '',
+                    description: action.description || '',
+                    limit: action.limit ?? 2,
+                    type: action.type || '',
+                    microevent: action.microevent || null,
+                    customConfig: action.customConfig,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok) setSavedAbilities(data.abilities || []);
+        } finally {
+            setSavingAbility(null);
+        }
+    };
+
+    const removeAbility = async (name) => {
+        try {
+            const res = await fetch(`/api/profile/abilities/${encodeURIComponent(name)}`, {
+                method: 'DELETE',
+                headers: authHeader(token, false),
+            });
+            const data = await res.json();
+            if (res.ok) setSavedAbilities(data.abilities || []);
+        } catch { /* silent */ }
     };
 
     const handleCreate = async (e) => {
@@ -956,14 +1019,24 @@ const CustomCardModal = ({ onClose }) => {
                         <div className="custom-card-image-preview-wrap">
                             <div className="custom-card-preview-head">
                                 <span>Card Art Preview</span>
-                                <button
-                                    type="button"
-                                    className="custom-card-row-btn"
-                                    onClick={handleRandomizeCard}
-                                    title="Generate a random build that stays within max stat budget."
-                                >
-                                    Randomize Card
-                                </button>
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    <button
+                                        type="button"
+                                        className="custom-card-row-btn"
+                                        onClick={() => setShowFullPreview(true)}
+                                        title="Open a full card preview overlay."
+                                    >
+                                        Full Preview
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="custom-card-row-btn"
+                                        onClick={handleRandomizeCard}
+                                        title="Generate a random build that stays within max stat budget."
+                                    >
+                                        Randomize Card
+                                    </button>
+                                </div>
                             </div>
                             {!imagePreviewError ? (
                                 <img
@@ -1135,44 +1208,79 @@ const CustomCardModal = ({ onClose }) => {
                         )}
 
                         <div className="custom-card-abilities">
-                            <div className="custom-card-subtitle" title="Each card can equip up to 3 abilities total (official + custom).">Abilities (pick up to 3 total)</div>
-                            <input
-                                className="custom-card-input"
-                                placeholder="Search ability examples..."
-                                value={abilitySearch}
-                                onChange={(e) => setAbilitySearch(e.target.value)}
-                                title="Search official and community ability examples by name, description, target, or effect type."
-                            />
-                            <div className="custom-card-ability-list">
-                                {filteredAbilityExamples.filter((a) => !a.isCustom).map((a) => (
+                            <div className="custom-card-ability-header">
+                                <span className="custom-card-subtitle" title="Each card can equip up to 3 abilities total (official + custom).">Abilities</span>
+                                <span className={`custom-card-ability-badge${totalAbilityCount >= 3 ? ' full' : ''}`}>{totalAbilityCount}/3</span>
+                                <div className="custom-card-ability-tabs">
                                     <button
-                                        key={a.name}
                                         type="button"
-                                        className={`custom-card-ability${abilityNames.includes(a.name) ? ' selected' : ''}`}
-                                        onClick={() => toggleAbility(a.name)}
-                                        title={a.description}
-                                    >
-                                        <span>{a.name}</span>
-                                        <small>{a.actionInfo} {a.microeventType ? `· ${a.microeventType}` : ''}</small>
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="custom-card-subtitle" style={{ marginTop: '0.6rem' }} title="Templates shared by other players. Use one to prefill a custom ability.">Community Examples</div>
-                            <div className="custom-card-ability-list">
-                                {filteredAbilityExamples.filter((a) => a.isCustom).slice(0, 20).map((a, idx) => (
+                                        className={`custom-card-ability-tab${activeAbilityTab === 'official' ? ' active' : ''}`}
+                                        onClick={() => setActiveAbilityTab('official')}
+                                    >Official</button>
                                     <button
-                                        key={`${a.name}-${a.createdBy}-${idx}`}
                                         type="button"
-                                        className="custom-card-ability"
-                                        onClick={() => applyAbilityTemplate(a)}
-                                        title={a.description}
-                                        disabled={totalAbilityCount >= 3}
-                                    >
-                                        <span>{a.name}</span>
-                                        <small>{a.target} · By {a.createdBy || 'Unknown'}</small>
-                                    </button>
-                                ))}
+                                        className={`custom-card-ability-tab${activeAbilityTab === 'mine' ? ' active' : ''}`}
+                                        onClick={() => setActiveAbilityTab('mine')}
+                                    >My Abilities {savedAbilities.length > 0 && <span className="custom-card-ability-tab-count">{savedAbilities.length}</span>}</button>
+                                </div>
                             </div>
+                            {activeAbilityTab === 'official' && (
+                                <>
+                                    <input
+                                        className="custom-card-input"
+                                        placeholder="Search official abilities..."
+                                        value={abilitySearch}
+                                        onChange={(e) => setAbilitySearch(e.target.value)}
+                                        title="Search official abilities by name, description, or effect type."
+                                    />
+                                    <div className="custom-card-ability-list">
+                                        {filteredAbilityExamples.filter((a) => !a.isCustom).map((a) => (
+                                            <button
+                                                key={a.name}
+                                                type="button"
+                                                className={`custom-card-ability${abilityNames.includes(a.name) ? ' selected' : ''}`}
+                                                onClick={() => toggleAbility(a.name)}
+                                                disabled={!abilityNames.includes(a.name) && totalAbilityCount >= 3}
+                                                title={a.description}
+                                            >
+                                                <span>{a.name}</span>
+                                                <small>{a.actionInfo} {a.microeventType ? `· ${a.microeventType}` : ''}</small>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                            {activeAbilityTab === 'mine' && (
+                                <div className="custom-card-ability-list">
+                                    {savedAbilities.length === 0 ? (
+                                        <p className="custom-card-empty" style={{ fontSize: '0.78rem', margin: '0.5rem 0' }}>
+                                            No saved abilities yet. Browse the card library below and click <strong>Save Ability</strong> on any custom action.
+                                        </p>
+                                    ) : savedAbilities.map((sa) => (
+                                        <div key={sa.name} className="custom-card-saved-ability">
+                                            <div className="custom-card-saved-ability-info">
+                                                <span>{sa.name}</span>
+                                                <small>{sa.actionInfo || sa.description || ''}</small>
+                                            </div>
+                                            <div className="custom-card-saved-ability-actions">
+                                                <button
+                                                    type="button"
+                                                    className="custom-card-row-btn"
+                                                    disabled={totalAbilityCount >= 3}
+                                                    onClick={() => applyFromSaved(sa)}
+                                                    title="Add this ability to your card as an editable copy."
+                                                >Apply</button>
+                                                <button
+                                                    type="button"
+                                                    className="custom-card-row-btn danger"
+                                                    onClick={() => removeAbility(sa.name)}
+                                                    title="Remove from your saved abilities."
+                                                >Remove</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="custom-card-subtitle" style={{ marginTop: '0.6rem' }} title="Compose your own effects and targets. Power budget must stay within limits.">Build Custom Abilities</div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-0.1rem' }}>
                                 <button
@@ -1488,50 +1596,121 @@ const CustomCardModal = ({ onClose }) => {
                             <p className="custom-card-empty">No cards found.</p>
                         ) : (
                             <div className="custom-card-list">
-                                {filteredCards.map((card) => (
-                                    <div key={card.id} className="custom-card-row">
-                                        <img src={card.image} alt={card.name} className="custom-card-thumb" />
-                                        <div className="custom-card-row-info">
-                                            <div className="custom-card-row-name">
-                                                {card.name}
-                                                {card.visibility === 'private' && <span className="custom-card-private-badge">🔒 Private</span>}
-                                                {!card.official && card.verified && <span className="custom-card-verified-badge">✓ Verified</span>}
-                                                {!card.official && !card.verified && <span className="custom-card-unverified-badge">⚠ Unverified</span>}
+                                {filteredCards.map((card) => {
+                                    const savableActions = (card.actions || []).filter((a) => a.customConfig);
+                                    const isExpanded = expandedAbilityCardId === card.id;
+                                    return (
+                                        <div key={card.id} className="custom-card-row-wrap">
+                                            <div className="custom-card-row">
+                                                <img src={card.image} alt={card.name} className="custom-card-thumb" />
+                                                <div className="custom-card-row-info">
+                                                    <div className="custom-card-row-name">
+                                                        {card.name}
+                                                        {card.visibility === 'private' && <span className="custom-card-private-badge">🔒 Private</span>}
+                                                        {!card.official && card.verified && <span className="custom-card-verified-badge">✓ Verified</span>}
+                                                        {!card.official && !card.verified && <span className="custom-card-unverified-badge">⚠ Unverified</span>}
+                                                    </div>
+                                                    <div className="custom-card-row-meta">
+                                                        {card.official ? 'Official' : `By ${card.createdBy || 'Unknown'}`}
+                                                        {card.createdBy === username ? ' · Yours' : ''}
+                                                        {card.reportCount > 0 ? ` · Reports: ${card.reportCount}` : ''}
+                                                    </div>
+                                                </div>
+                                                <div className="custom-card-row-actions">
+                                                    {savableActions.length > 0 && (
+                                                        <button
+                                                            className={`custom-card-row-btn${isExpanded ? ' active' : ''}`}
+                                                            onClick={() => setExpandedAbilityCardId(isExpanded ? null : card.id)}
+                                                            title="Browse this card's custom abilities to save to My Abilities."
+                                                        >
+                                                            Abilities {savableActions.length > 0 && `(${savableActions.length})`}
+                                                        </button>
+                                                    )}
+                                                    <button className="custom-card-row-btn" onClick={() => openVersions(card)} title="View edit history for this card.">Versions</button>
+                                                    {!card.official && card.createdBy === username && (
+                                                        <>
+                                                            <button className="custom-card-row-btn" onClick={() => startEditCard(card)} title="Load this card into the editor.">Edit</button>
+                                                            <button className="custom-card-row-btn danger" onClick={() => handleDelete(card.id)} title="Delete this card permanently.">Delete</button>
+                                                        </>
+                                                    )}
+                                                    {card.createdBy !== username && (
+                                                        <button className="custom-card-row-btn" onClick={() => handleReport(card.id)} title="Report card for moderation review.">Report</button>
+                                                    )}
+                                                    {isAdmin && !card.official && (
+                                                        <button
+                                                            className={`custom-card-row-btn${card.verified ? ' danger' : ''}`}
+                                                            onClick={() => handleVerify(card.id)}
+                                                            title={card.verified ? 'Remove verification from this card.' : 'Mark this card as verified.'}
+                                                        >
+                                                            {card.verified ? 'Unverify' : 'Verify'}
+                                                        </button>
+                                                    )}
+                                                    <button className="custom-card-row-btn" onClick={() => handleFork(card.id)} title="Create an editable copy under your account.">Fork</button>
+                                                </div>
                                             </div>
-                                            <div className="custom-card-row-meta">
-                                                {card.official ? 'Official' : `By ${card.createdBy || 'Unknown'}`}
-                                                {card.createdBy === username ? ' · Yours' : ''}
-                                                {card.reportCount > 0 ? ` · Reports: ${card.reportCount}` : ''}
-                                            </div>
+                                            {isExpanded && savableActions.length > 0 && (
+                                                <div className="custom-card-ability-expand">
+                                                    {savableActions.map((action) => {
+                                                        const isSaved = savedAbilities.some((sa) => sa.name === action.name);
+                                                        const isSaving = savingAbility === action.name;
+                                                        return (
+                                                            <div key={action.name} className="custom-card-ability-expand-row">
+                                                                <div className="custom-card-ability-expand-info">
+                                                                    <span>{action.name}</span>
+                                                                    <small>{action.description || action.actionInfo || ''}</small>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    className={`custom-card-row-btn${isSaved ? ' active' : ''}`}
+                                                                    disabled={isSaved || isSaving}
+                                                                    onClick={() => saveAbility(action)}
+                                                                    title={isSaved ? 'Already saved to My Abilities.' : 'Save this ability to My Abilities.'}
+                                                                >
+                                                                    {isSaving ? 'Saving…' : isSaved ? 'Saved ✓' : 'Save Ability'}
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="custom-card-row-actions">
-                                            <button className="custom-card-row-btn" onClick={() => openVersions(card)} title="View edit history for this card.">Versions</button>
-                                            {!card.official && card.createdBy === username && (
-                                                <>
-                                                    <button className="custom-card-row-btn" onClick={() => startEditCard(card)} title="Load this card into the editor.">Edit</button>
-                                                    <button className="custom-card-row-btn danger" onClick={() => handleDelete(card.id)} title="Delete this card permanently.">Delete</button>
-                                                </>
-                                            )}
-                                            {card.createdBy !== username && (
-                                                <button className="custom-card-row-btn" onClick={() => handleReport(card.id)} title="Report card for moderation review.">Report</button>
-                                            )}
-                                            {isAdmin && !card.official && (
-                                                <button
-                                                    className={`custom-card-row-btn${card.verified ? ' danger' : ''}`}
-                                                    onClick={() => handleVerify(card.id)}
-                                                    title={card.verified ? 'Remove verification from this card.' : 'Mark this card as verified.'}
-                                                >
-                                                    {card.verified ? 'Unverify' : 'Verify'}
-                                                </button>
-                                            )}
-                                            <button className="custom-card-row-btn" onClick={() => handleFork(card.id)} title="Create an editable copy under your account.">Fork</button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
                 </div>
+
+                {showFullPreview && (
+                    <div className="custom-card-fullpreview-overlay" onClick={() => setShowFullPreview(false)}>
+                        <div className="custom-card-fullpreview-modal" onClick={(e) => e.stopPropagation()}>
+                            <div className="custom-card-versions-head">
+                                <h3>{name || 'Unnamed Card'}</h3>
+                                <button className="custom-card-close" onClick={() => setShowFullPreview(false)}>✕</button>
+                            </div>
+                            <div className="custom-card-fullpreview-body">
+                                <FullCard
+                                    card={{
+                                        id: 'preview',
+                                        name: name || 'Unnamed Card',
+                                        image,
+                                        description,
+                                        elements,
+                                        passives: [],
+                                        actions: [],
+                                        ...stats,
+                                        category: 'custom',
+                                        verified: false,
+                                        official: false,
+                                        adultOnly: false,
+                                        statusEffects: [],
+                                    }}
+                                    isFlipped={false}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {versionsFor && (
                     <div className="custom-card-versions-overlay" onClick={() => setVersionsFor(null)}>

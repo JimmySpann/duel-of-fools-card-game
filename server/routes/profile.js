@@ -193,4 +193,80 @@ router.delete('/block/:username', requireAuth, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/profile/abilities
+ * Returns the authenticated user's saved abilities.
+ */
+router.get('/abilities', requireAuth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('savedAbilities').lean();
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json({ abilities: user.savedAbilities || [] });
+    } catch (err) {
+        console.error('GET /api/profile/abilities error:', err);
+        res.status(500).json({ error: 'Failed to fetch saved abilities' });
+    }
+});
+
+/**
+ * POST /api/profile/abilities
+ * Body: { name, actionInfo?, description?, limit?, type?, microevent?, customConfig? }
+ * Upserts a saved ability by name. Cap: 50.
+ */
+router.post('/abilities', requireAuth, async (req, res) => {
+    try {
+        const { name, actionInfo, description, limit, type, microevent, customConfig } = req.body;
+        if (!name || typeof name !== 'string' || !name.trim())
+            return res.status(400).json({ error: 'name is required' });
+
+        const trimmedName = name.trim().slice(0, 60);
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const existing = user.savedAbilities.findIndex((a) => a.name === trimmedName);
+        const entry = {
+            name: trimmedName,
+            actionInfo: String(actionInfo || '').trim().slice(0, 120),
+            description: String(description || '').trim().slice(0, 300),
+            limit: Math.max(1, Math.min(30, Number(limit) || 2)),
+            type: String(type || '').trim().slice(0, 20),
+            microevent: microevent || null,
+            customConfig: customConfig || null,
+            savedAt: new Date(),
+        };
+
+        if (existing !== -1) {
+            user.savedAbilities[existing] = entry;
+        } else {
+            if (user.savedAbilities.length >= 50)
+                return res.status(400).json({ error: 'Saved abilities limit reached (50)' });
+            user.savedAbilities.push(entry);
+        }
+
+        await user.save();
+        res.json({ abilities: user.savedAbilities });
+    } catch (err) {
+        console.error('POST /api/profile/abilities error:', err);
+        res.status(500).json({ error: 'Failed to save ability' });
+    }
+});
+
+/**
+ * DELETE /api/profile/abilities/:name
+ * Removes a saved ability by name.
+ */
+router.delete('/abilities/:name', requireAuth, async (req, res) => {
+    try {
+        const targetName = decodeURIComponent(req.params.name);
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        user.savedAbilities = user.savedAbilities.filter((a) => a.name !== targetName);
+        await user.save();
+        res.json({ abilities: user.savedAbilities });
+    } catch (err) {
+        console.error('DELETE /api/profile/abilities/:name error:', err);
+        res.status(500).json({ error: 'Failed to remove saved ability' });
+    }
+});
+
 module.exports = router;

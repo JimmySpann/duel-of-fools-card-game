@@ -3,6 +3,20 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+const savedAbilitySchema = new mongoose.Schema(
+    {
+        name: { type: String, required: true, trim: true, maxlength: 60 },
+        actionInfo: { type: String, trim: true, maxlength: 120, default: '' },
+        description: { type: String, trim: true, maxlength: 300, default: '' },
+        limit: { type: Number, default: 2, min: 1, max: 30 },
+        type: { type: String, trim: true, maxlength: 20, default: '' },
+        microevent: { type: mongoose.Schema.Types.Mixed, default: null },
+        customConfig: { type: mongoose.Schema.Types.Mixed, default: null },
+        savedAt: { type: Date, default: Date.now },
+    },
+    { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
     {
         username: {
@@ -33,6 +47,7 @@ const userSchema = new mongoose.Schema(
             name: { type: String, required: true, trim: true, maxlength: 40 },
             cardIds: [{ type: String }],
         }],
+        savedAbilities: { type: [savedAbilitySchema], default: [] },
     },
     { timestamps: true }
 );
