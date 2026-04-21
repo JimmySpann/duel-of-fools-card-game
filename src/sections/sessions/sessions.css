@@ -3247,6 +3247,57 @@
     display: flex;
     gap: 0.3rem;
     flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* ── Official ability item with Save button ───────────────────────────── */
+.custom-card-official-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.custom-card-ability-save-btn {
+    background: #1b1e2f;
+    border: 1px solid #3a4060;
+    border-radius: 5px;
+    color: #8890b0;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, color 0.15s;
+}
+
+.custom-card-ability-save-btn:hover:not(:disabled) {
+    background: #252945;
+    color: #c9a227;
+    border-color: #7a6000;
+}
+
+.custom-card-ability-save-btn.saved {
+    color: #c9a227;
+    border-color: #7a6000;
+    background: #211d05;
+}
+
+.custom-card-ability-save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── My Abilities: single-column list ───────────────────────────────── */
+.custom-card-ability-list--mine {
+    grid-template-columns: 1fr;
+}
+
+/* ── My Abilities: inline edit form ─────────────────────────────────── */
+.custom-card-saved-ability-edit {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
 /* ── Abilities expand section in card library rows ──────────────────────── */

@@ -32,7 +32,7 @@ const initialElements = {
 
 const TARGET_TYPES = ['self', 'enemyCard', 'allyCard', 'allEnemies', 'allAllies'];
 const EFFECT_TYPES = ['damage', 'status', 'heal', 'healSelf', 'cleanse', 'resetCooldowns', 'selfDestruct'];
-const STATUS_TYPES = ['burned', 'frozen', 'def_up', 'def_down', 'poisoned', 'bleeding', 'shielded', 'invulnerable', 'invisible', 'focused', 'damage_reduction', 'eva_up'];
+const STATUS_TYPES = ['burned', 'frozen', 'def_up', 'def_down', 'poisoned', 'bleeding', 'shielded', 'invulnerable', 'invisible', 'focused', 'damage_reduction', 'eva_up', 'atk_up'];
 const CLEANSE_DEBUFFS = ['burned', 'frozen', 'poisoned', 'bleeding', 'def_down'];
 const MAX_CUSTOM_ABILITY_POWER = 26;
 const MAX_TOTAL_CUSTOM_ABILITY_POWER = 54;
@@ -426,6 +426,8 @@ const CustomCardModal = ({ onClose }) => {
     const [activeAbilityTab, setActiveAbilityTab] = useState('official');
     const [expandedAbilityCardId, setExpandedAbilityCardId] = useState(null);
     const [savingAbility, setSavingAbility] = useState(null);
+    const [editingSavedName, setEditingSavedName] = useState(null);
+    const [editingSavedData, setEditingSavedData] = useState({ name: '', description: '' });
     const [libraryOpen, setLibraryOpen] = useState(false);
     const [visibility, setVisibility] = useState('private');
     const [imagePreviewError, setImagePreviewError] = useState(false);
@@ -632,7 +634,11 @@ const CustomCardModal = ({ onClose }) => {
     };
 
     const applyFromSaved = (saved) => {
-        if (!saved?.customConfig) return;
+        if (!saved?.customConfig) {
+            // Official ability saved by reference — toggle it on the card
+            toggleAbility(saved.name);
+            return;
+        }
         setCustomAbilities((prev) => {
             if (abilityNames.length + prev.length >= 3) return prev;
             return [
@@ -648,6 +654,74 @@ const CustomCardModal = ({ onClose }) => {
                 },
             ];
         });
+    };
+
+    const saveOfficialAbility = async (a) => {
+        if (savedAbilities.some((sa) => sa.name === a.name)) return;
+        setSavingAbility(a.name);
+        try {
+            const res = await fetch('/api/profile/abilities', {
+                method: 'POST',
+                headers: { ...authHeader(token, false), 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: a.name,
+                    actionInfo: a.actionInfo || '',
+                    description: a.description || '',
+                    limit: a.limit ?? 2,
+                    type: a.type || '',
+                    microevent: null,
+                    customConfig: null,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok) setSavedAbilities(data.abilities || []);
+        } finally {
+            setSavingAbility(null);
+        }
+    };
+
+    const forkSavedAbility = async (sa) => {
+        const base = sa.name.replace(/ \(copy(?: \d+)?\)$/, '').trim();
+        let copyName = `${base} (copy)`;
+        let i = 2;
+        while (savedAbilities.some((a) => a.name === copyName)) {
+            copyName = `${base} (copy ${i})`;
+            i += 1;
+        }
+        setSavingAbility(sa.name);
+        try {
+            const res = await fetch('/api/profile/abilities', {
+                method: 'POST',
+                headers: { ...authHeader(token, false), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...sa, name: copyName }),
+            });
+            const data = await res.json();
+            if (res.ok) setSavedAbilities(data.abilities || []);
+        } finally {
+            setSavingAbility(null);
+        }
+    };
+
+    const updateSavedAbility = async (originalName, updates) => {
+        const sa = savedAbilities.find((a) => a.name === originalName);
+        if (!sa) return;
+        setSavingAbility(originalName);
+        try {
+            await fetch(`/api/profile/abilities/${encodeURIComponent(originalName)}`, {
+                method: 'DELETE',
+                headers: authHeader(token, false),
+            });
+            const res = await fetch('/api/profile/abilities', {
+                method: 'POST',
+                headers: { ...authHeader(token, false), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...sa, ...updates }),
+            });
+            const data = await res.json();
+            if (res.ok) setSavedAbilities(data.abilities || []);
+        } finally {
+            setSavingAbility(null);
+            setEditingSavedName(null);
+        }
     };
 
     const saveAbility = async (action) => {
@@ -1236,49 +1310,98 @@ const CustomCardModal = ({ onClose }) => {
                                         title="Search official abilities by name, description, or effect type."
                                     />
                                     <div className="custom-card-ability-list">
-                                        {filteredAbilityExamples.filter((a) => !a.isCustom).map((a) => (
-                                            <button
-                                                key={a.name}
-                                                type="button"
-                                                className={`custom-card-ability${abilityNames.includes(a.name) ? ' selected' : ''}`}
-                                                onClick={() => toggleAbility(a.name)}
-                                                disabled={!abilityNames.includes(a.name) && totalAbilityCount >= 3}
-                                                title={a.description}
-                                            >
-                                                <span>{a.name}</span>
-                                                <small>{a.actionInfo} {a.microeventType ? `· ${a.microeventType}` : ''}</small>
-                                            </button>
-                                        ))}
+                                        {filteredAbilityExamples.filter((a) => !a.isCustom).map((a) => {
+                                            const isSaved = savedAbilities.some((sa) => sa.name === a.name);
+                                            return (
+                                                <div key={a.name} className="custom-card-official-item">
+                                                    <button
+                                                        type="button"
+                                                        className={`custom-card-ability${abilityNames.includes(a.name) ? ' selected' : ''}`}
+                                                        onClick={() => toggleAbility(a.name)}
+                                                        disabled={!abilityNames.includes(a.name) && totalAbilityCount >= 3}
+                                                        title={a.description}
+                                                    >
+                                                        <span>{a.name}</span>
+                                                        <small>{a.actionInfo} {a.microeventType ? `· ${a.microeventType}` : ''}</small>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`custom-card-ability-save-btn${isSaved ? ' saved' : ''}`}
+                                                        onClick={() => saveOfficialAbility(a)}
+                                                        disabled={isSaved || savingAbility === a.name}
+                                                        title={isSaved ? 'Already in My Abilities' : 'Save to My Abilities'}
+                                                    >{isSaved ? '★ Saved' : '☆ Save'}</button>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </>
                             )}
                             {activeAbilityTab === 'mine' && (
-                                <div className="custom-card-ability-list">
+                                <div className="custom-card-ability-list custom-card-ability-list--mine">
                                     {savedAbilities.length === 0 ? (
                                         <p className="custom-card-empty" style={{ fontSize: '0.78rem', margin: '0.5rem 0' }}>
-                                            No saved abilities yet. Browse the card library below and click <strong>Save Ability</strong> on any custom action.
+                                            No saved abilities yet. Use <strong>☆ Save</strong> on official abilities above, or <strong>Save Ability</strong> in the card library.
                                         </p>
                                     ) : savedAbilities.map((sa) => (
                                         <div key={sa.name} className="custom-card-saved-ability">
-                                            <div className="custom-card-saved-ability-info">
-                                                <span>{sa.name}</span>
-                                                <small>{sa.actionInfo || sa.description || ''}</small>
-                                            </div>
-                                            <div className="custom-card-saved-ability-actions">
-                                                <button
-                                                    type="button"
-                                                    className="custom-card-row-btn"
-                                                    disabled={totalAbilityCount >= 3}
-                                                    onClick={() => applyFromSaved(sa)}
-                                                    title="Add this ability to your card as an editable copy."
-                                                >Apply</button>
-                                                <button
-                                                    type="button"
-                                                    className="custom-card-row-btn danger"
-                                                    onClick={() => removeAbility(sa.name)}
-                                                    title="Remove from your saved abilities."
-                                                >Remove</button>
-                                            </div>
+                                            {editingSavedName === sa.name ? (
+                                                <div className="custom-card-saved-ability-edit">
+                                                    <input
+                                                        className="custom-card-input"
+                                                        value={editingSavedData.name}
+                                                        onChange={(e) => setEditingSavedData((d) => ({ ...d, name: e.target.value }))}
+                                                        maxLength={60}
+                                                        placeholder="Ability name"
+                                                    />
+                                                    <input
+                                                        className="custom-card-input"
+                                                        value={editingSavedData.description}
+                                                        onChange={(e) => setEditingSavedData((d) => ({ ...d, description: e.target.value }))}
+                                                        maxLength={120}
+                                                        placeholder="Short description"
+                                                    />
+                                                    <div className="custom-card-saved-ability-actions">
+                                                        <button type="button" className="custom-card-row-btn" disabled={savingAbility === sa.name} onClick={() => updateSavedAbility(sa.name, { name: editingSavedData.name.trim(), description: editingSavedData.description })}>Save</button>
+                                                        <button type="button" className="custom-card-row-btn" onClick={() => setEditingSavedName(null)}>Cancel</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="custom-card-saved-ability-info">
+                                                        <span>{sa.name}</span>
+                                                        <small>{sa.actionInfo || sa.description || ''}{!sa.customConfig ? ' · official' : ''}</small>
+                                                    </div>
+                                                    <div className="custom-card-saved-ability-actions">
+                                                        <button
+                                                            type="button"
+                                                            className="custom-card-row-btn"
+                                                            disabled={totalAbilityCount >= 3 && !!sa.customConfig}
+                                                            onClick={() => applyFromSaved(sa)}
+                                                            title={sa.customConfig ? 'Add to card as editable custom ability' : 'Toggle this official ability on your card'}
+                                                        >Apply</button>
+                                                        <button
+                                                            type="button"
+                                                            className="custom-card-row-btn"
+                                                            onClick={() => { setEditingSavedName(sa.name); setEditingSavedData({ name: sa.name, description: sa.description || sa.actionInfo || '' }); }}
+                                                            title="Rename or edit description"
+                                                        >Edit</button>
+                                                        <button
+                                                            type="button"
+                                                            className="custom-card-row-btn"
+                                                            disabled={savingAbility === sa.name}
+                                                            onClick={() => forkSavedAbility(sa)}
+                                                            title="Duplicate this ability in My Abilities"
+                                                        >Fork</button>
+                                                        <button
+                                                            type="button"
+                                                            className="custom-card-row-btn danger"
+                                                            onClick={() => removeAbility(sa.name)}
+                                                            title="Remove from My Abilities"
+                                                        >Delete</button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
