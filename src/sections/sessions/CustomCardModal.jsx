@@ -985,7 +985,7 @@ const CustomCardModal = ({ onClose }) => {
                             )}
                         </div>
 
-                        <div className="custom-card-ai-box">
+                        {/* <div className="custom-card-ai-box">
                             <div className="custom-card-preview-head">
                                 <span>AI Card Assistant</span>
                             </div>
@@ -1095,7 +1095,7 @@ const CustomCardModal = ({ onClose }) => {
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </div> */}
 
                         <div className="custom-card-stats-grid">
                             {Object.keys(initialStats).map((key) => (
