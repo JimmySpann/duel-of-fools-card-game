@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { AI_MODEL_PRESETS, generateCardConcept, generateCardDraft } from './ai/cardAIGenerator';
 import { FEATURES } from '../../config/features';
@@ -426,6 +426,8 @@ const CustomCardModal = ({ onClose }) => {
     const [activeAbilityTab, setActiveAbilityTab] = useState('official');
     const [expandedAbilityCardId, setExpandedAbilityCardId] = useState(null);
     const [savingAbility, setSavingAbility] = useState(null);
+    const [snackMsg, setSnackMsg] = useState('');
+    const snackTimerRef = useRef(null);
     const [editingSavedName, setEditingSavedName] = useState(null);
     const [editingSavedData, setEditingSavedData] = useState({ name: '', description: '' });
     const [libraryOpen, setLibraryOpen] = useState(false);
@@ -532,10 +534,19 @@ const CustomCardModal = ({ onClose }) => {
         setCards(data.cards || []);
     };
 
+    const showSnack = (msg) => {
+        setSnackMsg(msg);
+        if (snackTimerRef.current) clearTimeout(snackTimerRef.current);
+        snackTimerRef.current = setTimeout(() => setSnackMsg(''), 3000);
+    };
+
     const toggleAbility = (abilityName) => {
         setAbilityNames((prev) => {
             if (prev.includes(abilityName)) return prev.filter((x) => x !== abilityName);
-            if (prev.length + customAbilities.length >= 3) return prev;
+            if (prev.length + customAbilities.length >= 3) {
+                showSnack('Max 3 abilities per card. Remove one to add another.');
+                return prev;
+            }
             return [...prev, abilityName];
         });
     };
@@ -545,10 +556,11 @@ const CustomCardModal = ({ onClose }) => {
     };
 
     const addCustomAbility = () => {
-        setCustomAbilities((prev) => {
-            if (abilityNames.length + prev.length >= 3) return prev;
-            return [...prev, createEmptyCustomAbility()];
-        });
+        if (abilityNames.length + customAbilities.length >= 3) {
+            showSnack('Max 3 abilities per card. Remove one to add another.');
+            return;
+        }
+        setCustomAbilities((prev) => [...prev, createEmptyCustomAbility()]);
     };
 
     const removeCustomAbility = (idx) => {
@@ -637,6 +649,10 @@ const CustomCardModal = ({ onClose }) => {
         if (!saved?.customConfig) {
             // Official ability saved by reference — toggle it on the card
             toggleAbility(saved.name);
+            return;
+        }
+        if (abilityNames.length + customAbilities.length >= 3) {
+            showSnack('Max 3 abilities per card. Remove one to add another.');
             return;
         }
         setCustomAbilities((prev) => {
@@ -1060,6 +1076,9 @@ const CustomCardModal = ({ onClose }) => {
     return (
         <div className="custom-card-overlay" onClick={onClose}>
             <div className="custom-card-modal" onClick={(e) => e.stopPropagation()}>
+                {snackMsg && (
+                    <div className="custom-card-snack">{snackMsg}</div>
+                )}
                 <div className="custom-card-header">
                     <h2 className="custom-card-title">Custom Card Builder</h2>
                     <button className="custom-card-library-toggle" onClick={() => setLibraryOpen((v) => !v)} title="Open card library">Library</button>

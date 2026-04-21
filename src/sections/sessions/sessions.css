@@ -2481,6 +2481,7 @@
     background: #0f1117;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
 .custom-card-header {
@@ -3298,6 +3299,31 @@
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+}
+
+/* ── Ability limit snackbar ─────────────────────────────────────────────── */
+.custom-card-snack {
+    position: absolute;
+    bottom: 1.1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2a1535;
+    border: 1px solid #7a3ea0;
+    border-radius: 8px;
+    color: #d8a8f8;
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 0.5rem 1.1rem;
+    z-index: 1500;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: snack-in 0.18s ease;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+}
+
+@keyframes snack-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* ── Abilities expand section in card library rows ──────────────────────── */
