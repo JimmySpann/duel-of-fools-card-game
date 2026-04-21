@@ -426,6 +426,7 @@ const CustomCardModal = ({ onClose }) => {
     const [activeAbilityTab, setActiveAbilityTab] = useState('official');
     const [expandedAbilityCardId, setExpandedAbilityCardId] = useState(null);
     const [savingAbility, setSavingAbility] = useState(null);
+    const [libraryOpen, setLibraryOpen] = useState(false);
     const [visibility, setVisibility] = useState('private');
     const [imagePreviewError, setImagePreviewError] = useState(false);
     const [showFullPreview, setShowFullPreview] = useState(false);
@@ -987,6 +988,9 @@ const CustomCardModal = ({ onClose }) => {
             <div className="custom-card-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="custom-card-header">
                     <h2 className="custom-card-title">Custom Card Builder</h2>
+                    <button className="custom-card-library-toggle" onClick={() => setLibraryOpen((v) => !v)} title="Open card library">
+                        Library
+                    </button>
                     <button className="custom-card-close" onClick={onClose}>✕</button>
                 </div>
 
@@ -1579,9 +1583,12 @@ const CustomCardModal = ({ onClose }) => {
                         )}
                     </form>
 
-                    <div className="custom-card-library">
+                    <div className={`custom-card-library${libraryOpen ? ' open' : ''}`}>
                         <div className="custom-card-library-head">
-                            <h3>Library</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <h3>Library</h3>
+                                <button className="custom-card-library-drawer-close" onClick={() => setLibraryOpen(false)} title="Close library">✕</button>
+                            </div>
                             <input
                                 className="custom-card-input"
                                 value={query}
