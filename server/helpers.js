@@ -375,8 +375,7 @@ const seedOfficialCards = async () => {
             {
                 $set: {
                     ...entry.snapshot,
-                    official: entry.official,
-                    adultOnly: false,
+                    official: entry.official, verified: true, adultOnly: false,
                     visibility: 'public',
                     createdBy: entry.createdBy,
                     sourceCardId: null,

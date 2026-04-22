@@ -256,6 +256,7 @@ router.post('/:id/fork', requireAuth, async (req, res) => {
             id: nextId,
             name: `${source.name} (Fork)`,
             official: false,
+            verified: false,
             adultOnly: !!source.adultOnly,
             visibility: 'public',
             createdBy: req.user.username,
