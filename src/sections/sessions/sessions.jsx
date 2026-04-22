@@ -71,7 +71,7 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
     const unreadDm = useSelector((s) => s.chat.unreadDm);
     const { displayName, avatarUrl } = useSelector((s) => s.profile);
     const token = useSelector((s) => s.auth.token);
-    const lobbyBgStyle = useBackground('lobby');
+    const lobbyBgStyle = useBackground('sessions');
     const [showChat, setShowChat] = useState(false);
     const [showDeckBuilder, setShowDeckBuilder] = useState(false);
     const [deckPreset, setDeckPreset] = useState(null); // preset to auto-load when modal opens

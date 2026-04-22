@@ -23,19 +23,8 @@ export const BACKGROUND_GROUPS = {
         'background-9',
     ],
 
-    /** Sessions list / lobby browser / session creation */
+    /** Sessions list, session creation, and pre-game lobby */
     sessions: [
-        'background-1',
-        'background-3',
-        'background-4',
-        'background-5',
-        'background-6',
-        'background-9',
-        'background-10',
-    ],
-
-    /** Pre-game lobby */
-    lobby: [
         'background-1',
         'background-3',
         'background-4',
