@@ -16,31 +16,31 @@ export const FEATURES = {
 export const BACKGROUND_GROUPS = {
     /** Login and sign-up screens */
     auth: [
-        'background-1',
-        'background-4',
-        'background-5',
-        'background-6',
-        'background-9',
+        'background-1.png',
+        'background-4.png',
+        'background-5.png',
+        'background-6.png',
+        'background-9.png',
     ],
 
     /** Sessions list, session creation, and pre-game lobby */
     sessions: [
-        'background-1',
-        'background-3',
-        'background-4',
-        'background-5',
-        'background-6',
-        'background-9',
-        'background-10',
+        'background-1.png',
+        'background-3.png',
+        'background-4.png',
+        'background-5.png',
+        'background-6.png',
+        'background-9.png',
+        'background-10.png',
     ],
 
     /** In-game view */
     game: [
-        'background-2',
-        'background-7',
-        'background-8',
-        'background-4',
-        'background-3',
+        'background-2.png',
+        'background-7.png',
+        'background-8.png',
+        'background-4.png',
+        'background-3.png',
     ],
 };
 
