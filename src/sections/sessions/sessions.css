@@ -43,6 +43,7 @@
     background-color: #0f1117;
     color: #dde0f0;
     position: relative;
+    overflow-x: hidden;
 }
 
 /* Dark overlay so content stays readable over any background image */
@@ -56,7 +57,7 @@
 }
 
 /* Keep all content above the overlay — exclude modals that are fixed themselves */
-.sessions-backdrop>*:not(.profile-overlay):not(.dm-container):not(.dm-container--modal):not(.custom-card-overlay):not(.rules-overlay):not(.gallery-overlay):not(.deck-builder-overlay) {
+.sessions-backdrop>*:not(.header-container):not(.profile-overlay):not(.dm-container):not(.dm-container--modal):not(.custom-card-overlay):not(.rules-overlay):not(.gallery-overlay):not(.deck-builder-overlay) {
     position: relative;
     z-index: 1;
 }
