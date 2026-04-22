@@ -245,6 +245,10 @@ const CardGame = () => {
                 phase={phase}
                 isMyTurn={isMyTurn}
                 onLobbies={() => { dispatch(leaveSession()); navigate('/'); }}
+                onRules={() => navigate('/rules')}
+                onGallery={() => navigate('/gallery')}
+                onDeckBuilder={() => navigate('/deck-builder')}
+                onCreateCard={() => navigate('/card-creator')}
                 onProfileOpen={() => setShowProfile(true)}
                 onSignOut={() => dispatch(logout())}
                 onBriefToggle={() => { setShowBrief((v) => !v); setShowChat(false); }}

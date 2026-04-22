@@ -22,6 +22,10 @@ const Header = ({
     currentPlayerName,
     phase,
     onLobbies,
+    onRules,
+    onGallery,
+    onDeckBuilder,
+    onCreateCard,
     onBriefToggle,
     onChatToggle,
     onMessagesToggle,
@@ -38,8 +42,16 @@ const Header = ({
     turnStartedAt = null,
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [showNavDrawer, setShowNavDrawer] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
     const [brandPulse, setBrandPulse] = useState(1);
+
+    const closeDrawer = () => setShowNavDrawer(false);
+
+    const handleNavClick = (callback) => {
+        closeDrawer();
+        callback?.();
+    };
     const msg = phaseMessage(phase);
     const hasBriefOrChat = Boolean(onBriefToggle || onChatToggle);
     const hasTurnCardContent = Boolean(currentPlayerName || timeLeft !== null || msg);
@@ -88,6 +100,13 @@ const Header = ({
                 <span className="header-title header-title--clickable">Duel of Fools</span>
             </button>
             <div className="account-buttons-container">
+                <button
+                    className="header-nav-toggle"
+                    onClick={() => setShowNavDrawer((v) => !v)}
+                    title="Navigation"
+                >
+                    ☰
+                </button>
                 <div className="header-profile-wrap">
                     <button
                         className="header-profile-btn"
@@ -104,12 +123,6 @@ const Header = ({
                     </button>
                     {showProfileMenu && (
                         <div className="header-profile-dropdown">
-                            <button
-                                className="header-profile-dropdown-item"
-                                onClick={() => { setShowProfileMenu(false); onLobbies(); }}
-                            >
-                                🏠 Lobbies
-                            </button>
                             {onMessagesToggle && (
                                 <button
                                     className="header-profile-dropdown-item"
@@ -134,6 +147,42 @@ const Header = ({
                         </div>
                     )}
                 </div>
+            </div>
+            {showNavDrawer && <div className="header-nav-overlay" onClick={closeDrawer} />}
+            <div className={`header-nav-drawer${showNavDrawer ? ' open' : ''}`}>
+                <div className="header-nav-header">
+                    <h3>Navigation</h3>
+                    <button className="header-nav-close" onClick={closeDrawer}>✕</button>
+                </div>
+                <nav className="header-nav-list">
+                    <button className="header-nav-item" onClick={() => handleNavClick(onLobbies)}>
+                        🏠 Lobbies
+                    </button>
+                    <button className="header-nav-item" onClick={() => handleNavClick(onRules)}>
+                        📜 Rules
+                    </button>
+                    <button className="header-nav-item" onClick={() => handleNavClick(onGallery)}>
+                        📖 Gallery
+                    </button>
+                    <button className="header-nav-item" onClick={() => handleNavClick(onDeckBuilder)}>
+                        🃏 Deck Builder
+                    </button>
+                    <button className="header-nav-item" onClick={() => handleNavClick(onCreateCard)}>
+                        🧪 Create Card
+                    </button>
+                    <div className="header-nav-divider" />
+                    {onMessagesToggle && (
+                        <button className="header-nav-item" onClick={() => handleNavClick(() => onMessagesToggle(true))}>
+                            💬 Messages{hasUnreadMessages ? <span className="header-nav-badge" /> : null}
+                        </button>
+                    )}
+                    <button className="header-nav-item" onClick={() => handleNavClick(onProfileOpen)}>
+                        👤 Profile
+                    </button>
+                    <button className="header-nav-item header-nav-item--signout" onClick={() => handleNavClick(onSignOut)}>
+                        🚪 Sign Out
+                    </button>
+                </nav>
             </div>
             {showPlayerContainer && (
                 <div className="player-container">

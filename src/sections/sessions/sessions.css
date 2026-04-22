@@ -317,12 +317,6 @@
     margin-bottom: 0.75rem;
 }
 
-.sessions-secondary-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-}
-
 .sessions-action-btn {
     flex: 1;
     min-height: 42px;
@@ -390,8 +384,7 @@
         max-width: 82px;
     }
 
-    .sessions-actions,
-    .sessions-secondary-actions {
+    .sessions-actions {
         flex-direction: column;
         gap: 0.6rem;
     }

@@ -841,6 +841,10 @@ const Sessions = ({ initialModal } = {}) => {
         <div className="sessions-backdrop" style={sessionsBgStyle}>
             <Header
                 onLobbies={handleBack}
+                onRules={() => navigate('/rules')}
+                onGallery={() => navigate('/gallery')}
+                onDeckBuilder={() => navigate('/deck-builder')}
+                onCreateCard={() => navigate('/card-creator')}
                 displayName={displayName}
                 avatarUrl={avatarUrl}
                 username={username}
@@ -1021,20 +1025,6 @@ const Sessions = ({ initialModal } = {}) => {
                 </button>
                 <button className="sessions-action-btn" onClick={handleOpenJoin}>
                     Join by Code
-                </button>
-            </div>
-            <div className="sessions-secondary-actions">
-                <button className="sessions-action-btn" onClick={() => navigate('/rules')}>
-                    📜 Rules
-                </button>
-                <button className="sessions-action-btn" onClick={() => navigate('/gallery')}>
-                    📖 Gallery
-                </button>
-                <button className="sessions-action-btn" onClick={() => navigate('/deck-builder')}>
-                    🃏 Deck Builder
-                </button>
-                <button className="sessions-action-btn" onClick={() => navigate('/card-creator')}>
-                    🧪 Create Cards
                 </button>
             </div>
 
