@@ -10,7 +10,7 @@
 /* Dark overlay so text stays readable over any background image */
 .auth-backdrop::before {
     content: '';
-    position: fixed;
+    position: absolute;
     inset: 0;
     background: rgba(8, 8, 18, 0.55);
     pointer-events: none;

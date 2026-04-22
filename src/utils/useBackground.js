@@ -23,8 +23,8 @@ const useBackground = (group) => {
         return {
             backgroundImage: `url(${BACKGROUND_BASE}${name})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundAttachment: 'fixed',
+            backgroundPosition: 'center center',
+            backgroundAttachment: 'scroll',
             backgroundRepeat: 'no-repeat',
         };
     }, []); // intentionally empty — pick once on mount
