@@ -338,7 +338,7 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                                     <option value={86400}>24 Hours</option>
                                 </select>
                             </label>
-                            <label className="lobby-setting-label">
+                            <label className="lobby-setting-label" style={{ gridColumn: 'span 2' }}>
                                 Minigame Difficulty
                                 <select
                                     className="lobby-setting-input"
