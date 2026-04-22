@@ -466,7 +466,11 @@
     gap: 0.75rem;
 }
 
+
 .sessions-empty {
+    background: linear-gradient(135deg, #181b2b 60%, #23243a 100%);
+    border: 1px solid #23243a;
+    border-radius: 20px;
     color: #5a607a;
     text-align: center;
     padding: 2rem 0;
