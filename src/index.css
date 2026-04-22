@@ -11,3 +11,25 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* ── Global custom scrollbar ─────────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a4268 #0f1117;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0f1117;
+  border-radius: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #3a4268;
+  border-radius: 8px;
+  border: 1px solid #0f1117;
+}
