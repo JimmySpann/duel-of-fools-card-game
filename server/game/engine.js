@@ -827,26 +827,30 @@ const computeCpuTurn = (state) => {
                 }
                 // allEnemies needs no target index
             } else if (abilityTarget === ABILITY_TARGETS.ALLY_CARD || abilityTarget === ABILITY_TARGETS.ALL_ALLIES) {
-                const allyCards = getCpuWs().inPlay.filter((c) => !c.dying);
-                if (abilityTarget === ABILITY_TARGETS.ALLY_CARD && allyCards.length > 0) {
-                    let chosenAlly;
+                // getAllies returns [self] in FFA, all teammates in teams mode
+                const allyPlayers = getAllies(s, cpuId);
+                const allyCardPool = allyPlayers.flatMap((ap) =>
+                    ap.inPlay.filter((c) => !c.dying).map((c) => ({ card: c, player: ap }))
+                );
+                if (abilityTarget === ABILITY_TARGETS.ALLY_CARD && allyCardPool.length > 0) {
+                    let chosen;
                     if (useScoring) {
                         let best = -Infinity;
-                        for (const ac of allyCards) {
+                        for (const { card: ac, player: ap } of allyCardPool) {
                             let score = 1;
                             if (ac.currentHealth / ac.health > 0.8) score -= 4;
                             if (hasStatus(ac, 'burned') || hasStatus(ac, 'poisoned') || hasStatus(ac, 'bleeding')) score += 5;
                             if (hasStatus(ac, 'frozen')) score += 6;
                             if (ac.currentHealth / ac.health < 0.25) score += 10;
                             else if (ac.currentHealth / ac.health < 0.3) score += 6;
-                            if (score > best) { best = score; chosenAlly = ac; }
+                            if (score > best) { best = score; chosen = { card: ac, player: ap }; }
                         }
                     } else {
-                        chosenAlly = allyCards[Math.floor(Math.random() * allyCards.length)];
+                        chosen = allyCardPool[Math.floor(Math.random() * allyCardPool.length)];
                     }
-                    if (chosenAlly) {
-                        targetPlayerId = cpuId;
-                        targetCardIndex = getCpuWs().inPlay.indexOf(chosenAlly);
+                    if (chosen) {
+                        targetPlayerId = chosen.player.id;
+                        targetCardIndex = chosen.player.inPlay.indexOf(chosen.card);
                     }
                 }
             }

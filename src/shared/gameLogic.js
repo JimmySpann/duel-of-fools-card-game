@@ -542,9 +542,12 @@ const executeAbility = (state, casterPlayerId, casterCardIdx, abilityIdx, target
             applySingleEffect(effect, caster, casterPlayer, casterCardIdx, t, ep, targetCardIdx, state, ability.name);
 
         } else if (targetType === 'allyCard') {
-            const t = casterPlayer.inPlay[targetCardIdx];
+            const allyPlayer = targetPlayerId
+                ? state.players.find((p) => p.id === targetPlayerId)
+                : casterPlayer;
+            const t = allyPlayer?.inPlay[targetCardIdx];
             if (!t) continue;
-            applySingleEffect(effect, caster, casterPlayer, casterCardIdx, t, casterPlayer, targetCardIdx, state, ability.name);
+            applySingleEffect(effect, caster, casterPlayer, casterCardIdx, t, allyPlayer, targetCardIdx, state, ability.name);
 
         } else if (targetType === 'allEnemies') {
             if (effect.type === 'damage' && effect.randomTarget) {

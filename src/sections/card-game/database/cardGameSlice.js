@@ -146,9 +146,9 @@ export const cardGameSlice = createSlice({
 
     resolveOnAllyCard: (state, action) => {
       if (state.phase !== 'selectingAllyTarget' || state.gameOver) return;
-      const { targetCardIndex } = action.payload;
+      const { targetCardIndex, targetPlayerId = null } = action.payload;
       const { casterCardIndex, abilityIndex } = state.pendingAction;
-      executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, targetCardIndex);
+      executeAbility(state, state.currentTurn, casterCardIndex, abilityIndex, targetCardIndex, targetPlayerId);
       state.pendingAction = null;
       state.phase = 'main';
     },

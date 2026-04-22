@@ -3,16 +3,18 @@ import { useDispatch } from 'react-redux';
 import BattlerBoard from '../../battler-board/battler-board.jsx';
 import PlayerHUD from '../../player-hud/player-hud.jsx';
 import SelectedCard from '../../selected-card/selected-card.jsx';
-import { resolveOnEnemyCard, attackPlayer } from '../../../database/cardGameSlice';
+import { resolveOnEnemyCard, attackPlayer, resolveOnAllyCard } from '../../../database/cardGameSlice';
 
-const EnemyLayout = ({ player, isTargetable, isActiveTurn }) => {
+const EnemyLayout = ({ player, isTargetable, isAllyTargetable = false, isActiveTurn }) => {
     const dispatch = useDispatch();
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
 
     const hasNoBattlers = player.inPlay.filter((c) => !c.dying).length === 0;
 
     const onCardClick = (index) => {
-        if (isTargetable) {
+        if (isAllyTargetable) {
+            dispatch(resolveOnAllyCard({ targetCardIndex: index, targetPlayerId: player.id }));
+        } else if (isTargetable) {
             dispatch(resolveOnEnemyCard({ targetCardIndex: index, targetPlayerId: player.id }));
         } else {
             document.body.style.overflow = 'hidden';
@@ -41,12 +43,12 @@ const EnemyLayout = ({ player, isTargetable, isActiveTurn }) => {
                 <BattlerBoard
                     cards={player.inPlay}
                     onCardClick={onCardClick}
-                    highlight={isTargetable}
+                    highlight={isTargetable ? true : isAllyTargetable ? 'ally' : false}
                     playerId={player.id}
                     showExhausted={isActiveTurn}
                 />
             )}
-            {selectedCardIndex !== null && !isTargetable && (
+            {selectedCardIndex !== null && !isTargetable && !isAllyTargetable && (
                 <SelectedCard
                     card={player.inPlay[selectedCardIndex]}
                     onCloseClick={handleSelectionCardClose}

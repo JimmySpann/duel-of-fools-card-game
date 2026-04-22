@@ -18,7 +18,7 @@ const UserLayout = ({ player, phase, onEndTurn, onCancelSelection, onForfeit, di
         if (phase === 'selectingTarget') return;
         // In ally-targeting phase, clicking own card selects it as target
         if (phase === 'selectingAllyTarget') {
-            dispatch(resolveOnAllyCard({ targetCardIndex: index }));
+            dispatch(resolveOnAllyCard({ targetCardIndex: index, targetPlayerId: player.id }));
             return;
         }
         document.body.style.overflow = 'hidden';

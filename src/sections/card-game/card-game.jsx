@@ -85,6 +85,14 @@ const CardGame = () => {
     // All players other than me, excluding eliminated players
     const opponents = gamePlayers.filter((p) => p.id !== myPlayer?.id && !p.eliminated);
 
+    // In teams mode, split into teammates (same team) and enemies (different/no team)
+    const myTeam = myPlayer?.team ?? null;
+    const isTeamsMode = gameSettings?.teamMode === 'teams';
+    const teammates = isTeamsMode && myTeam
+        ? opponents.filter((p) => p.team === myTeam)
+        : [];
+    const enemies = opponents.filter((p) => !isTeamsMode || !myTeam || p.team !== myTeam);
+
     // Actions are only allowed when it is this client's turn
     const isMyTurn = !isOnline || currentTurn === myPlayerId;
 
@@ -248,11 +256,21 @@ const CardGame = () => {
                 </button>
             )}
             <div className={`opponents-area opponents-${opponents.length}`}>
-                {opponents.map((opp) => (
+                {teammates.map((tm) => (
+                    <EnemyLayout
+                        key={tm.id}
+                        player={tm}
+                        isTargetable={false}
+                        isAllyTargetable={isMyTurn && phase === 'selectingAllyTarget'}
+                        isActiveTurn={currentTurn === tm.id}
+                    />
+                ))}
+                {enemies.map((opp) => (
                     <EnemyLayout
                         key={opp.id}
                         player={opp}
                         isTargetable={isMyTurn && phase === 'selectingTarget'}
+                        isAllyTargetable={false}
                         isActiveTurn={currentTurn === opp.id}
                     />
                 ))}
