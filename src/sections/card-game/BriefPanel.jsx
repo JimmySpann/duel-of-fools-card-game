@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import RulesView from '../shared/rules/RulesView';
 import RulesModal from '../shared/rules/RulesModal';
+import { TEAM_CONFIG } from '../../shared/teamConfig';
 
 const BriefPanel = ({ onClose, gamePlayers, myPlayerId, isOnline }) => {
     const { log, currentTurn } = useSelector((s) => s.cardGame);
@@ -101,6 +102,25 @@ const BriefPanel = ({ onClose, gamePlayers, myPlayerId, isOnline }) => {
                                                         {isCurrent ? '▶ ' : ''}{p.name}
                                                         {p.id === myPlayerId && isOnline ? ' (You)' : ''}
                                                     </span>
+                                                    {p.team && TEAM_CONFIG[p.team] && (
+                                                        <span
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '3px',
+                                                                fontSize: '0.72rem',
+                                                                fontWeight: 700,
+                                                                color: '#fff',
+                                                                background: TEAM_CONFIG[p.team].color,
+                                                                borderRadius: '999px',
+                                                                padding: '1px 7px',
+                                                                marginLeft: '6px',
+                                                                flexShrink: 0,
+                                                            }}
+                                                        >
+                                                            {TEAM_CONFIG[p.team].symbol} {TEAM_CONFIG[p.team].label}
+                                                        </span>
+                                                    )}
                                                     <span className="game-panel-player-hp">{+p.health.toFixed(1)} / {+p.maxHealth.toFixed(1)} HP</span>
                                                 </div>
                                                 <div className="game-panel-hp-bar">

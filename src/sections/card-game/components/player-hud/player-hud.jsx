@@ -1,5 +1,6 @@
 import './player-hud.css';
 import { getElementIcon } from '../../utils/elementIcons';
+import { TEAM_CONFIG } from '../../../../shared/teamConfig';
 
 
 const PlayerHUD = ({ player, isCurrentUser }) => {
@@ -69,6 +70,15 @@ const PlayerHUD = ({ player, isCurrentUser }) => {
                             onError={(e) => { e.currentTarget.src = fallbackAvatar; }}
                         />
                         <div className="name">{player.name} {isCurrentUser ? '(You)' : ''}</div>
+                        {player.team && TEAM_CONFIG[player.team] && (
+                            <div
+                                className="hud-team-badge"
+                                style={{ background: TEAM_CONFIG[player.team].color }}
+                                title={TEAM_CONFIG[player.team].label}
+                            >
+                                {TEAM_CONFIG[player.team].symbol}
+                            </div>
+                        )}
                         <div className="battler-count" title="Battlers in play">⚔ {player.inPlay?.length ?? 0}</div>
                     </div>
 

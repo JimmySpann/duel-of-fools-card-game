@@ -127,7 +127,7 @@ const createInitialState = (playerConfigs, settings = {}) => {
 const checkWinCondition = (state) => {
     if (state.settings?.teamMode === 'teams') {
         const aliveTeams = new Set(
-            state.players.filter((p) => !p.eliminated && p.health > 0).map((p) => p.team)
+            state.players.filter((p) => !p.eliminated && p.health > 0 && p.team !== null).map((p) => p.team)
         );
         if (aliveTeams.size === 1) {
             const team = [...aliveTeams][0];

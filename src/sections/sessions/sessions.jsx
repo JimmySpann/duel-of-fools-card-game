@@ -14,6 +14,7 @@ import {
     removeCpu,
     setCpuDeck,
     setCpuSkill,
+    setCpuTeam,
     leaveSession,
     leaveSessionLobby,
     deleteSession,
@@ -23,6 +24,7 @@ import {
 } from '../../features/sessions/sessionsSlice';
 import { logout } from '../../features/auth/authSlice';
 import { setGameState } from '../card-game/database/cardGameSlice';
+import { TEAM_CONFIG } from '../../shared/teamConfig';
 import LobbyChat from '../../features/chat/LobbyChat';
 import DMPanel from '../../features/chat/DMPanel';
 import Profile from '../../features/profile/Profile';
@@ -38,7 +40,6 @@ import Welcome from './Welcome.jsx';
 
 const POLL_INTERVAL = 3000;
 const SLOTS = ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'];
-const TEAM_COLORS = { A: '#e74c3c', B: '#3498db', C: '#2ecc71' };
 const CPU_SKILL_LABELS = ['', 'Easy', 'Normal', 'Hard', 'Very Hard', 'Insane'];
 
 const statusLabel = (status) => {
@@ -379,6 +380,19 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                                             onClick={() => dispatch(removeCpu({ sessionId: session._id, slot }))}
                                             title="Remove CPU"
                                         >✕</button>
+                                        {teamMode === 'teams' && (
+                                            <select
+                                                className="lobby-team-select"
+                                                value={cpu.team || ''}
+                                                onChange={(e) => dispatch(setCpuTeam({ sessionId: session._id, slot, team: e.target.value || null }))}
+                                                style={{ borderColor: cpu.team ? TEAM_CONFIG[cpu.team].color : undefined }}
+                                            >
+                                                <option value="">No Team</option>
+                                                <option value="A">{TEAM_CONFIG.A.symbol} Team A</option>
+                                                <option value="B">{TEAM_CONFIG.B.symbol} Team B</option>
+                                                <option value="C">{TEAM_CONFIG.C.symbol} Team C</option>
+                                            </select>
+                                        )}
                                     </div>
                                 )}
                                 {/* Add CPU button in the first empty slot if host, not full, and not loading */}
@@ -397,19 +411,19 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                                             className="lobby-team-select"
                                             value={player.team || ''}
                                             onChange={(e) => handleTeamChange(slot, e.target.value || null)}
-                                            style={{ borderColor: player.team ? TEAM_COLORS[player.team] : undefined }}
+                                            style={{ borderColor: player.team ? TEAM_CONFIG[player.team].color : undefined }}
                                         >
                                             <option value="">No Team</option>
-                                            <option value="A">Team A</option>
-                                            <option value="B">Team B</option>
-                                            <option value="C">Team C</option>
+                                            <option value="A">{TEAM_CONFIG.A.symbol} Team A</option>
+                                            <option value="B">{TEAM_CONFIG.B.symbol} Team B</option>
+                                            <option value="C">{TEAM_CONFIG.C.symbol} Team C</option>
                                         </select>
                                     ) : (
                                         <span
                                             className="lobby-team-badge"
-                                            style={{ background: player.team ? TEAM_COLORS[player.team] : '#555' }}
+                                            style={{ background: player.team ? TEAM_CONFIG[player.team].color : '#555' }}
                                         >
-                                            {player.team ? `Team ${player.team}` : '—'}
+                                            {player.team ? `${TEAM_CONFIG[player.team].symbol} Team ${player.team}` : '—'}
                                         </span>
                                     )
                                 )}

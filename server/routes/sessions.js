@@ -217,7 +217,7 @@ module.exports = (gameActions) => {
                 })),
                 ...(session.cpuSlots || []).map((c) => ({
                     name: c.name,
-                    team: null,
+                    team: c.team ?? null,
                     slot: c.slot,
                     isBot: true,
                     cpuSkill: c.cpuSkill ?? 2,
@@ -515,6 +515,32 @@ module.exports = (gameActions) => {
         } catch (err) {
             console.error('PATCH /api/sessions/:id/cpu/:slot/deck error:', err);
             res.status(500).json({ error: 'Failed to set CPU deck' });
+        }
+    });
+
+    /**
+     * PATCH /api/sessions/:id/cpu/:slot/team
+     */
+    router.patch('/:id/cpu/:slot/team', requireAuth, async (req, res) => {
+        try {
+            const session = await Session.findById(req.params.id);
+            if (!session) return res.status(404).json({ error: 'Session not found' });
+            if (String(session.host.userId) !== req.user.id) return res.status(403).json({ error: 'Only the host can assign CPU teams' });
+            if (session.status !== 'waiting') return res.status(409).json({ error: 'Cannot change teams after game starts' });
+
+            const cpu = (session.cpuSlots || []).find((c) => c.slot === req.params.slot);
+            if (!cpu) return res.status(404).json({ error: 'CPU slot not found' });
+
+            const { team } = req.body;
+            if (team !== null && !['A', 'B', 'C'].includes(team)) return res.status(400).json({ error: 'Team must be A, B, C, or null' });
+            cpu.team = team;
+            session.markModified('cpuSlots');
+            await session.save();
+
+            res.json({ session });
+        } catch (err) {
+            console.error('PATCH /api/sessions/:id/cpu/:slot/team error:', err);
+            res.status(500).json({ error: 'Failed to set CPU team' });
         }
     });
 

@@ -160,6 +160,18 @@ export const setCpuSkill = createAsyncThunk('sessions/setCpuSkill', async ({ ses
     return data.session;
 });
 
+export const setCpuTeam = createAsyncThunk('sessions/setCpuTeam', async ({ sessionId, slot, team }, { getState, rejectWithValue }) => {
+    const token = getState().auth.token;
+    const res = await fetch(`${API}/${sessionId}/cpu/${slot}/team`, {
+        method: 'PATCH',
+        headers: authHeader(token),
+        body: JSON.stringify({ team }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.error);
+    return data.session;
+});
+
 export const leaveSessionLobby = createAsyncThunk('sessions/leaveLobby', async ({ sessionId }, { getState, rejectWithValue }) => {
     const token = getState().auth.token;
     const res = await fetch(`${API}/${sessionId}/leave`, {
@@ -328,6 +340,13 @@ const sessionsSlice = createSlice({
                 if (idx >= 0) state.list[idx] = action.payload;
             })
             .addCase(setCpuSkill.rejected, (state, action) => { state.error = action.payload; })
+
+            .addCase(setCpuTeam.fulfilled, (state, action) => {
+                state.activeSession = action.payload;
+                const idx = state.list.findIndex((s) => s._id === action.payload._id);
+                if (idx >= 0) state.list[idx] = action.payload;
+            })
+            .addCase(setCpuTeam.rejected, (state, action) => { state.error = action.payload; })
 
             .addCase(joinSessionById.pending, (state) => { state.loading = true; state.error = null; })
             .addCase(joinSessionById.fulfilled, (state, action) => {
