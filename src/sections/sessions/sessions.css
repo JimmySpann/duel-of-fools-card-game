@@ -443,9 +443,8 @@
 }
 
 .sessions-tab.active {
-    background: #2a6fdb;
-    color: #fff;
-    border-color: #2a6fdb;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    border-color: #7c3aed;
 }
 
 .sessions-tab:not(.active):hover {
