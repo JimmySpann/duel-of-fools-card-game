@@ -17,8 +17,8 @@
     z-index: 0;
 }
 
-/* Keep all content above the overlay */
-.auth-backdrop>* {
+/* Keep all content above the overlay — exclude any fixed-position modals */
+.auth-backdrop>*:not(.profile-overlay):not(.dm-container):not(.dm-container--modal) {
     position: relative;
     z-index: 1;
 }

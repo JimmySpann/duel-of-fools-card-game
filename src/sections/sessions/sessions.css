@@ -55,8 +55,8 @@
     z-index: 0;
 }
 
-/* Keep all content above the overlay */
-.sessions-backdrop>* {
+/* Keep all content above the overlay — exclude modals that are fixed themselves */
+.sessions-backdrop>*:not(.profile-overlay):not(.dm-container):not(.dm-container--modal):not(.custom-card-overlay):not(.rules-overlay):not(.gallery-overlay):not(.deck-builder-overlay) {
     position: relative;
     z-index: 1;
 }
