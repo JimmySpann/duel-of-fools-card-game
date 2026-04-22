@@ -625,7 +625,7 @@ const fmtCountdown = (ms) => {
     return `${s}s`;
 };
 
-const SessionCard = ({ session, isParticipant, openSlots, isMyTurn, currentTurnName, sessionUnread, onEnter, onPreview, dispatch }) => {
+const SessionCard = ({ session, isParticipant, isHost, openSlots, isMyTurn, currentTurnName, sessionUnread, loading, onEnter, onPreview, onQuit, onDelete }) => {
     const timeLeft = useTurnCountdown(session.turnStartedAt, session.settings?.turnTimeLimit);
     const countdown = fmtCountdown(timeLeft);
     const urgent = timeLeft !== null && timeLeft > 0 && timeLeft <= 300000; // last 5 min
@@ -667,20 +667,40 @@ const SessionCard = ({ session, isParticipant, openSlots, isMyTurn, currentTurnN
             {session.status === 'waiting' && (
                 <div className="session-card-code">Code: <strong>{session.joinCode}</strong></div>
             )}
-            <button
-                className="session-card-btn"
-                onClick={() => {
-                    if (isParticipant || session.status !== 'waiting') {
-                        onEnter(session);
-                    } else {
-                        onPreview(session);
-                    }
-                }}
-            >
-                {isParticipant
-                    ? session.status === 'in-progress' ? 'Rejoin' : 'Open Lobby'
-                    : 'View'}
-            </button>
+            <div className="session-card-actions">
+                <button
+                    className="session-card-btn"
+                    onClick={() => {
+                        if (isParticipant || session.status !== 'waiting') {
+                            onEnter(session);
+                        } else {
+                            onPreview(session);
+                        }
+                    }}
+                >
+                    {isParticipant
+                        ? session.status === 'in-progress' ? 'Rejoin' : 'Open Lobby'
+                        : 'View'}
+                </button>
+                {isParticipant && session.status === 'waiting' && (
+                    <button
+                        className="session-card-btn session-card-btn--danger"
+                        onClick={() => onQuit(session)}
+                        disabled={loading}
+                    >
+                        Quit
+                    </button>
+                )}
+                {isHost && session.status === 'waiting' && (
+                    <button
+                        className="session-card-btn session-card-btn--danger"
+                        onClick={() => onDelete(session)}
+                        disabled={loading}
+                    >
+                        Delete
+                    </button>
+                )}
+            </div>
         </div>
     );
 };
@@ -767,6 +787,23 @@ const Sessions = ({ initialModal } = {}) => {
             navigate(`/game/${session._id}`);
         },
         [dispatch, navigate]
+    );
+
+    const handleQuitSessionFromList = useCallback(
+        (session) => {
+            if (session.status !== 'waiting') return;
+            dispatch(leaveSessionLobby({ sessionId: session._id }));
+        },
+        [dispatch]
+    );
+
+    const handleDeleteSessionFromList = useCallback(
+        (session) => {
+            if (session.status !== 'waiting') return;
+            if (!window.confirm(`Delete session "${session.name}"?`)) return;
+            dispatch(deleteSession({ sessionId: session._id }));
+        },
+        [dispatch]
     );
 
     const handleBack = useCallback(() => {
@@ -1035,6 +1072,7 @@ const Sessions = ({ initialModal } = {}) => {
                         : s.status === 'waiting' && !s.players.some((p) => p.username === username)
                     ).map((session) => {
                         const isParticipant = session.players.some((p) => p.username === username);
+                        const isHost = session.host?.username === username;
                         const openSlots = 6 - session.players.length;
                         const mySlot = session.players.find((p) => p.username === username)?.slot;
                         const isMyTurn = session.status === 'in-progress' && mySlot != null && session.currentTurn === mySlot;
@@ -1047,13 +1085,16 @@ const Sessions = ({ initialModal } = {}) => {
                                 key={session._id}
                                 session={session}
                                 isParticipant={isParticipant}
+                                isHost={isHost}
                                 openSlots={openSlots}
                                 isMyTurn={isMyTurn}
                                 currentTurnName={currentTurnName}
                                 sessionUnread={sessionUnread}
+                                loading={loading}
                                 onEnter={handleEnterSession}
                                 onPreview={(s) => { dispatch(clearSessionError()); setPreviewSession(s); setView('preview'); }}
-                                dispatch={dispatch}
+                                onQuit={handleQuitSessionFromList}
+                                onDelete={handleDeleteSessionFromList}
                             />
                         );
                     })}
