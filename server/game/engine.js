@@ -1051,5 +1051,5 @@ const computeCpuTurn = (state) => {
     return { state: s, cpuMicroevent: null };
 };
 
-module.exports = { createGame, dispatch, computeCpuTurn, cpuAutoResolve, ABILITY_TARGETS, getAbilityTarget };
+module.exports = { createGame, dispatch, computeCpuTurn, cpuAutoResolve, ABILITY_TARGETS, ABILITY_DEFS, getAbilityTarget };
 

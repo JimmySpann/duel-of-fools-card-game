@@ -13,7 +13,7 @@ const {
     buildActionsFromPayload,
     validateCustomCardPayload,
 } = require('../helpers');
-const { ABILITY_TARGETS } = require('../game/engine');
+const { ABILITY_TARGETS, ABILITY_DEFS } = require('../game/engine');
 const Card = require('../models/Card');
 
 const router = express.Router();
@@ -50,20 +50,23 @@ router.get('/', requireAuth, async (req, res) => {
  */
 router.get('/ability-options', requireAuth, async (_req, res) => {
     try {
-        const official = Array.from(abilityCatalog.values()).map((a) => ({
-            name: a.name,
-            actionInfo: a.actionInfo,
-            description: a.description,
-            type: a.type,
-            limit: a.limit,
-            microeventType: a.microevent?.type || null,
-            microevent: a.microevent || null,
-            target: ABILITY_TARGETS[a.name] || 'enemyCard',
-            isCustom: false,
-            createdBy: 'system',
-            effectTypes: [],
-            customConfig: null,
-        }));
+        const official = Array.from(abilityCatalog.values()).map((a) => {
+            const def = ABILITY_DEFS[a.name] || null;
+            return {
+                name: a.name,
+                actionInfo: a.actionInfo,
+                description: a.description,
+                type: a.type,
+                limit: a.limit,
+                microeventType: a.microevent?.type || null,
+                microevent: a.microevent || null,
+                target: ABILITY_TARGETS[a.name] || 'enemyCard',
+                isCustom: false,
+                createdBy: 'system',
+                effectTypes: def ? def.effects.map((e) => e.type) : [],
+                customConfig: def ? { targetType: def.targetType, effects: def.effects.map((e) => ({ ...e })) } : null,
+            };
+        });
 
         const sourceCards = await Card.find({ visibility: 'public' }).select('createdBy actions').limit(300).lean();
         const seen = new Set();

@@ -1474,73 +1474,153 @@ const CustomCardModal = ({ onClose }) => {
                                         const isExpanded = expandedSavedAbility === sa.name;
                                         const isEditing = editingSavedName === sa.name;
 
-                                        // ── Official saved ability: flat row (unchanged) ──
+                                        // ── Official saved ability: accordion with full editor ──
+                                        const saEffects = sa.customConfig?.effects;
+                                        const saIsConverted = !!(saEffects && saEffects.length > 0);
+                                        // For power display: use customConfig if present, else zero
+                                        const saOfficialPower = saIsConverted
+                                            ? estimateCustomAbilityPower({
+                                                ...sa.customConfig,
+                                                limit: sa.limit ?? 2,
+                                                microevent: sa.microevent ?? null,
+                                            })
+                                            : 0;
+
                                         if (!sa.customConfig) {
                                             return (
-                                                <div key={sa.name} className={`custom-card-saved-ability${isApplied ? ' applied' : ''}`}>
-                                                    <div className="custom-card-saved-ability-info">
-                                                        <span>{sa.name}</span>
-                                                        <small>{sa.actionInfo || sa.description || ''} · official</small>
-                                                    </div>
-                                                    <div className="custom-card-saved-ability-actions">
-                                                        <button
-                                                            type="button"
-                                                            className="custom-card-row-btn"
-                                                            onClick={() => applyFromSaved(sa)}
-                                                            title="Toggle this official ability on your card"
-                                                        >Apply</button>
-                                                        <button
-                                                            type="button"
-                                                            className="custom-card-row-btn"
-                                                            onClick={() => {
-                                                                setEditingSavedName(sa.name);
-                                                                setEditingSavedData({
-                                                                    name: sa.name,
-                                                                    description: sa.description || sa.actionInfo || '',
-                                                                    targetType: 'enemyCard',
-                                                                    limit: sa.limit ?? 2,
-                                                                    effects: [createDamageEffect()],
-                                                                    microevent: sa.microevent || null,
-                                                                });
-                                                            }}
-                                                            title="Edit ability name/description"
-                                                        >Edit</button>
-                                                        <button
-                                                            type="button"
-                                                            className="custom-card-row-btn"
-                                                            disabled={savingAbility === sa.name}
-                                                            onClick={() => forkSavedAbility(sa)}
-                                                            title="Duplicate this ability in My Abilities"
-                                                        >Fork</button>
-                                                        <button
-                                                            type="button"
-                                                            className="custom-card-row-btn danger"
-                                                            onClick={() => removeAbility(sa.name)}
-                                                            title="Remove from My Abilities"
-                                                        >Delete</button>
-                                                    </div>
-                                                    {isEditing && (
-                                                        <div className="custom-card-saved-ability-edit" style={{ width: '100%', marginTop: '0.35rem' }}>
-                                                            <input
-                                                                className="custom-card-input"
-                                                                value={editingSavedData.name}
-                                                                onChange={(e) => setEditingSavedData((d) => ({ ...d, name: e.target.value }))}
-                                                                maxLength={60}
-                                                                placeholder="Ability name"
-                                                            />
-                                                            <input
-                                                                className="custom-card-input"
-                                                                value={editingSavedData.description}
-                                                                onChange={(e) => setEditingSavedData((d) => ({ ...d, description: e.target.value }))}
-                                                                maxLength={120}
-                                                                placeholder="Short description"
-                                                            />
-                                                            <div className="custom-card-saved-ability-actions">
-                                                                <button type="button" className="custom-card-row-btn" disabled={savingAbility === sa.name} onClick={() => {
-                                                                    updateSavedAbility(sa.name, { name: editingSavedData.name.trim(), description: editingSavedData.description });
-                                                                }}>Save</button>
-                                                                <button type="button" className="custom-card-row-btn" onClick={() => setEditingSavedName(null)}>Cancel</button>
-                                                            </div>
+                                                <div key={sa.name} className={`custom-card-saved-ability accordion${isApplied ? ' applied' : ''}`}>
+                                                    <button
+                                                        type="button"
+                                                        className="custom-card-saved-ability-accordion-header"
+                                                        onClick={() => setExpandedSavedAbility(isExpanded ? null : sa.name)}
+                                                        aria-expanded={isExpanded}
+                                                    >
+                                                        <span className="custom-card-saved-ability-chevron">{isExpanded ? '▾' : '▸'}</span>
+                                                        <span className="custom-card-saved-ability-accordion-name">{sa.name}</span>
+                                                        {isApplied && <span className="custom-card-saved-ability-applied-dot" title="Applied to card" />}
+                                                        <span className="custom-card-saved-ability-power-badge">official</span>
+                                                    </button>
+                                                    {isExpanded && (
+                                                        <div className="custom-card-saved-ability-body">
+                                                            {isEditing ? (
+                                                                <>
+                                                                    <input
+                                                                        className="custom-card-input"
+                                                                        value={editingSavedData.name}
+                                                                        onChange={(e) => setEditingSavedData((d) => ({ ...d, name: e.target.value }))}
+                                                                        maxLength={60}
+                                                                        placeholder="Ability name"
+                                                                    />
+                                                                    <input
+                                                                        className="custom-card-input"
+                                                                        value={editingSavedData.description}
+                                                                        onChange={(e) => setEditingSavedData((d) => ({ ...d, description: e.target.value }))}
+                                                                        maxLength={120}
+                                                                        placeholder="Short description"
+                                                                    />
+                                                                    <CustomAbilityEditor
+                                                                        ability={{
+                                                                            name: editingSavedData.name,
+                                                                            targetType: editingSavedData.targetType,
+                                                                            limit: editingSavedData.limit,
+                                                                            effects: editingSavedData.effects,
+                                                                            microevent: editingSavedData.microevent,
+                                                                        }}
+                                                                        onUpdate={(patch) => setEditingSavedData((d) => ({ ...d, ...patch }))}
+                                                                        onUpdateEffect={(ei, patch) => setEditingSavedData((d) => ({
+                                                                            ...d,
+                                                                            effects: d.effects.map((e, i) => i === ei ? { ...e, ...patch } : e),
+                                                                        }))}
+                                                                        onSetEffectType={(ei, type) => setEditingSavedData((d) => ({
+                                                                            ...d,
+                                                                            effects: d.effects.map((e, i) => {
+                                                                                if (i !== ei) return e;
+                                                                                if (type === 'damage') return { type: 'damage', multiplier: 1 };
+                                                                                if (type === 'status') return { type: 'status', status: 'burned', value: 1, duration: 2 };
+                                                                                if (type === 'heal' || type === 'healSelf') return { type, amount: 3 };
+                                                                                if (type === 'cleanse') return { type: 'cleanse', debuffs: ['burned'] };
+                                                                                if (type === 'resetCooldowns') return { type: 'resetCooldowns' };
+                                                                                if (type === 'selfDestruct') return { type: 'selfDestruct' };
+                                                                                return { type: 'damage', multiplier: 1 };
+                                                                            }),
+                                                                        }))}
+                                                                        onAddEffect={() => setEditingSavedData((d) => ({
+                                                                            ...d,
+                                                                            effects: d.effects.length < 3 ? [...d.effects, createDamageEffect()] : d.effects,
+                                                                        }))}
+                                                                        onRemoveEffect={(ei) => setEditingSavedData((d) => {
+                                                                            const next = d.effects.filter((_, i) => i !== ei);
+                                                                            return { ...d, effects: next.length ? next : [createDamageEffect()] };
+                                                                        })}
+                                                                        onToggleDebuff={(ei, debuff) => setEditingSavedData((d) => ({
+                                                                            ...d,
+                                                                            effects: d.effects.map((e, i) => {
+                                                                                if (i !== ei || e.type !== 'cleanse') return e;
+                                                                                const cur = new Set(Array.isArray(e.debuffs) ? e.debuffs : []);
+                                                                                if (cur.has(debuff)) cur.delete(debuff); else cur.add(debuff);
+                                                                                return { ...e, debuffs: [...cur] };
+                                                                            }),
+                                                                        }))}
+                                                                    />
+                                                                    <div className="custom-card-saved-ability-actions">
+                                                                        <button type="button" className="custom-card-row-btn" disabled={savingAbility === sa.name} onClick={() => {
+                                                                            updateSavedAbility(sa.name, {
+                                                                                name: editingSavedData.name.trim(),
+                                                                                description: editingSavedData.description,
+                                                                                customConfig: { targetType: editingSavedData.targetType, effects: editingSavedData.effects },
+                                                                                limit: editingSavedData.limit,
+                                                                                microevent: editingSavedData.microevent,
+                                                                            });
+                                                                        }}>Save as Custom</button>
+                                                                        <button type="button" className="custom-card-row-btn" onClick={() => setEditingSavedName(null)}>Cancel</button>
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <p className="custom-card-saved-ability-desc">{sa.actionInfo || sa.description || ''}</p>
+                                                                    <div className="custom-card-saved-ability-actions">
+                                                                        <button
+                                                                            type="button"
+                                                                            className="custom-card-row-btn"
+                                                                            onClick={() => applyFromSaved(sa)}
+                                                                            title="Toggle this official ability on your card"
+                                                                        >Apply</button>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="custom-card-row-btn"
+                                                                            onClick={() => {
+                                                                                // Seed the editor from the official ability's ABILITY_DEFS effects
+                                                                                const officialDef = abilities.find((a) => a.name === sa.name);
+                                                                                setEditingSavedName(sa.name);
+                                                                                setEditingSavedData({
+                                                                                    name: sa.name,
+                                                                                    description: sa.description || sa.actionInfo || '',
+                                                                                    targetType: officialDef?.customConfig?.targetType || 'enemyCard',
+                                                                                    limit: sa.limit ?? 2,
+                                                                                    effects: officialDef?.customConfig?.effects
+                                                                                        ? officialDef.customConfig.effects.map((e) => ({ ...e }))
+                                                                                        : [createDamageEffect()],
+                                                                                    microevent: sa.microevent || null,
+                                                                                });
+                                                                            }}
+                                                                            title="Convert to custom ability and edit its effects"
+                                                                        >Edit as Custom</button>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="custom-card-row-btn"
+                                                                            disabled={savingAbility === sa.name}
+                                                                            onClick={() => forkSavedAbility(sa)}
+                                                                            title="Duplicate this ability in My Abilities"
+                                                                        >Fork</button>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="custom-card-row-btn danger"
+                                                                            onClick={() => removeAbility(sa.name)}
+                                                                            title="Remove from My Abilities"
+                                                                        >Delete</button>
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
