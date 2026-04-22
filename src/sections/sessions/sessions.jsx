@@ -980,7 +980,7 @@ const Sessions = ({ initialModal } = {}) => {
             {view === 'list' && <Welcome />}
             <div className="sessions-actions">
                 <button className="sessions-action-btn primary" onClick={handleOpenCreate}>
-                    + New Session
+                    + New Game
                 </button>
                 <button className="sessions-action-btn" onClick={handleOpenJoin}>
                     Join by Code
