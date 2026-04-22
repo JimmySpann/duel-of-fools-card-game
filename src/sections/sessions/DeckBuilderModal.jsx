@@ -339,7 +339,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, initialPreset = nul
 
                 <div className="db-footer">
                     <button className="db-cancel-btn" onClick={onClose}>
-                        {isSessionDeckBuilder ? 'Back' : 'Cancel'}
+                        {isSessionDeckBuilder ? 'Close' : 'Cancel'}
                     </button>
                     {!isSessionDeckBuilder && (
                         <button
