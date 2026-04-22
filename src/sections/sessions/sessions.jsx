@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { authHeader } from '../../utils/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     fetchSessions,
@@ -68,9 +69,13 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
     const unreadLobby = useSelector((s) => s.chat.unreadLobby[session._id] || 0);
     const unreadDm = useSelector((s) => s.chat.unreadDm);
     const { displayName, avatarUrl } = useSelector((s) => s.profile);
+    const token = useSelector((s) => s.auth.token);
     const [showChat, setShowChat] = useState(false);
     const [showDeckBuilder, setShowDeckBuilder] = useState(false);
+    const [deckPreset, setDeckPreset] = useState(null); // preset to auto-load when modal opens
     const [cpuDeckSlot, setCpuDeckSlot] = useState(null); // slot string when editing a CPU deck
+    const [cpuDeckPreset, setCpuDeckPreset] = useState(null); // preset for cpu deck modal
+    const [savedDecks, setSavedDecks] = useState([]); // [{ name, cardIds }]
     const [inviteUsername, setInviteUsername] = useState('');
     const [inviteFeedback, setInviteFeedback] = useState('');
     const [inviteFeedbackType, setInviteFeedbackType] = useState('');
@@ -84,6 +89,17 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
 
     // All human players must be 'ready' before host can start
     const allReady = session.players.every((p) => p.deckStatus === 'ready');
+
+    // Fetch saved decks for the deck picker dropdowns
+    useEffect(() => {
+        if (!token) return;
+        let mounted = true;
+        fetch('/api/decks', { headers: authHeader(token, false) })
+            .then((r) => r.json())
+            .then((data) => { if (mounted && Array.isArray(data.decks)) setSavedDecks(data.decks); })
+            .catch(() => { });
+        return () => { mounted = false; };
+    }, [token]);
 
     // Clear unread count when chat is opened
     useEffect(() => {
@@ -106,8 +122,38 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
 
     const handleCpuDeckConfirm = (deck) => {
         dispatch(setCpuDeck({ sessionId: session._id, slot: cpuDeckSlot, deck })).then((res) => {
-            if (!res.error) setCpuDeckSlot(null);
+            if (!res.error) { setCpuDeckSlot(null); setCpuDeckPreset(null); }
         });
+    };
+
+    // Deck picker select for the current human player
+    const handleLobbyDeckSelect = (value) => {
+        if (!value) return;
+        if (value === '__official' || value === '__dripwarts') {
+            setDeckPreset(value);
+            setShowDeckBuilder(true);
+        } else if (value === '__create') {
+            setDeckPreset(null);
+            setShowDeckBuilder(true);
+        } else {
+            const deck = savedDecks.find((d) => d.name === value);
+            if (deck) dispatch(submitDeck({ sessionId: session._id, deck: deck.cardIds }));
+        }
+    };
+
+    // Deck picker select for a CPU slot
+    const handleCpuLobbyDeckSelect = (slot, value) => {
+        if (!value) return;
+        if (value === '__official' || value === '__dripwarts') {
+            setCpuDeckPreset(value);
+            setCpuDeckSlot(slot);
+        } else if (value === '__create') {
+            setCpuDeckPreset(null);
+            setCpuDeckSlot(slot);
+        } else {
+            const deck = savedDecks.find((d) => d.name === value);
+            if (deck) dispatch(setCpuDeck({ sessionId: session._id, slot, deck: deck.cardIds }));
+        }
     };
 
     const setFeedback = (message, type = 'info') => {
@@ -341,28 +387,54 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                                         {player.deckStatus === 'ready' ? '✓ Ready' : '⏳ Preparation'}
                                     </span>
                                 )}
-                                {/* Build / Edit Deck button for the current user */}
+                                {/* Deck picker for the current user */}
                                 {isMe && (
-                                    <button
-                                        className={`lobby-build-deck-btn${myDeckStatus === 'ready' ? ' edit' : ''}`}
-                                        onClick={() => setShowDeckBuilder(true)}
+                                    <select
+                                        className="lobby-deck-select"
+                                        value=""
+                                        onChange={(e) => { handleLobbyDeckSelect(e.target.value); e.target.value = ''; }}
                                         disabled={loading}
                                     >
-                                        {myDeckStatus === 'ready' ? '✏ Edit Deck' : '🃏 Build Deck'}
-                                    </button>
+                                        <option value="">🃏 {myDeckStatus === 'ready' ? 'Change Deck…' : 'Pick a Deck…'}</option>
+                                        <optgroup label="Official Presets">
+                                            <option value="__official">Official Default</option>
+                                            <option value="__dripwarts">Dripwarts</option>
+                                        </optgroup>
+                                        {savedDecks.length > 0 && (
+                                            <optgroup label="My Decks">
+                                                {savedDecks.map((d) => (
+                                                    <option key={d.name} value={d.name}>{d.name}</option>
+                                                ))}
+                                            </optgroup>
+                                        )}
+                                        <option value="__create">＋ Create a Deck</option>
+                                    </select>
                                 )}
                                 {isCpu && isHost && (
                                     <div className="lobby-cpu-actions">
                                         <span className={`lobby-slot-status${cpu.selectedDeck?.length >= 3 ? ' ready' : ' prep'}`}>
                                             {cpu.selectedDeck?.length >= 3 ? `✓ ${cpu.selectedDeck.length} cards` : '⏳ Random deck'}
                                         </span>
-                                        <button
-                                            className="lobby-build-deck-btn edit"
-                                            onClick={() => setCpuDeckSlot(slot)}
+                                        <select
+                                            className="lobby-deck-select"
+                                            value=""
+                                            onChange={(e) => { handleCpuLobbyDeckSelect(slot, e.target.value); e.target.value = ''; }}
                                             disabled={loading}
                                         >
-                                            {cpu.selectedDeck?.length >= 3 ? '✏ Edit Deck' : '🃏 Set Deck'}
-                                        </button>
+                                            <option value="">🃏 {cpu.selectedDeck?.length >= 3 ? 'Change Deck…' : 'Set Deck…'}</option>
+                                            <optgroup label="Official Presets">
+                                                <option value="__official">Official Default</option>
+                                                <option value="__dripwarts">Dripwarts</option>
+                                            </optgroup>
+                                            {savedDecks.length > 0 && (
+                                                <optgroup label="My Decks">
+                                                    {savedDecks.map((d) => (
+                                                        <option key={d.name} value={d.name}>{d.name}</option>
+                                                    ))}
+                                                </optgroup>
+                                            )}
+                                            <option value="__create">＋ Create a Deck</option>
+                                        </select>
                                         <div className="lobby-cpu-skill">
                                             <span className="lobby-cpu-skill-label">{CPU_SKILL_LABELS[cpu.cpuSkill ?? 2]}</span>
                                             <input
@@ -497,9 +569,10 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                 {/* Deck builder modal — current player */}
                 {showDeckBuilder && (
                     <DeckBuilderModal
-                        onClose={() => setShowDeckBuilder(false)}
+                        onClose={() => { setShowDeckBuilder(false); setDeckPreset(null); }}
                         onConfirm={handleDeckConfirm}
-                        initialDeck={myPlayer?.selectedDeck || []}
+                        initialDeck={deckPreset ? [] : (myPlayer?.selectedDeck || [])}
+                        initialPreset={deckPreset}
                         loading={loading}
                         error={error}
                         verifiedCardsOnly={!!settings.verifiedCardsOnly}
@@ -509,9 +582,10 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                 {/* Deck builder modal — CPU slot */}
                 {cpuDeckSlot && (
                     <DeckBuilderModal
-                        onClose={() => setCpuDeckSlot(null)}
+                        onClose={() => { setCpuDeckSlot(null); setCpuDeckPreset(null); }}
                         onConfirm={handleCpuDeckConfirm}
-                        initialDeck={cpuSlots.find((c) => c.slot === cpuDeckSlot)?.selectedDeck || []}
+                        initialDeck={cpuDeckPreset ? [] : (cpuSlots.find((c) => c.slot === cpuDeckSlot)?.selectedDeck || [])}
+                        initialPreset={cpuDeckPreset}
                         loading={loading}
                         error={error}
                         verifiedCardsOnly={!!settings.verifiedCardsOnly}

@@ -38,7 +38,7 @@ const PRESET_OPTIONS = [
  *   error?: string | null
  *   isSessionDeckBuilder?: boolean
  */
-const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, verifiedCardsOnly = false, isSessionDeckBuilder = false }) => {
+const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, initialPreset = null, loading, error, verifiedCardsOnly = false, isSessionDeckBuilder = false }) => {
     const token = useSelector((s) => s.auth.token);
     const censorAdultCards = useSelector((s) => s.profile.censorAdultCards !== false);
     const [selected, setSelected] = useState(() => new Set(initialDeck || []));
@@ -106,6 +106,19 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, loading, error, ver
     // Preset decks derived from loaded cards
     const officialDefaultDeck = useMemo(() => cards.filter(c => c.category === 'official v1').map(c => c.id), [cards]);
     const dripwartsDeck = useMemo(() => cards.filter(c => c.category === 'dripwarts').map(c => c.id), [cards]);
+
+    // Auto-load the preset passed from the lobby once cards are ready
+    useEffect(() => {
+        if (!initialPreset || cards.length === 0) return;
+        if (initialPreset === '__official') {
+            setSelected(new Set(officialDefaultDeck));
+            setDeckSelectValue('__official');
+        } else if (initialPreset === '__dripwarts') {
+            setSelected(new Set(dripwartsDeck));
+            setDeckSelectValue('__dripwarts');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialPreset, cards.length]);
 
     const handleDeckSelect = (value) => {
         setDeckSelectValue(value);

@@ -586,12 +586,26 @@ const computeCpuTurn = (state) => {
                 const enemyTotalHp = enemies.reduce((sum, c) => sum + (c.currentHealth ?? 0), 0);
                 const boardMod = cpuTotalHp > enemyTotalHp * 1.5 ? -5
                     : cpuTotalHp < enemyTotalHp * 0.6 ? 8 : 0;
+                // Enemies none of the current in-play allies can cleanly beat
+                const currentAllies = getCpu().inPlay;
+                const unbeatableEnemies = enemies.filter((ec) =>
+                    !ec.dying &&
+                    !currentAllies.some((ac) =>
+                        getEffectiveAtk(ac) > getEffectiveDef(ec) &&
+                        getEffectiveAgi(ac) > getEffectiveEva(ec)
+                    )
+                );
                 const scores = getCpu().hand.map((card) => {
                     let score = (card.attack ?? 0) + (card.health ?? 0) + boardMod;
                     if ((card.attack ?? 0) <= 4 && allyBelow30) score += 5;
                     if ((card.actions || []).some((a) => (a.limit ?? 99) === 1)) score += 4;
                     if (getCpu().inPlay.length >= 4) score -= 3;
                     if ((card.health ?? 0) <= 5 && maxEnemyAtk >= 7) score -= 2;
+                    // Prefer hand cards that can counter an otherwise unbeatable enemy
+                    if (unbeatableEnemies.some((ec) =>
+                        getEffectiveAtk(card) > getEffectiveDef(ec) &&
+                        getEffectiveAgi(card) > getEffectiveEva(ec)
+                    )) score += 12;
                     return score;
                 });
                 cardIndex = scores.indexOf(Math.max(...scores));
@@ -812,6 +826,11 @@ const computeCpuTurn = (state) => {
                                 if (hasStatus(ec, 'focused')) score += 4;
                                 if (hasStatus(ec, 'def_down')) score += 3;
                                 if ((ec.attack ?? 0) >= 7) score += 2;
+                                // Only favour targets the attacker can cleanly beat
+                                if (!(getEffectiveAtk(card) > getEffectiveDef(ec) &&
+                                    getEffectiveAgi(card) > getEffectiveEva(ec))) score -= 20;
+                                const dmgRatioAbility = cpuSkill >= 5 ? 1.0 : 0.85;
+                                if (estimatedDmg / ec.currentHealth < dmgRatioAbility) score -= 15;
                                 if (score > best) { best = score; chosenEnemy = ep; chosenCard = ec; }
                             }
                         }
@@ -924,6 +943,11 @@ const computeCpuTurn = (state) => {
                             if (hasStatus(ec, 'def_down')) score += 3;
                             if ((ec.attack ?? 0) >= 7) score += 2;
                             if (hitChance < 40) score -= 4;
+                            // Only favour targets the attacker can cleanly beat
+                            if (!(getEffectiveAtk(card) > getEffectiveDef(ec) &&
+                                getEffectiveAgi(card) > getEffectiveEva(ec))) score -= 20;
+                            const dmgRatio = cpuSkill >= 5 ? 1.0 : 0.85;
+                            if (estimatedDmg / ec.currentHealth < dmgRatio) score -= 15;
                             if (score > best) { best = score; chosenEnemy = ep; chosenCard = ec; }
                         }
                     }

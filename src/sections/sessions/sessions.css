@@ -21,6 +21,7 @@
     border-radius: 8px;
     border: 1px solid #0f1117;
 }
+
 /* --- Game Settings Row Alignment Fix --- */
 .game-settings-row {
     display: flex;
@@ -1795,6 +1796,30 @@
     color: #c084fc;
 }
 
+/* ── Deck picker select ─────────────────────────────────────────────────── */
+.lobby-deck-select {
+    width: 100%;
+    background: #1a2040;
+    border: 1px solid #4a5280;
+    border-radius: 6px;
+    color: #c084fc;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    appearance: auto;
+}
+
+.lobby-deck-select:hover:not(:disabled) {
+    border-color: #a855f7;
+}
+
+.lobby-deck-select:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 /* ── Deck build reminder banner ─────────────────────────────────────────── */
 .lobby-deck-reminder {
     display: flex;
@@ -3396,7 +3421,7 @@
     box-shadow: 0 0 0 1px #7a3ea044 inset;
 }
 
-.custom-card-saved-ability.applied .custom-card-saved-ability-info > span {
+.custom-card-saved-ability.applied .custom-card-saved-ability-info>span {
     color: #d8a8f8;
 }
 
@@ -3460,12 +3485,19 @@
     white-space: nowrap;
     pointer-events: none;
     animation: snack-in 0.18s ease;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
 }
 
 @keyframes snack-in {
-    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
 }
 
 /* ── Abilities expand section in card library rows ──────────────────────── */
