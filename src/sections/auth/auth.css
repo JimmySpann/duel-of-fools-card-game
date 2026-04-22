@@ -3,8 +3,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(ellipse at 50% 0%, rgba(120, 40, 200, 0.18) 0%, #0f1117 60%);
+    background-color: #0f1117;
     position: relative;
+}
+
+/* Dark overlay so text stays readable over any background image */
+.auth-backdrop::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 8, 18, 0.55);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Keep all content above the overlay */
+.auth-backdrop>* {
+    position: relative;
+    z-index: 1;
 }
 
 /* ── Floating music toggle ──────────────────────────────────────────────── */

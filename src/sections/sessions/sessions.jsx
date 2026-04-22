@@ -36,6 +36,7 @@ import RulesModal from '../shared/rules/RulesModal';
 import Header from '../card-game/components/header/header.jsx';
 import { markLobbyRead } from '../../features/chat/chatSlice';
 import { getSocket } from '../../features/chat/socket';
+import useBackground from '../../utils/useBackground';
 import './sessions.css';
 import Welcome from './Welcome.jsx';
 
@@ -70,6 +71,7 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
     const unreadDm = useSelector((s) => s.chat.unreadDm);
     const { displayName, avatarUrl } = useSelector((s) => s.profile);
     const token = useSelector((s) => s.auth.token);
+    const lobbyBgStyle = useBackground('lobby');
     const [showChat, setShowChat] = useState(false);
     const [showDeckBuilder, setShowDeckBuilder] = useState(false);
     const [deckPreset, setDeckPreset] = useState(null); // preset to auto-load when modal opens
@@ -198,7 +200,7 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
     });
 
     return (
-        <div className="sessions-backdrop">
+        <div className="sessions-backdrop" style={lobbyBgStyle}>
             <Header
                 onLobbies={onBack}
                 displayName={displayName}
@@ -797,8 +799,9 @@ const Sessions = ({ initialModal } = {}) => {
         setView('join');
     }, [dispatch]);
 
+    const sessionsBgStyle = useBackground('sessions');
     const renderViewShell = useCallback((content, includeGlobalOverlays = false) => (
-        <div className="sessions-backdrop">
+        <div className="sessions-backdrop" style={sessionsBgStyle}>
             <Header
                 onLobbies={handleBack}
                 displayName={displayName}

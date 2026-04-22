@@ -17,11 +17,13 @@ import TurnRecap from './components/turn-recap/turn-recap.jsx';
 import sounds from '../../features/sound/soundManager';
 import BriefPanel from './BriefPanel';
 import MicroEventController from './components/micro-events/MicroEventController';
+import useBackground from '../../utils/useBackground';
 import './card-game.css';
 
 const CardGame = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const bgStyle = useBackground('game');
     const { players, currentTurn, phase, gameOver, winner, log, lastHitEvents } = useSelector((state) => state.cardGame);
     const turnStartedAt = useSelector((state) => state.cardGame.turnStartedAt);
     const gameSettings = useSelector((state) => state.cardGame.settings);
@@ -221,7 +223,7 @@ const CardGame = () => {
     }
 
     return (
-        <div className="card-game-container">
+        <div className="card-game-container" style={bgStyle}>
             <Header
                 currentPlayerName={gamePlayers.find((p) => p.id === currentTurn)?.name}
                 phase={phase}

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { login, signup, clearAuthError } from '../../features/auth/authSlice';
 import musicManager from '../../features/sound/musicManager';
 import useMusicPlayer from '../../features/sound/useMusicPlayer';
+import useBackground from '../../utils/useBackground';
 import './auth.css';
 
 const Auth = ({ initialMode = 'login' }) => {
@@ -73,9 +74,10 @@ const Auth = ({ initialMode = 'login' }) => {
     };
 
     const displayError = localError || error;
+    const bgStyle = useBackground('auth');
 
     return (
-        <div className="auth-backdrop" onClick={handleFirstInteraction}>
+        <div className="auth-backdrop" style={bgStyle} onClick={handleFirstInteraction}>
             {/* Floating mute button */}
             <button
                 className={`auth-music-btn ${music.playing ? 'on' : 'off'}`}

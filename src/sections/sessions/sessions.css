@@ -40,8 +40,25 @@
 /* ── Shared backdrop ─────────────────────────────────────────────────────── */
 .sessions-backdrop {
     min-height: 100vh;
-    background: radial-gradient(ellipse at 50% 0%, rgba(120, 40, 200, 0.15) 0%, #0f1117 60%);
+    background-color: #0f1117;
     color: #dde0f0;
+    position: relative;
+}
+
+/* Dark overlay so content stays readable over any background image */
+.sessions-backdrop::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 8, 18, 0.55);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Keep all content above the overlay */
+.sessions-backdrop>* {
+    position: relative;
+    z-index: 1;
 }
 
 /* ── Page layout ─────────────────────────────────────────────────────────── */
