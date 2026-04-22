@@ -578,7 +578,6 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                         loading={loading}
                         error={error}
                         verifiedCardsOnly={!!settings.verifiedCardsOnly}
-                        isSessionDeckBuilder
                     />
                 )}
 
@@ -592,7 +591,6 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
                         loading={loading}
                         error={error}
                         verifiedCardsOnly={!!settings.verifiedCardsOnly}
-                        isSessionDeckBuilder
                     />
                 )}
 
@@ -825,6 +823,7 @@ const Sessions = ({ initialModal } = {}) => {
                     initialDeck={[]}
                     loading={false}
                     error={null}
+                    isSessionDeckBuilder
                 />
             )}
             {includeGlobalOverlays && showCustomCards && <CustomCardModal onClose={() => navigate('/')} />}
