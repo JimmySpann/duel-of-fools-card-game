@@ -46,6 +46,7 @@ const userSchema = new mongoose.Schema(
         savedDecks: [{
             name: { type: String, required: true, trim: true, maxlength: 40 },
             cardIds: [{ type: String }],
+            isPublic: { type: Boolean, default: false },
         }],
         savedAbilities: { type: [savedAbilitySchema], default: [] },
     },

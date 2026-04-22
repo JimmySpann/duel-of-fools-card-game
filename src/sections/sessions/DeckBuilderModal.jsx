@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { authHeader } from '../../utils/api';
 import Card from '../card-game/components/card-layouts/full-card/full-card';
 import { FEATURES } from '../../config/features';
+import DeckManagerModal from './DeckManagerModal';
 
 const ELEMENT_COLORS = {
     fire: { bg: '#7c1a00', color: '#ff7a40', border: '#b04000' },
@@ -52,6 +53,7 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, initialPreset = nul
     const [cards, setCards] = useState([]);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
+    const [showDeckManager, setShowDeckManager] = useState(false);
 
     // If the lobby mandates verified cards only, we can never show unverified
     useEffect(() => {
@@ -164,6 +166,20 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, initialPreset = nul
         setConfirmDeleteDeck(null);
     };
 
+    const handleLoadFromManager = (cardIds, deckName) => {
+        setSelected(new Set(cardIds));
+        setSaveNameInput(deckName);
+        setDeckSelectValue(deckName);
+        setSavedDecks((prev) => {
+            // refresh list in case manager renamed/deleted
+            fetch('/api/decks', { headers: authHeader(token, false) })
+                .then((r) => r.json())
+                .then((d) => { if (Array.isArray(d.decks)) setSavedDecks(d.decks); })
+                .catch(() => { });
+            return prev;
+        });
+    };
+
     const canConfirm = selected.size >= 3 && !loading;
     const selectedCount = selected.size;
     const allCardIds = useMemo(() => cards.map((card) => card.id), [cards]);
@@ -246,12 +262,18 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, initialPreset = nul
                                 Save Deck
                             </button>
                         )}
-                        <button
-                            className="db-clear-all-btn"
+                        <button className="db-clear-all-btn"
                             onClick={() => setSelected(new Set())}
                             disabled={selectedCount === 0}
                         >
                             Clear
+                        </button>
+                        <button
+                            className="db-manage-decks-btn"
+                            onClick={() => setShowDeckManager(true)}
+                            title="Copy, share, fork, rename or delete your saved decks"
+                        >
+                            Manage Decks
                         </button>
                     </div>
                 </div>
@@ -387,6 +409,20 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, initialPreset = nul
                     </div>
                 );
             })()}
+
+            <DeckManagerModal
+                open={showDeckManager}
+                onClose={() => {
+                    setShowDeckManager(false);
+                    // Refresh saved decks list after manager closes
+                    fetch('/api/decks', { headers: authHeader(token, false) })
+                        .then((r) => r.json())
+                        .then((d) => { if (Array.isArray(d.decks)) setSavedDecks(d.decks); })
+                        .catch(() => { });
+                }}
+                token={token}
+                onLoadDeck={handleLoadFromManager}
+            />
         </div>
     );
 };
