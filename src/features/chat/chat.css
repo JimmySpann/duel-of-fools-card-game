@@ -153,9 +153,12 @@
 }
 
 .dm-container--modal {
+    position: fixed;
     inset: 0;
     right: auto;
     bottom: auto;
+    width: 100%;
+    height: 100%;
     align-items: center;
     justify-content: center;
     pointer-events: none;
@@ -282,6 +285,22 @@
     pointer-events: auto;
 }
 
+@media (max-width: 600px) {
+    .dm-container--modal {
+        align-items: stretch;
+        justify-content: flex-end;
+    }
+
+    .dm-panel--modal {
+        width: 100vw;
+        height: 90dvh;
+        border-radius: 16px 16px 0 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+    }
+}
+
 /* Inbox */
 .dm-inbox {
     display: flex;
@@ -299,6 +318,9 @@
     color: #c9a227;
     border-bottom: 1px solid #2e3148;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .dm-new-form {
@@ -349,7 +371,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 260px;
+    max-width: min(260px, 80vw);
 }
 
 /* Conversation */
