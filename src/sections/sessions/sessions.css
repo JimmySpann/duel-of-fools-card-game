@@ -3832,6 +3832,15 @@
     margin: 1.5rem 0;
 }
 
+.dm-section-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    margin: 0.75rem 0 0.25rem;
+}
+
 /* Deck list */
 .dm-deck-list {
     display: flex;

@@ -1,15 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { authHeader } from '../../utils/api';
 
+const PRESET_DECKS = [
+    { value: '__official', label: 'Official Default', description: 'The standard set of official cards' },
+    { value: '__dripwarts', label: 'Dripwarts', description: 'The Dripwarts themed card set' },
+];
+
 /**
  * DeckManagerModal
  * Props:
- *   open        {boolean}
- *   onClose     {() => void}
- *   token       {string}
- *   onLoadDeck  {(cardIds: string[], deckName: string) => void}
+ *   open          {boolean}
+ *   onClose       {() => void}
+ *   token         {string}
+ *   onLoadDeck    {(cardIds: string[], deckName: string) => void}
+ *   onLoadPreset  {(presetValue: string) => void}
  */
-const DeckManagerModal = ({ open, onClose, token, onLoadDeck }) => {
+const DeckManagerModal = ({ open, onClose, token, onLoadDeck, onLoadPreset }) => {
     const [tab, setTab] = useState('mine');           // 'mine' | 'public'
     const [myDecks, setMyDecks] = useState([]);
     const [publicDecks, setPublicDecks] = useState([]);
@@ -357,6 +363,33 @@ const DeckManagerModal = ({ open, onClose, token, onLoadDeck }) => {
                             value={publicSearch}
                             onChange={(e) => setPublicSearch(e.target.value)}
                         />
+
+                        {onLoadPreset && (
+                            <>
+                                <p className="dm-section-label">Presets</p>
+                                <div className="dm-deck-list">
+                                    {PRESET_DECKS.map((preset) => (
+                                        <div key={preset.value} className="dm-deck-row">
+                                            <div className="dm-deck-info">
+                                                <span className="dm-deck-name">{preset.label}</span>
+                                                <span className="dm-deck-count">{preset.description}</span>
+                                            </div>
+                                            <div className="dm-deck-actions">
+                                                <button
+                                                    className="dm-action-btn dm-action-btn--primary"
+                                                    onClick={() => onLoadPreset(preset.value)}
+                                                    title={`Load the ${preset.label} preset into the builder`}
+                                                >
+                                                    Load
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="dm-section-label">Community Decks</p>
+                            </>
+                        )}
+
                         {publicLoading && <p className="dm-empty">Loading…</p>}
                         {!publicLoading && publicDecks.length === 0 && (
                             <p className="dm-empty">No public decks found. Be the first to share one!</p>

@@ -363,16 +363,14 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, initialPreset = nul
                     <button className="db-cancel-btn" onClick={onClose}>
                         {isSessionDeckBuilder ? 'Close' : 'Cancel'}
                     </button>
-                    {!isSessionDeckBuilder && (
-                        <button
-                            className="db-confirm-btn"
-                            onClick={() => onConfirm([...selected])}
-                            disabled={!canConfirm}
-                            title={selectedCount < 3 ? 'Select at least 3 cards' : ''}
-                        >
-                            {loading ? 'Saving…' : `Confirm Deck (${selectedCount})`}
-                        </button>
-                    )}
+                    <button
+                        className="db-confirm-btn"
+                        onClick={() => onConfirm([...selected])}
+                        disabled={!canConfirm}
+                        title={selectedCount < 3 ? 'Select at least 3 cards' : ''}
+                    >
+                        {loading ? 'Saving…' : `Confirm Deck (${selectedCount})`}
+                    </button>
                 </div>
             </div>
 
@@ -422,6 +420,10 @@ const DeckBuilderModal = ({ onConfirm, onClose, initialDeck, initialPreset = nul
                 }}
                 token={token}
                 onLoadDeck={handleLoadFromManager}
+                onLoadPreset={(presetValue) => {
+                    setShowDeckManager(false);
+                    handleDeckSelect(presetValue);
+                }}
             />
         </div>
     );
