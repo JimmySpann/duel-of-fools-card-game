@@ -99,6 +99,13 @@ const Header = ({
                 <img src="/img/Jester.png" alt="jester" className="header-brand-jester" style={{ transform: `scale(${brandPulse.toFixed(4)})`, transformOrigin: 'center bottom' }} />
                 <span className="header-title header-title--clickable">Duel of Fools</span>
             </button>
+            <nav className="header-nav-bar" aria-label="Main navigation">
+                <button className="header-nav-link" onClick={onLobbies}>Lobbies</button>
+                <button className="header-nav-link" onClick={onRules}>Rules</button>
+                <button className="header-nav-link" onClick={onGallery}>Gallery</button>
+                <button className="header-nav-link" onClick={onDeckBuilder}>Deck Builder</button>
+                <button className="header-nav-link" onClick={onCreateCard}>Create Card</button>
+            </nav>
             <div className="account-buttons-container">
                 <button
                     className="header-nav-toggle"

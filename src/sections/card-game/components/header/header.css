@@ -82,6 +82,34 @@
     color: rgb(220, 80, 220) !important;
 }
 
+.header-nav-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 18px;
+    margin-right: auto;
+}
+
+.header-nav-link {
+    border: 1px solid rgba(187, 16, 187, 0.24);
+    background: rgba(125, 33, 164, 0.15);
+    color: #dde0f0;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.header-nav-link:hover {
+    background: rgba(125, 33, 164, 0.4);
+    border-color: rgba(187, 16, 187, 0.6);
+    color: #fff;
+}
+
 .player-container {
     position: absolute;
     top: 2px;
@@ -447,6 +475,14 @@
 }
 
 @media (max-width: 900px) {
+    .header-nav-bar {
+        display: none;
+    }
+
+    .header-nav-toggle {
+        display: inline-flex;
+    }
+
     .header-container {
         padding: 6px 10px;
     }
@@ -508,10 +544,6 @@
 
     .header-profile-btn {
         padding: 2px 8px 2px 3px;
-    }
-
-    .header-nav-toggle {
-        display: flex;
     }
 
     .header-nav-drawer {
