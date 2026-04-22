@@ -195,8 +195,23 @@ const CardGame = () => {
                 <div className="game-over-screen">
                     <h1 className="game-over-title">{winnerLabel}</h1>
                     <div className="game-over-actions">
-                        <button className="game-over-btn" onClick={() => setShowBrief((v) => !v)}>
+                        <button
+                            className="game-over-btn"
+                            onClick={() => {
+                                setShowBrief((v) => !v);
+                                setShowChat(false);
+                            }}
+                        >
                             📋 Brief
+                        </button>
+                        <button
+                            className="game-over-btn"
+                            onClick={() => {
+                                setShowChat((v) => !v);
+                                setShowBrief(false);
+                            }}
+                        >
+                            💬 Lobby Chat{unreadLobby > 0 && !showChat ? ` (${unreadLobby})` : ''}
                         </button>
                         <button
                             className="game-over-btn"
@@ -218,6 +233,7 @@ const CardGame = () => {
                         isOnline={isOnline}
                     />
                 )}
+                {showChat && activeSession && <LobbyChat sessionId={activeSession._id} isWatching={true} />}
             </div>
         );
     }
