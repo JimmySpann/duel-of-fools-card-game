@@ -445,6 +445,7 @@
 .sessions-tab.active {
     background: linear-gradient(135deg, #a855f7, #7c3aed);
     border-color: #7c3aed;
+    color: #e4e6ee;
 }
 
 .sessions-tab:not(.active):hover {
@@ -471,7 +472,7 @@
     background: linear-gradient(135deg, #181b2b 60%, #23243a 100%);
     border: 1px solid #23243a;
     border-radius: 20px;
-    color: #5a607a;
+    color: #73778c;
     text-align: center;
     padding: 2rem 0;
 }
