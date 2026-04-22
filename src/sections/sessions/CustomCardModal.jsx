@@ -53,6 +53,7 @@ const MICROGAME_POWER_REDUCTION = { easy: 1.2, medium: 2, hard: 3.1 };
 const createDamageEffect = () => ({ type: 'damage', multiplier: 1 });
 const createEmptyCustomAbility = () => ({
     name: '',
+    description: '',
     targetType: 'enemyCard',
     limit: 2,
     effects: [createDamageEffect()],
@@ -1848,6 +1849,17 @@ const CustomCardModal = ({ onClose }) => {
                                             />
                                         </label>
                                     </div>
+                                    <label className="custom-card-label">
+                                        Description
+                                        <input
+                                            className="custom-card-input"
+                                            value={ability.description || ''}
+                                            maxLength={120}
+                                            onChange={(e) => updateCustomAbility(abilityIdx, { description: e.target.value })}
+                                            placeholder="Short flavor text shown in the ability tooltip…"
+                                            title="Optional description shown when hovering this ability in battle."
+                                        />
+                                    </label>
                                     <div className="custom-card-stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
                                         <label className="custom-card-label">
                                             Microgame
@@ -2017,9 +2029,26 @@ const CustomCardModal = ({ onClose }) => {
                                         </div>
                                     ))}
 
-                                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.45rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.45rem', flexWrap: 'wrap' }}>
                                         <button type="button" className="custom-card-row-btn" onClick={() => addEffect(abilityIdx)} title="Add another effect (max 3 per ability).">
                                             + Effect
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="custom-card-row-btn"
+                                            disabled={!ability.name.trim() || savingAbility === ability.name}
+                                            onClick={() => saveAbility({
+                                                name: ability.name,
+                                                description: ability.description || '',
+                                                actionInfo: '',
+                                                limit: ability.limit,
+                                                type: 'custom',
+                                                microevent: ability.microevent || null,
+                                                customConfig: { targetType: ability.targetType, effects: ability.effects },
+                                            })}
+                                            title="Save this ability to My Abilities library for reuse across cards."
+                                        >
+                                            {savingAbility === ability.name ? 'Saving…' : 'Save to My Abilities'}
                                         </button>
                                         <button type="button" className="custom-card-row-btn danger" onClick={() => removeCustomAbility(abilityIdx)} title="Remove this entire custom ability.">
                                             Remove Ability
