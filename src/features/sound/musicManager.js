@@ -53,7 +53,7 @@ let _state = {
     playing: false,
     currentIndex: load('cg_musicIndex', 0),
     volume: load('cg_musicVolume', 0.5),
-    enabled: loadCookie('cg_musicEnabled', true),
+    enabled: loadCookie('cg_musicEnabled', false),
 };
 
 const _subscribers = new Set();

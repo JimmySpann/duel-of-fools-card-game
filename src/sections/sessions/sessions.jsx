@@ -60,6 +60,7 @@ const inviteLinkFromCode = (joinCode) => `${window.location.origin}/?join=${enco
 
 // ── Lobby view ─────────────────────────────────────────────────────────────────
 export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, loading, error, dispatch }) => {
+    const navigate = useNavigate();
     const isHost = session.host.username === username;
     const isPublic = session.isPublic !== false;
     const settings = session.settings || {};
@@ -203,6 +204,10 @@ export const Lobby = ({ session, username, onStart, onLeave, onDelete, onBack, l
         <div className="sessions-backdrop" style={lobbyBgStyle}>
             <Header
                 onLobbies={onBack}
+                onRules={() => navigate('/rules')}
+                onGallery={() => navigate('/gallery')}
+                onDeckBuilder={() => navigate('/deck-builder')}
+                onCreateCard={() => navigate('/card-creator')}
                 displayName={displayName}
                 avatarUrl={avatarUrl}
                 username={username}

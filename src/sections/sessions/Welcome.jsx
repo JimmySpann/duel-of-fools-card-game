@@ -5,7 +5,7 @@ const Welcome = () => (
     <div className="welcome-card">
         <h2 className="welcome-title">Welcome to Duel of Fools!</h2>
         <div className="welcome-desc">
-            <p><strong>Duel of Fools</strong> is a fast-paced, multiplayer card battler where you build decks, battle friends or CPUs, and experiment with custom cards and wild combos. It was made for fun and as a portfolio project—so enjoy, break things, and share your feedback!</p>
+            <p><strong>Duel of Fools</strong> is a turn-based, multiplayer card battler where you build decks, battle friends or CPUs, and experiment with custom cards and wild combos. It was made for fun and as a portfolio project—so enjoy, break things, and share your feedback!</p>
         </div>
         <ul className="welcome-list">
             <li>🃏 <strong>Create</strong> a new session or <strong>join</strong> an open lobby to start playing.</li>
