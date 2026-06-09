@@ -1,4 +1,4 @@
-# Card Game
+# Duel of Fools Card Game
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge)](https://card-game-9dfi.onrender.com/)
 
