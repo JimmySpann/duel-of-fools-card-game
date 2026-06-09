@@ -43,16 +43,9 @@ A real-time turn-based multiplayer card battle game with custom cards, deck buil
    cd duel-of-fools-card-game
    ```
 
-2. **Install frontend dependencies**
+2. **Install frontend & server dependencies**
    ```bash
-   npm install
-   ```
-
-3. **Install server dependencies**
-   ```bash
-   cd server
-   npm install
-   cd ..
+   npm run deploy-build
    ```
 
 4. **Configure environment variables**
@@ -73,15 +66,10 @@ A real-time turn-based multiplayer card battle game with custom cards, deck buil
 
 **Start the backend server:**
 ```bash
-npm run server
+npm run server:dev
 ```
 
-**Start the React development server (in a separate terminal):**
-```bash
-npm start
-```
-
-The React dev server proxies API calls to `localhost:3001` automatically. Open `http://localhost:3000` to play.
+The React dev server proxies API calls to `localhost:3001/api` automatically. Open `http://localhost:3001` to play.
 
 ### Production Build
 
