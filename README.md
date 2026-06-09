@@ -39,8 +39,8 @@ A real-time turn-based multiplayer card battle game with custom cards, deck buil
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/JimmySpann/card-game.git
-   cd card-game
+   git clone https://github.com/JimmySpann/duel-of-fools-card-game.git
+   cd duel-of-fools-card-game
    ```
 
 2. **Install frontend dependencies**
