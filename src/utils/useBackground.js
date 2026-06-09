@@ -20,11 +20,12 @@ const useBackground = (group) => {
         const options = BACKGROUND_GROUPS[group];
         if (!options || options.length === 0) return {};
         const name = options[Math.floor(Math.random() * options.length)];
+        return { /* Return nothing until background is improved */ };
         return {
             backgroundImage: `url(${BACKGROUND_BASE}${name})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center center',
-            backgroundAttachment: 'scroll',
+            backgroundAttachment: 'fixed',
             backgroundRepeat: 'no-repeat',
         };
     }, []); // intentionally empty — pick once on mount

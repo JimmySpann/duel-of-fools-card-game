@@ -39,7 +39,6 @@
 
 /* ── Shared backdrop ─────────────────────────────────────────────────────── */
 .sessions-backdrop {
-    min-height: 100vh;
     background-color: #0f1117;
     color: #dde0f0;
     position: relative;
